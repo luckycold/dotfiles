@@ -35,9 +35,9 @@ stow .
 ## Extras
 
 Due to this not being able to be included locally, the following should be done if you want Goldwarden to work in applications like Obsidian:
-`sudo  nvim /etc/security/pam_env.conf`
+```sudo  nvim /etc/security/pam_env.conf```
 and include this on the bottom of that file:
-`SSH_AUTH_SOCK DEFAULT=/home/$USER/.var/app/com.quexten.Goldwarden/data/ssh-auth-sock`
+```SSH_AUTH_SOCK DEFAULT=/home/$USER/.var/app/com.quexten.Goldwarden/data/ssh-auth-sock```
 
 ## Instructional Video
 This is a useful video if you get lost:
