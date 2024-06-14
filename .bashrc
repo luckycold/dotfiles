@@ -30,3 +30,8 @@ eval $(thefuck --alias fk)
 bw-stay-logged-in() {
     export BW_SESSION=$(bw unlock --raw)
 }
+
+export XDG_DATA_DIRS=$XDG_DATA_DIRS:/var/lib/flatpak/exports/share:/home/lucky/.local/share/flatpak/exports/share
+export SSH_AUTH_SOCK=/home/$USER/.var/app/com.quexten.Goldwarden/data/ssh-auth-sock
+alias gw='flatpak run --command=goldwarden com.quexten.Goldwarden'
+export PATH=$PATH:$HOME/go/bin
