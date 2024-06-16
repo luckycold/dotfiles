@@ -25,8 +25,6 @@ fi
 unset rc
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
-eval $(thefuck --alias)
-eval $(thefuck --alias fk)
 bw-stay-logged-in() {
     export BW_SESSION=$(bw unlock --raw)
 }
