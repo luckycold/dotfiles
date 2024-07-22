@@ -34,7 +34,7 @@ stow .
 
 ## Extras
 
-Due to this not being able to be included locally, the following should be done if you want Goldwarden to work in applications like Obsidian:
+Due to this not being able to be included locally, the following should be done if you want Goldwarden to work in applications like Obsidian (This maybe is unneeded now):
 ```bash
 sudo  nvim /etc/security/pam_env.conf
 ```
