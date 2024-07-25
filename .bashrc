@@ -130,6 +130,7 @@ bw-stay-logged-in() {
 }
 # bash completion V2 for bootdev                              -*- shell-script -*-
 
+<<<<<<< HEAD
 __bootdev_debug()
 {
     if [[ -n ${BASH_COMP_DEBUG_FILE-} ]]; then
@@ -468,3 +469,12 @@ fi
 # ex: ts=4 sw=4 et filetype=sh
 
 eval "$(zoxide init bash)"
+=======
+export XDG_DATA_DIRS=$XDG_DATA_DIRS:/var/lib/flatpak/exports/share:/home/lucky/.local/share/flatpak/exports/share
+export SSH_AUTH_SOCK=/home/$USER/.var/app/com.quexten.Goldwarden/data/ssh-auth-sock
+alias gw='flatpak run --command=goldwarden com.quexten.Goldwarden'
+export PATH=$PATH:$HOME/go/bin
+export EDITOR=nvim
+
+#Test
+>>>>>>> main
