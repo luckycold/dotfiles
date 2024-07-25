@@ -29,9 +29,7 @@ cd dotfiles
 then use GNU stow to create symlinks
 
 ```bash
-stow -t ~ common
-stow -t ~ personal
-#stow -t ~ work (or go with this if you want to get configs for work instead of personal)
+stow .
 ```
 
 ## Instructional Video
