@@ -32,17 +32,6 @@ then use GNU stow to create symlinks
 stow .
 ```
 
-## Extras
-
-Due to this not being able to be included locally, the following should be done if you want Goldwarden to work in applications like Obsidian (This maybe is unneeded now):
-```bash
-sudo  nvim /etc/security/pam_env.conf
-```
-and include this on the bottom of that file:
-```bash
-SSH_AUTH_SOCK DEFAULT=/home/$USER/.var/app/com.quexten.Goldwarden/data/ssh-auth-sock
-```
-
 ## Instructional Video
 This is a useful video if you get lost:
 
