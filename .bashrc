@@ -34,3 +34,5 @@ export SSH_AUTH_SOCK=/home/$USER/.var/app/com.quexten.Goldwarden/data/ssh-auth-s
 alias gw='flatpak run --command=goldwarden com.quexten.Goldwarden'
 export PATH=$PATH:$HOME/go/bin
 export EDITOR=nvim
+
+#Test
