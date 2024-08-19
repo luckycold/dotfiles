@@ -86,7 +86,11 @@ require('lazy').setup({
   require 'lucky/plugins/refactoring',
   --  Here are some example plugins that have been included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
-  --
+  require 'lucky/plugins/cmake-tools',
+
+  require 'lucky/plugins/overseer',
+
+  require 'lucky/plugins/toggleterm',
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
