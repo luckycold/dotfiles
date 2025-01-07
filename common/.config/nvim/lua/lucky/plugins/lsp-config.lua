@@ -15,6 +15,17 @@ return { -- LSP Configuration & Plugins
     { 'folke/neodev.nvim', opts = {} },
   },
   config = function()
+    -- My (Luke's) additions to kickstart.
+    vim.api.nvim_create_autocmd('FileType', {
+      group = vim.api.nvim_create_augroup('gitcommit-config', { clear = true }),
+      pattern = 'gitcommit',
+      callback = function()
+        vim.opt_local.textwidth = 72
+        vim.opt_local.spell = true
+        vim.opt_local.colorcolumn = '50,72'
+      end,
+    })
+
     -- Brief aside: **What is LSP?**
     --
     -- LSP is an initialism you've probably heard, but might not understand what it is.
@@ -160,7 +171,7 @@ return { -- LSP Configuration & Plugins
     local servers = {
       -- clangd = {},
       -- gopls = {},
-      -- pyright = {},
+      pyright = {},
       -- rust_analyzer = {},
       -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
       --
