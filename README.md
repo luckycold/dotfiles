@@ -7,14 +7,23 @@ These are the dotfiles for my system
 Make sure you have the these installed on your system
 
 ### Git
-
+#### Fedora
 ```bash
 sudo dnf install git
 ```
+#### Debian
+```bash
+sudo apt install git
+```
 
 ### Stow
+#### Fedora
 ```bash
 sudo dnf install stow
+```
+#### Debian
+```bash
+sudo apt install stow
 ```
 
 ## Installation
