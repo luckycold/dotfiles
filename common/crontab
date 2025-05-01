@@ -1,1 +1,1 @@
-@reboot flatpak run --command=goldwarden com.quexten.Goldwarden daemonize
+
