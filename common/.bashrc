@@ -154,9 +154,10 @@ stow-profile() {
 
     if [[ "$selected_profile" == "none" ]]; then
         echo "This will ensure only the 'common' profile is active."
-        echo "Continue? (y/n)"
+        echo "Continue? (Y/n)" # Indicate Yes is default
         read -r confirmation
-        if [[ ! "$confirmation" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        # Abort only if input starts with n or N (case-insensitive)
+        if [[ "$confirmation" =~ ^[nN] ]]; then
             echo "Aborting profile switch."
             return 0
         fi
