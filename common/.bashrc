@@ -181,8 +181,15 @@ check_dotfiles_update() {
         # Change to the dotfiles directory (temporarily, _switch_dotfiles_profile does its own pushd/popd)
         pushd "$dotfiles_dir" > /dev/null
         
-        # Check for updates using HTTPS (no SSH agent interaction)
-        GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet 2>/dev/null
+        # Check for updates using HTTPS (no SSH agent interaction) with timeout
+        # Use timeout command to avoid hangs when offline
+        echo "Checking for dotfiles updates..." # Add feedback
+        if ! timeout 5s GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet 2>/dev/null; then
+             echo "Update check timed out (likely offline). Skipping." >&2
+             popd > /dev/null # Ensure we popd even on timeout
+             return 0         # Exit the function gracefully
+        fi
+        echo "Update check complete."
         
         # Compare local and remote
         local local_head=$(git rev-parse HEAD)
