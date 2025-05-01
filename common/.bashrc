@@ -118,40 +118,41 @@ check_dotfiles_update() {
         local remote_head=$(git rev-parse @{u})
         
         if [ "$local_head" != "$remote_head" ]; then
-            # Check if we're ahead or behind
+            # Check if local is ahead
             if git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
+                # Local is ahead, just notify
                 echo -e "\n\033[1;33mYour dotfiles are out of sync with the repo (you're ahead)\033[0m"
             else
+                # Local is behind (or diverged), notify and prompt
                 echo -e "\n\033[1;33mYour dotfiles are out of date!\033[0m"
-            fi
-            
-            echo "Would you like to update and restow your dotfiles? (y/n)"
-            read -r response
-            if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-                echo "Updating dotfiles..."
-                git pull
-                echo "Restowing common files..."
-                stow -t ~ common
-                
-                echo "Restow profile? (personal/work) [Enter to skip]"
-                read -r profile
-                if [[ "$profile" =~ ^(personal|work)$ ]]; then
-                    # Unstow current profile if it exists
-                    if [ -d "personal" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/personal/" ]; then
-                        echo "Unstowing personal profile..."
-                        stow -D -t ~ personal
-                    elif [ -d "work" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/work/" ]; then
-                        echo "Unstowing work profile..."
-                        stow -D -t ~ work
-                    fi
+                echo "Would you like to update and restow your dotfiles? (y/n)"
+                read -r response
+                if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                    echo "Updating dotfiles..."
+                    git pull
+                    echo "Restowing common files..."
+                    stow -t ~ common
                     
-                    echo "Restowing $profile files..."
-                    stow -t ~ "$profile"
-                    echo "Dotfiles updated successfully!"
-                elif [[ -z "$profile" || "$profile" == "skip" ]]; then
-                    echo "Skipping profile restow. Only common files were updated."
-                else
-                    echo "Invalid profile. Only common files were restowed."
+                    echo "Restow profile? (personal/work) [Enter to skip]"
+                    read -r profile
+                    if [[ "$profile" =~ ^(personal|work)$ ]]; then
+                        # Unstow current profile if it exists
+                        if [ -d "personal" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/personal/" ]; then
+                            echo "Unstowing personal profile..."
+                            stow -D -t ~ personal
+                        elif [ -d "work" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/work/" ]; then
+                            echo "Unstowing work profile..."
+                            stow -D -t ~ work
+                        fi
+                        
+                        echo "Restowing $profile files..."
+                        stow -t ~ "$profile"
+                        echo "Dotfiles updated successfully!"
+                    elif [[ -z "$profile" || "$profile" == "skip" ]]; then
+                        echo "Skipping profile restow. Only common files were updated."
+                    else
+                        echo "Invalid profile. Only common files were restowed."
+                    fi
                 fi
             fi
         fi
