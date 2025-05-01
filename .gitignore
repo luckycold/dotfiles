@@ -1,0 +1,2 @@
+# Ignore systemd enablement directories managed by systemctl
+/common/.config/systemd/user/*.wants/ 
