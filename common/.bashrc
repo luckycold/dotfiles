@@ -140,6 +140,15 @@ check_dotfiles_update() {
                 echo "Restow profile? (personal/work) [Enter to skip]"
                 read -r profile
                 if [[ "$profile" =~ ^(personal|work)$ ]]; then
+                    # Unstow current profile if it exists
+                    if [ -d "personal" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/personal/" ]; then
+                        echo "Unstowing personal profile..."
+                        stow -D -t ~ personal
+                    elif [ -d "work" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/work/" ]; then
+                        echo "Unstowing work profile..."
+                        stow -D -t ~ work
+                    fi
+                    
                     echo "Restowing $profile files..."
                     stow -t ~ "$profile"
                     echo "Dotfiles updated successfully!"
