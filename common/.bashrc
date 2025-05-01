@@ -147,3 +147,4 @@ check_dotfiles_update() {
 # Run the update check
 check_dotfiles_update
 
+#Unneeded comment
