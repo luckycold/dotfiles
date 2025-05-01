@@ -43,25 +43,6 @@ else
     PS1='${chroot_prompt}\u@\h:\w\$ '
 fi
 
-# Add SSH agent indicator to prompt
-if [ "$color_prompt" = yes ]; then
-    # Only show checkmark on first launch
-    if [ -z "$SSH_AGENT_FIRST_LAUNCH" ]; then
-        PS1='${chroot_prompt}${SSH_AGENT_ACTIVE:+\[\033[01;32m\]✓\[\033[00m\] }\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-        export SSH_AGENT_FIRST_LAUNCH=1
-    else
-        PS1='${chroot_prompt}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-    fi
-else
-    # Only show checkmark on first launch
-    if [ -z "$SSH_AGENT_FIRST_LAUNCH" ]; then
-        PS1='${chroot_prompt}${SSH_AGENT_ACTIVE:+✓ }\u@\h:\w\$ '
-        export SSH_AGENT_FIRST_LAUNCH=1
-    else
-        PS1='${chroot_prompt}\u@\h:\w\$ '
-    fi
-fi
-
 # Window title for X terminals
 case "$TERM" in
 xterm*|rxvt*)
@@ -101,6 +82,12 @@ if ! shopt -oq posix; then
   fi
 fi
 
+# Display SSH Agent MOTD once
+if [ -z "$_ssh_motd_shown" ] && [ "$SSH_AGENT_ACTIVE" = "1" ]; then
+    echo -e "SSH Agent ✓"
+    _ssh_motd_shown=1 # Flag for this shell instance
+fi
+
 # Check for dotfiles updates
 check_dotfiles_update() {
     # Only check if we're in an interactive shell
@@ -127,8 +114,17 @@ check_dotfiles_update() {
         GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet 2>/dev/null
         
         # Compare local and remote
-        if [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u})" ]; then
-            echo -e "\n\033[1;33mYour dotfiles are out of date!\033[0m"
+        local local_head=$(git rev-parse HEAD)
+        local remote_head=$(git rev-parse @{u})
+        
+        if [ "$local_head" != "$remote_head" ]; then
+            # Check if we're ahead or behind
+            if git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
+                echo -e "\n\033[1;33mYour dotfiles are out of sync with the repo (you're ahead)\033[0m"
+            else
+                echo -e "\n\033[1;33mYour dotfiles are out of date!\033[0m"
+            fi
+            
             echo "Would you like to update and restow your dotfiles? (y/n)"
             read -r response
             if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
