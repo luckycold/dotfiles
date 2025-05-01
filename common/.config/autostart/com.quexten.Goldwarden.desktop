@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Goldwarden
+Comment=Password Manager with SSH Agent
+Exec=flatpak run --command=daemonize com.quexten.Goldwarden
+Terminal=false
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true 

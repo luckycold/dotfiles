@@ -1,0 +1,12 @@
+[Unit]
+Description=Goldwarden Password Manager
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=flatpak run --command=goldwarden com.quexten.Goldwarden daemonize
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target 
