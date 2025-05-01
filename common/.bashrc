@@ -88,6 +88,83 @@ if [ -z "$_ssh_motd_shown" ] && [ "$SSH_AGENT_ACTIVE" = "1" ]; then
     _ssh_motd_shown=1 # Flag for this shell instance
 fi
 
+# --- Dotfiles Management Functions ---
+
+# Internal function to switch stow profiles
+_switch_dotfiles_profile() {
+    local target_profile="$1"
+    local dotfiles_dir="$HOME/dotfiles" # Assume fixed location
+
+    # Check if dotfiles directory exists
+    if [ ! -d "$dotfiles_dir" ]; then
+        echo "Error: Dotfiles directory '$dotfiles_dir' not found." >&2
+        return 1
+    fi
+
+    echo "Switching profile in $dotfiles_dir..."
+    pushd "$dotfiles_dir" > /dev/null || return 1
+
+    # Unstow potential existing profiles (ignore errors)
+    echo "(Attempting to unstow existing profiles...)"
+    stow -D -t ~ personal >/dev/null 2>&1
+    stow -D -t ~ work >/dev/null 2>&1
+
+    # Stow the target profile or ensure common is stowed
+    if [[ "$target_profile" =~ ^(personal|work)$ ]]; then
+        if [ -d "$target_profile" ]; then
+            echo "Stowing '$target_profile' profile..."
+            if stow -t ~ "$target_profile"; then
+                echo "Profile '$target_profile' stowed successfully."
+            else
+                echo "Error stowing profile '$target_profile'." >&2
+            fi
+        else
+             echo "Error: Profile directory '$target_profile' not found." >&2
+        fi
+    elif [[ -z "$target_profile" || "$target_profile" == "skip" || "$target_profile" == "none" ]]; then
+        echo "Ensuring only 'common' profile is stowed..."
+        if [ -d "common" ]; then
+            if stow -t ~ common; then
+                 echo "'common' profile stowed successfully."
+            else
+                 echo "Error stowing 'common' profile." >&2
+            fi
+        else
+            echo "Error: Profile directory 'common' not found." >&2
+        fi
+    else
+        echo "Warning: Invalid target profile specified: '$target_profile'. No profile stowed." >&2
+    fi
+
+    popd > /dev/null
+    echo "Profile switch complete."
+}
+
+# Function to manually switch profiles
+stow-profile() {
+    local selected_profile
+    local confirmation
+    echo "Which profile to stow? (personal/work/none) [Enter for none]"
+    read -r selected_profile
+
+    # Map empty input to "none"
+    if [[ -z "$selected_profile" ]]; then
+        selected_profile="none"
+    fi
+
+    if [[ "$selected_profile" == "none" ]]; then
+        echo "This will ensure only the 'common' profile is active."
+        echo "Continue? (y/n)"
+        read -r confirmation
+        if [[ ! "$confirmation" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+            echo "Aborting profile switch."
+            return 0
+        fi
+    fi
+
+    _switch_dotfiles_profile "$selected_profile"
+}
+
 # Check for dotfiles updates
 check_dotfiles_update() {
     # Only check if we're in an interactive shell
@@ -96,18 +173,11 @@ check_dotfiles_update() {
           *) return;;
     esac
 
-    # Get the directory where this .bashrc is located
-    local dotfiles_dir
-    if [ -L "$HOME/.bashrc" ]; then
-        dotfiles_dir="$(dirname "$(readlink -f "$HOME/.bashrc")")"
-        dotfiles_dir="$(dirname "$dotfiles_dir")"  # Go up one level to get to dotfiles root
-    else
-        return  # Not a symlink, probably not managed by stow
-    fi
+    local dotfiles_dir="$HOME/dotfiles" # Assume fixed location
 
-    # Check if we're in a git repository
+    # Check if dotfiles directory exists and contains .git
     if [ -d "$dotfiles_dir/.git" ]; then
-        # Change to the dotfiles directory
+        # Change to the dotfiles directory (temporarily, _switch_dotfiles_profile does its own pushd/popd)
         pushd "$dotfiles_dir" > /dev/null
         
         # Check for updates using HTTPS (no SSH agent interaction)
@@ -115,9 +185,10 @@ check_dotfiles_update() {
         
         # Compare local and remote
         local local_head=$(git rev-parse HEAD)
-        local remote_head=$(git rev-parse @{u})
+        local remote_head=$(git rev-parse @{u} 2>/dev/null) # Check remote exists
         
-        if [ "$local_head" != "$remote_head" ]; then
+        # Only proceed if remote tracking branch exists
+        if [ -n "$remote_head" ] && [ "$local_head" != "$remote_head" ]; then
             # Check if local is ahead
             if git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
                 # Local is ahead, just notify
@@ -135,24 +206,8 @@ check_dotfiles_update() {
                     
                     echo "Restow profile? (personal/work) [Enter to skip]"
                     read -r profile
-                    if [[ "$profile" =~ ^(personal|work)$ ]]; then
-                        # Unstow current profile if it exists
-                        if [ -d "personal" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/personal/" ]; then
-                            echo "Unstowing personal profile..."
-                            stow -D -t ~ personal
-                        elif [ -d "work" ] && [ -L "$HOME/.bashrc" ] && [ "$(readlink -f "$HOME/.bashrc")" =~ "/work/" ]; then
-                            echo "Unstowing work profile..."
-                            stow -D -t ~ work
-                        fi
-                        
-                        echo "Restowing $profile files..."
-                        stow -t ~ "$profile"
-                        echo "Dotfiles updated successfully!"
-                    elif [[ -z "$profile" || "$profile" == "skip" ]]; then
-                        echo "Skipping profile restow. Only common files were updated."
-                    else
-                        echo "Invalid profile. Only common files were restowed."
-                    fi
+                    # Call the refactored function
+                    _switch_dotfiles_profile "$profile"
                 fi
             fi
         fi
