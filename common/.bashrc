@@ -183,13 +183,20 @@ check_dotfiles_update() {
         
         # Check for updates using HTTPS (no SSH agent interaction) with timeout
         # Use timeout command to avoid hangs when offline
-        echo "Checking for dotfiles updates..." # Add feedback
-        if ! timeout 5s GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet 2>/dev/null; then
-             echo "Update check timed out (likely offline). Skipping." >&2
-             popd > /dev/null # Ensure we popd even on timeout
+        local exit_code=0
+        # Use env to pass variables to the command run by timeout
+        if ! timeout 5s env GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet; then
+             exit_code=$?
+             # Exit code 124 usually indicates timeout
+             if [ "$exit_code" -eq 124 ]; then
+                 echo "Update check timed out (likely offline). Skipping." >&2
+             else
+                 # Restore message for other errors
+                 echo "Update check failed (Exit Code: $exit_code). Skipping." >&2
+             fi
+             popd > /dev/null # Ensure we popd even on failure/timeout
              return 0         # Exit the function gracefully
         fi
-        echo "Update check complete."
         
         # Compare local and remote
         local local_head=$(git rev-parse HEAD)
