@@ -1,12 +1,10 @@
 [Unit]
-Description=Goldwarden Password Manager
+Description="Goldwarden daemon"
 After=graphical-session.target
 
 [Service]
-Type=simple
-ExecStart=flatpak run --command=goldwarden com.quexten.Goldwarden daemonize
-Restart=always
-RestartSec=10
+# Run native if available, otherwise fallback to flatpak
+ExecStart=/bin/sh -c 'if [ -x /usr/bin/goldwarden ]; then exec /usr/bin/goldwarden daemonize; else exec flatpak run --command=goldwarden com.quexten.Goldwarden daemonize; fi'
 
 [Install]
-WantedBy=default.target 
+WantedBy=graphical-session.target
