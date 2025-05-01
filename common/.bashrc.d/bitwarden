@@ -3,7 +3,6 @@ goldwarden_ssh_sock="$HOME/.var/app/com.quexten.Goldwarden/data/ssh-auth-sock"
 goldwarden_sock="$HOME/.var/app/com.quexten.Goldwarden/data/goldwarden.sock"
 
 if [ -S "$goldwarden_ssh_sock" ] && [ -S "$goldwarden_sock" ]; then
-    echo "Setting up Goldwarden SSH agent"
     export SSH_AUTH_SOCK="$goldwarden_ssh_sock"
     export GOLDWARDEN_SOCKET_PATH="$goldwarden_sock"
     # Verify the agent is actually running
@@ -13,7 +12,6 @@ if [ -S "$goldwarden_ssh_sock" ] && [ -S "$goldwarden_sock" ]; then
         unset SSH_AGENT_ACTIVE
     fi
 elif [ -S "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock" ]; then
-    echo "Setting up Bitwarden SSH agent"
     export SSH_AUTH_SOCK="$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
     # Verify the agent is actually running
     if pgrep -f "com.bitwarden.desktop" >/dev/null; then
