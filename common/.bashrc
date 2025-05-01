@@ -1,4 +1,4 @@
-# ~/.bashrc: executed by bash for non-login shells (universal Fedora/Pop_OS version)
+# General Terminal Setup
 
 # Source global definitions (cross-distro compatible)
 [ -f /etc/bashrc ] && . /etc/bashrc          # Fedora/RHEL
@@ -89,9 +89,61 @@ if ! shopt -oq posix; then
   fi
 fi
 
-if command -v nvim >/dev/null 2>&1; then
-    export EDITOR="nvim"
-    export VISUAL="nvim"
-fi
+# Check for dotfiles updates
+check_dotfiles_update() {
+    # Only check if we're in an interactive shell
+    case $- in
+        *i*) ;;
+          *) return;;
+    esac
 
+    # Get the directory where this .bashrc is located
+    local dotfiles_dir
+    if [ -L "$HOME/.bashrc" ]; then
+        dotfiles_dir="$(dirname "$(readlink -f "$HOME/.bashrc")")"
+        dotfiles_dir="$(dirname "$dotfiles_dir")"  # Go up one level to get to dotfiles root
+    else
+        return  # Not a symlink, probably not managed by stow
+    fi
+
+    # Check if we're in a git repository
+    if [ -d "$dotfiles_dir/.git" ]; then
+        # Change to the dotfiles directory
+        pushd "$dotfiles_dir" > /dev/null
+        
+        # Check for updates
+        git fetch --quiet
+        
+        # Compare local and remote
+        if [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u})" ]; then
+            echo -e "\n\033[1;33mYour dotfiles are out of date!\033[0m"
+            echo "Would you like to update and restow your dotfiles? (y/n)"
+            read -r response
+            if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                echo "Updating dotfiles..."
+                git pull
+                echo "Restowing common files..."
+                stow -t ~ common
+                
+                echo "Restow profile? (personal/work) [Enter to skip]"
+                read -r profile
+                if [[ "$profile" =~ ^(personal|work)$ ]]; then
+                    echo "Restowing $profile files..."
+                    stow -t ~ "$profile"
+                    echo "Dotfiles updated successfully!"
+                elif [[ -z "$profile" || "$profile" == "skip" ]]; then
+                    echo "Skipping profile restow. Only common files were updated."
+                else
+                    echo "Invalid profile. Only common files were restowed."
+                fi
+            fi
+        fi
+        
+        # Return to original directory
+        popd > /dev/null
+    fi
+}
+
+# Run the update check
+check_dotfiles_update
 
