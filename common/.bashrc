@@ -45,9 +45,21 @@ fi
 
 # Add SSH agent indicator to prompt
 if [ "$color_prompt" = yes ]; then
-    PS1='${chroot_prompt}${SSH_AGENT_ACTIVE:+\[\033[01;32m\]✓\[\033[00m\] }\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    # Only show checkmark on first launch
+    if [ -z "$SSH_AGENT_FIRST_LAUNCH" ]; then
+        PS1='${chroot_prompt}${SSH_AGENT_ACTIVE:+\[\033[01;32m\]✓\[\033[00m\] }\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+        export SSH_AGENT_FIRST_LAUNCH=1
+    else
+        PS1='${chroot_prompt}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    fi
 else
-    PS1='${chroot_prompt}${SSH_AGENT_ACTIVE:+✓ }\u@\h:\w\$ '
+    # Only show checkmark on first launch
+    if [ -z "$SSH_AGENT_FIRST_LAUNCH" ]; then
+        PS1='${chroot_prompt}${SSH_AGENT_ACTIVE:+✓ }\u@\h:\w\$ '
+        export SSH_AGENT_FIRST_LAUNCH=1
+    else
+        PS1='${chroot_prompt}\u@\h:\w\$ '
+    fi
 fi
 
 # Window title for X terminals
@@ -111,8 +123,8 @@ check_dotfiles_update() {
         # Change to the dotfiles directory
         pushd "$dotfiles_dir" > /dev/null
         
-        # Check for updates
-        git fetch --quiet
+        # Check for updates using HTTPS (no SSH agent interaction)
+        GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet 2>/dev/null
         
         # Compare local and remote
         if [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u})" ]; then
@@ -146,5 +158,3 @@ check_dotfiles_update() {
 
 # Run the update check
 check_dotfiles_update
-
-#Unneeded comment
