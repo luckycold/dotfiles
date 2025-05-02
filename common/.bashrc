@@ -234,3 +234,5 @@ check_dotfiles_update() {
 
 # Run the update check
 check_dotfiles_update
+# Generated for envman. Do not edit.
+[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"

@@ -1,0 +1,3 @@
+if [ -d "$HOME/.local/opt/go/bin" ]; then
+    export PATH="$PATH:$HOME/.local/opt/go/bin"
+fi
