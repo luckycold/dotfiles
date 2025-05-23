@@ -8,6 +8,12 @@
 if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
     PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 fi
+
+# Add ~/Applications to PATH if it exists
+if [ -d "$HOME/Applications" ] && ! [[ "$PATH" =~ "$HOME/Applications:" ]]; then
+    PATH="$HOME/Applications:$PATH"
+fi
+
 export PATH
 
 # Only run in interactive shells
