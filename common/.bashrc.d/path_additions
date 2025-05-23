@@ -1,3 +1,9 @@
 if [ -d "$HOME/.local/opt/go/bin" ]; then
-    export PATH="$PATH:$HOME/.local/opt/go/bin"
+    PATH="$PATH:$HOME/.local/opt/go/bin"
 fi
+
+if [ -d "$HOME/Applications" ]; then
+    PATH="$PATH:$HOME/Applications"
+fi
+
+export PATH
