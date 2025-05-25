@@ -1,0 +1,9 @@
+{
+    "window.commandCenter": true,
+    "workbench.colorTheme": "Cursor Dark High Contrast",
+    "explorer.confirmDelete": false,
+    "git.autofetch": true,
+    "vscode-office.editorTheme": "Auto",
+    "vscode-office.openOutline": false,
+    "zigBuilder.path": "zig"
+}
