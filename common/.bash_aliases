@@ -11,3 +11,6 @@ fi
 if flatpak list | grep -q "com.quexten.Goldwarden"; then
     alias goldwarden="flatpak run --command=goldwarden com.quexten.Goldwarden"
 fi
+if kubectl version | grep -qi "Client"; then
+    alias k="kubectl"
+fi

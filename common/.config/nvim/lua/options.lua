@@ -61,3 +61,4 @@ vim.opt.cursorline = false
 vim.opt.scrolloff = 10
 
 vim.g.netrw_localcopydircmd = 'cp -r'
+vim.g.netrw_keepdir = 0
