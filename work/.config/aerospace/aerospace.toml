@@ -43,6 +43,14 @@ automatically-unhide-macos-hidden-apps = false
 [key-mapping]
     preset = 'qwerty'
 
+
+[workspace-to-monitor-force-assignment]
+6 = 1
+7 = 1
+8 = 1
+9 = 1
+10 = 1
+
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
 # Possible values:
 # - Constant:     gaps.outer.top = 8
@@ -93,6 +101,7 @@ automatically-unhide-macos-hidden-apps = false
     # '''
 
     alt-w = 'close'
+    alt-m = 'fullscreen'
 
     alt-space = 'exec-and-forget open -n -a Ghostty'
 
