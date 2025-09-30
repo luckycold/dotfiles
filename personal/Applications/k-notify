@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import sys
+import time
+import shutil # Used to check for command existence
+
+# --- Configuration ---
+# 1800 seconds = 30 minutes
+DEFAULT_TIMEOUT_SECONDS = 1800
+DEFAULT_INTERVAL_SECONDS = 5
+
+def send_notification(title, message):
+    """
+    Sends a desktop notification on macOS or Linux.
+    """
+    print(f"📢 Sending notification: {title}")
+    try:
+        if sys.platform == "darwin": # macOS
+            if shutil.which("osascript"):
+                # 🔧 UPDATED: Changed from 'display notification' to 'display alert'.
+                command = ['osascript', '-e', f'display alert "{title}" message "{message}"']
+                subprocess.run(command, check=True, capture_output=True)
+            else:
+                print("   ⚠️ 'osascript' command not found, cannot send notification.")
+        elif sys.platform.startswith("linux"): # Linux
+            if shutil.which("notify-send"):
+                command = ['notify-send', title, message]
+                subprocess.run(command, check=True, capture_output=True)
+            else:
+                print("   ⚠️ 'notify-send' command not found. On Debian/Ubuntu, install with 'sudo apt-get install libnotify-bin'.")
+        else:
+            print(f"   ⚠️ Notifications not supported on this OS ({sys.platform}).")
+    except Exception as e:
+        print(f"   Failed to send notification: {e}", file=sys.stderr)
+
+
+def parse_condition(condition_str):
+    """
+    Parses a condition string. Intelligently adds 'jsonpath=' prefix
+    and correctly splits the path from the expected value.
+    """
+    processed_str = condition_str.strip()
+    if processed_str.startswith('{') and '=' in processed_str:
+        processed_str = f"jsonpath={processed_str}"
+
+    if not processed_str.startswith('jsonpath='):
+        return {'type': 'standard', 'condition': condition_str}
+
+    try:
+        path_and_value = processed_str[len("jsonpath="):]
+        closing_brace_index = path_and_value.rfind('}')
+        if closing_brace_index == -1 or path_and_value[closing_brace_index+1] != '=':
+            raise ValueError("JSONPath should be in format {...}=<value>")
+
+        jsonpath_expression = path_and_value[:closing_brace_index+1]
+        expected_value = path_and_value[closing_brace_index+2:]
+
+        if not jsonpath_expression or expected_value == '':
+             raise ValueError("JSONPath expression or value cannot be empty")
+
+        return {'type': 'jsonpath', 'path': jsonpath_expression, 'value': expected_value}
+    except (ValueError, IndexError) as e:
+        print(f"\n❌ Error: Invalid JSONPath condition format: '{condition_str}' ({e})")
+        sys.exit(1)
+
+def check_jsonpath_condition(resource_type, resource_name, condition):
+    command = f"kubectl get {resource_type} {resource_name} -o jsonpath='{condition['path']}'"
+    try:
+        proc = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
+        actual_value = proc.stdout.strip().strip("'\"")
+        return actual_value == condition['value']
+    except subprocess.CalledProcessError:
+        return False
+    return False
+
+def simple_wait(resource_type, resource_names, success_condition, timeout):
+    full_resource_list = [f"{resource_type}/{name}" for name in resource_names]
+    print(f"⏳ Starting simple wait for {len(full_resource_list)} resource(s)...")
+    print(f"   Resource(s): {', '.join(full_resource_list)}")
+    print(f"   Success Condition: --for={success_condition}")
+    print(f"   Timeout: {timeout}s")
+    command = ["kubectl", "wait", f"--for={success_condition}", f"--timeout={timeout}s"] + full_resource_list
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"\n✅ Success! All resources met the condition '{success_condition}'.")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"\n❌ Failure or Timeout!")
+        print(f"   Error from kubectl: {e.stderr.strip()}")
+        return False
+
+def advanced_wait(resource_type, resource_names, success_cond_str, fail_cond_str, timeout, interval):
+    success_condition = parse_condition(success_cond_str)
+    fail_condition = parse_condition(fail_cond_str) if fail_cond_str else None
+
+    print("🚀 Starting advanced wait with custom polling...")
+    print(f"   Watching {len(resource_names)} resource(s): {', '.join(resource_names)}")
+    print(f"   Success Condition: {success_cond_str}")
+    if fail_condition:
+        print(f"   Failure Condition: {fail_cond_str}")
+    print(f"   Timeout: {timeout}s, Interval: {interval}s")
+
+    start_time = time.time()
+    succeeded_resources = set()
+
+    while time.time() - start_time < timeout:
+        remaining_resources = [r for r in resource_names if r not in succeeded_resources]
+
+        for name in remaining_resources:
+            if fail_condition and check_jsonpath_condition(resource_type, name, fail_condition):
+                print(f"\n❌ Failure! Resource '{resource_type}/{name}' met the failure condition.")
+                return False
+
+            if check_jsonpath_condition(resource_type, name, success_condition):
+                print(f"\n   👍 Success condition met for '{resource_type}/{name}'.")
+                succeeded_resources.add(name)
+
+        if succeeded_resources == set(resource_names):
+            print(f"\n✅ Success! All resources met their success conditions.")
+            return True
+
+        elapsed = int(time.time() - start_time)
+        status_line = f"   [{elapsed}s/{timeout}s] Waiting... ({len(succeeded_resources)}/{len(resource_names)} succeeded)"
+        sys.stdout.write(status_line + '\r')
+        sys.stdout.flush()
+        time.sleep(interval)
+
+    print(f"\n❌ Failure! Timed out after {timeout} seconds.")
+    print(f"   Succeeded resources: {list(succeeded_resources) or 'None'}")
+    print(f"   Still waiting for: {[r for r in resource_names if r not in succeeded_resources]}")
+    return False
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="A notifier for Kubernetes resources using 'kubectl wait'.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument("resource_type", help="The type of the Kubernetes resource (e.g., pod, baremetalnode).")
+    parser.add_argument("resource_names", nargs='*', help="The names of the resources to watch.")
+    parser.add_argument("-s", "--on-success", required=True, help="The condition for success.\nStandard: 'delete', 'condition=Available'\nJSONPath: '{.status.phase}=Succeeded'")
+    parser.add_argument("-f", "--on-fail", help="The condition for immediate failure (JSONPath format only).\nExample: '{.status.phase}=Failed'")
+    parser.add_argument("-t", "--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS, help=f"Timeout in seconds. Default: {DEFAULT_TIMEOUT_SECONDS}s")
+    parser.add_argument("-i", "--interval", type=int, default=DEFAULT_INTERVAL_SECONDS, help=f"Polling interval in seconds. Default: {DEFAULT_INTERVAL_SECONDS}s")
+    parser.add_argument("--notify", default=True, action="store_false", help="Send a desktop notification on success or failure.")
+
+    args = parser.parse_args()
+
+    if not args.resource_names:
+        print("❌ Error: At least one resource name is required.")
+        sys.exit(1)
+
+    success_condition_info = parse_condition(args.on_success)
+
+    # Determine which wait mode to use
+    if args.on_fail or success_condition_info['type'] == 'jsonpath':
+        success = advanced_wait(args.resource_type, args.resource_names, args.on_success, args.on_fail, args.timeout, args.interval)
+    else:
+        success = simple_wait(args.resource_type, args.resource_names, args.on_success, args.timeout)
+
+    # Send notification if requested
+    if args.notify:
+        resource_str = f"{len(args.resource_names)} {args.resource_type}(s)"
+        if success:
+            title = f"✅ Kubernetes Wait Succeeded"
+            message = f"{resource_str} met the condition. \n With condition: \n {args.on_success}"
+        else:
+            title = f"❌ Kubernetes Wait Failed"
+            message = f"{resource_str} failed or timed out."
+        send_notification(title, message)
+
+    sys.exit(0 if success else 1)
+
+if __name__ == "__main__":
+    main()
