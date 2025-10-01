@@ -8,8 +8,14 @@ interactive_update_prompt() {
 
     # macOS using AppleScript
     if command -v osascript &>/dev/null; then
-        # First dialog: Ask if they want to update
+        # Try to show dialog, check if it actually works
         response=$(osascript -e 'display dialog "Your dotfiles are out of date! Would you like to update now?" buttons {"No", "Yes"} default button "Yes" with title "Dotfiles Update Available"' 2>/dev/null | cut -d: -f2)
+
+        # Check if osascript actually ran successfully
+        if [ -z "$response" ]; then
+            # Dialog failed to show
+            return 2
+        fi
 
         if [[ "$response" == "Yes" ]]; then
             # Perform the update
@@ -143,10 +149,6 @@ background_dotfiles_check() {
 
     # Check if we should run the check
     if ! should_check_for_updates; then
-        # Still show message if we know there's an update pending from parent shell
-        if [ -n "$DOTFILES_UPDATE_PENDING" ]; then
-            show_terminal_update_message
-        fi
         return 0
     fi
 
@@ -204,10 +206,11 @@ background_dotfiles_check() {
                         # Success - update was performed
                         unset DOTFILES_UPDATE_PENDING
                     elif [ $prompt_result -eq 2 ]; then
-                        # Notification sent but no interaction, or no GUI - show terminal message
+                        # Notification completely failed (no GUI available or error)
+                        # Show terminal message as fallback
                         show_terminal_update_message
                     fi
-                    # If result is 1, user declined via GUI, no terminal message needed
+                    # If result is 1, user declined via GUI - notification worked, user chose not to update
 
                 elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
                     # Local is ahead - just notify once per session
@@ -399,11 +402,5 @@ if [ -z "$_DOTFILES_CHECK_STARTED" ]; then
     background_dotfiles_check
 fi
 
-# Show message if update is pending from parent shell
-if [ -n "$DOTFILES_UPDATE_PENDING" ]; then
-    # Only show once per shell
-    if [ -z "$_DOTFILES_UPDATE_SHOWN" ]; then
-        export _DOTFILES_UPDATE_SHOWN=1
-        show_terminal_update_message
-    fi
-fi
+# Note: DOTFILES_UPDATE_PENDING is only used as a marker for child shells
+# Messages are only shown if notifications fail, not on every shell open
