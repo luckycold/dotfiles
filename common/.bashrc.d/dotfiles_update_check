@@ -56,7 +56,8 @@ interactive_update_prompt() {
         # Check if notify-send supports actions (usually requires a notification daemon like dunst or mako)
         if notify-send --help 2>&1 | grep -q -- '--action'; then
             # Send notification with Yes/No actions
-            action=$(notify-send -u critical --wait \
+            action=$(notify-send -u critical \
+                --wait \
                 --action="yes=Yes" \
                 --action="no=No" \
                 "Dotfiles Update Available" \
@@ -69,7 +70,8 @@ interactive_update_prompt() {
                 stow -t ~ common
 
                 # Ask about profile with another notification
-                profile_action=$(notify-send --wait \
+                profile_action=$(notify-send\
+                    --wait \
                     --action="none=None" \
                     --action="personal=Personal" \
                     --action="work=Work" \
