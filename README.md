@@ -50,9 +50,3 @@ The above is a bit of a departure from the instructional video for GNU stow. It'
 This is a useful video if you get lost:
 
 https://www.youtube.com/watch?v=y6XCebnB9gs
-
-
-
-
-
-This is a temp arbitrary text.
