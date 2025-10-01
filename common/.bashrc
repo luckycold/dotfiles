@@ -173,3 +173,6 @@ stow-profile() {
 # which runs in the background and uses notifications instead of blocking terminal startup
 # Generated for envman. Do not edit.
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
+
+export WARP_ENABLE_WAYLAND=1
+export WGPU_BACKEND=gl
