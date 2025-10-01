@@ -169,73 +169,7 @@ stow-profile() {
   _switch_dotfiles_profile "$selected_profile"
 }
 
-# Check for dotfiles updates
-check_dotfiles_update() {
-  # Only check if we're in an interactive shell
-  case $- in
-  *i*) ;;
-  *) return ;;
-  esac
-
-  local dotfiles_dir="$HOME/dotfiles" # Assume fixed location
-
-  # Check if dotfiles directory exists and contains .git
-  if [ -d "$dotfiles_dir/.git" ]; then
-    # Change to the dotfiles directory (temporarily, _switch_dotfiles_profile does its own pushd/popd)
-    pushd "$dotfiles_dir" >/dev/null
-
-    # Check for updates using HTTPS (no SSH agent interaction) with timeout
-    # Use timeout command to avoid hangs when offline
-    local exit_code=0
-    # Use env to pass variables to the command run by timeout
-    if ! timeout 5s env GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet; then
-      exit_code=$?
-      # Exit code 124 usually indicates timeout
-      if [ "$exit_code" -eq 124 ]; then
-        echo "Update check timed out (likely offline). Skipping." >&2
-      else
-        # Restore message for other errors
-        echo "Update check failed (Exit Code: $exit_code). Skipping." >&2
-      fi
-      popd >/dev/null # Ensure we popd even on failure/timeout
-      return 0        # Exit the function gracefully
-    fi
-
-    # Compare local and remote
-    local local_head=$(git rev-parse HEAD)
-    local remote_head=$(git rev-parse @{u} 2>/dev/null) # Check remote exists
-
-    # Only proceed if remote tracking branch exists
-    if [ -n "$remote_head" ] && [ "$local_head" != "$remote_head" ]; then
-      # Check if local is ahead
-      if git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
-        # Local is ahead, just notify
-        echo -e "\n\033[1;33mYour dotfiles are out of sync with the repo (you're ahead)\033[0m"
-      else
-        # Local is behind (or diverged), notify and prompt
-        echo -e "\n\033[1;33mYour dotfiles are out of date!\033[0m"
-        echo "Would you like to update and restow your dotfiles? (y/n)"
-        read -r response
-        if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-          echo "Updating dotfiles..."
-          git pull
-          echo "Restowing common files..."
-          stow -t ~ common
-
-          echo "Restow profile? (personal/work) [Enter to skip]"
-          read -r profile
-          # Call the refactored function
-          _switch_dotfiles_profile "$profile"
-        fi
-      fi
-    fi
-
-    # Return to original directory
-    popd >/dev/null
-  fi
-}
-
-# Run the update check
-check_dotfiles_update
+# The dotfiles update check has been moved to .bashrc.d/dotfiles_update_check
+# which runs in the background and uses notifications instead of blocking terminal startup
 # Generated for envman. Do not edit.
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
