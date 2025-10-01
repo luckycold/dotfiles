@@ -44,6 +44,9 @@ interactive_update_prompt() {
             # Reload the current shell
             source ~/.bashrc
 
+            # Let user know they need to press enter to get prompt back
+            echo -e "\033[0;32m✓ Dotfiles updated and configuration reloaded. Press Enter to continue.\033[0m"
+
             return 0
         fi
         return 1
