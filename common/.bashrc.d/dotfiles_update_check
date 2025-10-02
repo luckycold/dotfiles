@@ -2,74 +2,8 @@
 # Dotfiles background update checker with interactive notification support
 # Uses only in-memory state management (no file writes)
 
-# Foreground update execution (called when user accepts update)
-perform_foreground_update() {
-    local dotfiles_dir="$HOME/dotfiles"
-    local target_tty="$1"  # Optional: specific TTY to use
-
-    echo ""
-    echo -e "\033[1;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "\033[1;32m    Updating Dotfiles Repository\033[0m"
-    echo -e "\033[1;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo ""
-
-    cd "$dotfiles_dir" || {
-        echo -e "\033[0;31mError: Cannot access dotfiles directory\033[0m"
-        return 1
-    }
-
-    echo "Pulling latest changes..."
-    if ! git pull; then
-        echo -e "\033[0;31mError: git pull failed\033[0m"
-        return 1
-    fi
-
-    echo ""
-    echo "Restowing common files..."
-    if ! stow -t ~ common; then
-        echo -e "\033[0;31mError: Failed to stow common files\033[0m"
-        return 1
-    fi
-
-    echo ""
-    echo "Which profile would you like to stow?"
-    echo "  1) None (common only)"
-    echo "  2) Personal"
-    echo "  3) Work"
-    echo -n "Enter choice [1-3]: "
-
-    # Read from specific TTY if provided, otherwise use default stdin
-    local choice
-    if [ -n "$target_tty" ] && [ -e "$target_tty" ]; then
-        read -r choice <"$target_tty"
-    else
-        read -r choice
-    fi
-
-    case "$choice" in
-        2)
-            _switch_dotfiles_profile "personal"
-            ;;
-        3)
-            _switch_dotfiles_profile "work"
-            ;;
-        *)
-            echo "Keeping common-only configuration."
-            ;;
-    esac
-
-    echo ""
-    echo -e "\033[0;32m✓ Update complete! Reloading configuration...\033[0m"
-    source ~/.bashrc
-    echo -e "\033[0;32m✓ Configuration reloaded.\033[0m"
-    echo ""
-
-    return 0
-}
-
-# Function to create an interactive update dialog with TTY support
+# Function to create an interactive update dialog with profile selection
 interactive_update_prompt() {
-    local target_tty="$1"  # The TTY to use for input
     local dotfiles_dir="$HOME/dotfiles"
 
     # macOS using AppleScript
@@ -84,9 +18,36 @@ interactive_update_prompt() {
         fi
 
         if [[ "$response" == "Yes" ]]; then
-            # Perform the update in foreground with TTY
-            perform_foreground_update "$target_tty"
-            return $?
+            # Perform the update
+            cd "$dotfiles_dir" || return 1
+            git pull
+            stow -t ~ common
+
+            # Second dialog: Ask about profile
+            profile_response=$(osascript -e 'display dialog "Which profile would you like to stow?" buttons {"None", "Personal", "Work"} default button "None" with title "Select Dotfiles Profile"' 2>/dev/null | cut -d: -f2)
+
+            case "$profile_response" in
+                "Personal")
+                    _switch_dotfiles_profile "personal"
+                    ;;
+                "Work")
+                    _switch_dotfiles_profile "work"
+                    ;;
+                "None")
+                    # Already stowed common, nothing more to do
+                    ;;
+            esac
+
+            # Show completion notification
+            osascript -e 'display notification "Dotfiles updated successfully! Run: source ~/.bashrc" with title "Update Complete"'
+
+            # Reload the current shell
+            source ~/.bashrc
+
+            # Let user know they need to press enter to get prompt back
+            echo -e "\033[0;32m✓ Dotfiles updated and configuration reloaded. Press Enter to continue.\033[0m"
+
+            return 0
         fi
         return 1
 
@@ -96,16 +57,44 @@ interactive_update_prompt() {
         if notify-send --help 2>&1 | grep -q -- '--action'; then
             # Send notification with Yes/No actions
             action=$(notify-send -u critical \
-                --wait \
                 --action="yes=Yes" \
                 --action="no=No" \
                 "Dotfiles Update Available" \
                 "Your dotfiles are out of date! Update now?" 2>/dev/null)
 
             if [[ "$action" == "yes" ]]; then
-                # Perform update in foreground with TTY
-                perform_foreground_update "$target_tty"
-                return $?
+                # Perform update
+                cd "$dotfiles_dir" || return 1
+                git pull
+                stow -t ~ common
+
+                # Ask about profile with another notification
+                profile_action=$(notify-send \
+                    --action="none=None" \
+                    --action="personal=Personal" \
+                    --action="work=Work" \
+                    "Select Profile" \
+                    "Which profile would you like to stow?" 2>/dev/null)
+
+                case "$profile_action" in
+                    "personal")
+                        _switch_dotfiles_profile "personal"
+                        ;;
+                    "work")
+                        _switch_dotfiles_profile "work"
+                        ;;
+                    *)
+                        # Default to none/common only
+                        ;;
+                esac
+
+                # Send completion notification
+                notify-send "Update Complete" "Dotfiles updated! Run: source ~/.bashrc"
+
+                # Reload the current shell
+                source ~/.bashrc
+
+                return 0
             fi
             return 1
         else
@@ -169,21 +158,7 @@ background_dotfiles_check() {
     # Mark that we're checking (for this shell session)
     export _DOTFILES_CHECK_COMPLETED=1
 
-    # Create FIFO in temp directory (RAM-based on macOS, cleared on reboot)
-    # Use PID to ensure uniqueness
-    local temp_dir="/tmp"
-    if [ -d "/dev/shm" ]; then
-        temp_dir="/dev/shm"  # Prefer /dev/shm on Linux
-    fi
-    local fifo_path="${temp_dir}/dotfiles_update_fifo_$$"
-
-    # Clean up FIFO on shell exit
-    trap "rm -f '$fifo_path' 2>/dev/null" EXIT
-
-    # Create the FIFO
-    mkfifo "$fifo_path" 2>/dev/null || return 0
-
-    # Run the fetch check in background
+    # Run the check in background
     (
         cd "$dotfiles_dir" 2>/dev/null || exit 0
 
@@ -200,7 +175,7 @@ background_dotfiles_check() {
             fetch_status=$?
         else
             # No timeout command, use background job with sleep
-            ( eval $fetch_cmd 2>/dev/null ) &
+            ( $fetch_cmd 2>/dev/null ) &
             local fetch_pid=$!
             local count=0
             while kill -0 $fetch_pid 2>/dev/null && [ $count -lt 10 ]; do
@@ -226,41 +201,19 @@ background_dotfiles_check() {
                     # Export for child shells to know
                     export DOTFILES_UPDATE_PENDING=1
 
-                    # Send notification with action that writes to FIFO
-                    if command -v notify-send &>/dev/null && notify-send --help 2>&1 | grep -q -- '--action'; then
-                        # Linux with action support
-                        (
-                            action=$(notify-send -u critical \
-                                --wait \
-                                --action="update=Update Now" \
-                                --action="later=Later" \
-                                "Dotfiles Update Available" \
-                                "New updates available for your dotfiles" 2>/dev/null)
+                    # Try interactive update prompt
+                    interactive_update_prompt
+                    local prompt_result=$?
 
-                            if [ "$action" = "update" ]; then
-                                echo "yes" > "$fifo_path" 2>/dev/null
-                            fi
-                        ) &
-                    elif command -v osascript &>/dev/null; then
-                        # macOS: Show notification and then dialog
-                        (
-                            # First show notification
-                            osascript -e 'display notification "New updates available for your dotfiles" with title "Dotfiles Update Available"' 2>/dev/null
-
-                            # Wait a moment for notification to appear
-                            sleep 1
-
-                            # Show dialog
-                            response=$(osascript -e 'display dialog "Your dotfiles are out of date! Would you like to update now?" buttons {"Later", "Update Now"} default button "Update Now" with title "Dotfiles Update Available"' 2>&1)
-
-                            if echo "$response" | grep -q "Update Now"; then
-                                echo "yes" > "$fifo_path" 2>/dev/null
-                            fi
-                        ) &
-                    elif ! send_notification "Dotfiles Update Available" "Updates available! Run 'update-dotfiles' to update."; then
-                        # Fallback to terminal message if notification fails
+                    if [ $prompt_result -eq 0 ]; then
+                        # Success - update was performed
+                        unset DOTFILES_UPDATE_PENDING
+                    elif [ $prompt_result -eq 2 ]; then
+                        # Notification completely failed (no GUI available or error)
+                        # Show terminal message as fallback
                         show_terminal_update_message
                     fi
+                    # If result is 1, user declined via GUI - notification worked, user chose not to update
 
                 elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
                     # Local is ahead - just notify once per session
@@ -279,38 +232,6 @@ background_dotfiles_check() {
     ) &
 
     # Disown background job
-    disown
-
-    # Start foreground watcher for FIFO (with timeout)
-    # This runs in the background but will bring update to foreground when triggered
-    (
-        local parent_pid=$$
-        local temp_dir="/tmp"
-        if [ -d "/dev/shm" ]; then
-            temp_dir="/dev/shm"
-        fi
-        local trigger_file="${temp_dir}/dotfiles_trigger_${parent_pid}"
-
-        # Read from FIFO with timeout (30 minutes = 1800 seconds)
-        if command -v timeout &>/dev/null; then
-            response=$(timeout 1800 cat "$fifo_path" 2>/dev/null)
-        else
-            # Fallback: read with timeout using read built-in
-            response=$(timeout 1800 cat "$fifo_path" 2>/dev/null || true)
-        fi
-
-        # If we got "yes", create trigger file and force prompt refresh
-        if [ "$response" = "yes" ]; then
-            touch "$trigger_file"
-
-            # Send SIGWINCH to parent shell to trigger prompt refresh
-            # WINCH is window size change - harmless signal that forces prompt redraw
-            kill -WINCH $parent_pid 2>/dev/null
-        fi
-
-        # Clean up FIFO
-        rm -f "$fifo_path" 2>/dev/null
-    ) &
     disown
 }
 
@@ -344,16 +265,54 @@ update-dotfiles() {
         return 0
     fi
 
-    echo ""
-    echo -n "Updates are available. Would you like to update now? (y/n): "
+    # Try GUI update first
+    interactive_update_prompt
+    local prompt_result=$?
+
+    if [ $prompt_result -eq 0 ]; then
+        unset DOTFILES_UPDATE_PENDING
+        echo "Update complete! Configuration reloaded."
+        cd "$original_dir" 2>/dev/null
+        return 0
+    fi
+
+    # Fallback to terminal-based update flow
+    echo "Updates are available. Would you like to update now? (y/n)"
     read -r response
 
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-        perform_foreground_update
-        if [ $? -eq 0 ]; then
-            unset DOTFILES_UPDATE_PENDING
-            send_notification "Dotfiles Updated" "Your dotfiles have been successfully updated."
-        fi
+        echo "Updating dotfiles..."
+        git pull
+        echo "Restowing common files..."
+        stow -t ~ common
+
+        echo "Which profile would you like to stow?"
+        echo "  1) None (common only)"
+        echo "  2) Personal"
+        echo "  3) Work"
+        echo -n "Enter choice [1-3]: "
+        read -r choice
+
+        case "$choice" in
+            2)
+                _switch_dotfiles_profile "personal"
+                ;;
+            3)
+                _switch_dotfiles_profile "work"
+                ;;
+            *)
+                # Default to none/common only
+                ;;
+        esac
+
+        unset DOTFILES_UPDATE_PENDING
+
+        # Send completion notification if available
+        send_notification "Dotfiles Updated" "Your dotfiles have been successfully updated."
+
+        echo "Update complete! Reloading configuration..."
+        source ~/.bashrc
+        echo "Configuration reloaded."
     else
         echo "Update cancelled."
     fi
@@ -391,7 +350,7 @@ check-dotfiles-now() {
         fetch_status=$?
     else
         # No timeout command, use background job with sleep
-        ( eval $fetch_cmd 2>/dev/null ) &
+        ( $fetch_cmd 2>/dev/null ) &
         local fetch_pid=$!
         local count=0
         while kill -0 $fetch_pid 2>/dev/null && [ $count -lt 10 ]; do
@@ -415,17 +374,15 @@ check-dotfiles-now() {
             if ! git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
                 export DOTFILES_UPDATE_PENDING=1
                 echo "Updates are available!"
-                echo ""
-                echo -n "Would you like to update now? (y/n): "
-                read -r response
 
-                if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-                    perform_foreground_update
-                    if [ $? -eq 0 ]; then
-                        unset DOTFILES_UPDATE_PENDING
-                    fi
-                else
-                    echo "Update cancelled. Run 'update-dotfiles' later to update."
+                # Try interactive prompt
+                interactive_update_prompt
+                local prompt_result=$?
+
+                if [ $prompt_result -eq 0 ]; then
+                    unset DOTFILES_UPDATE_PENDING
+                elif [ $prompt_result -eq 2 ]; then
+                    show_terminal_update_message
                 fi
             elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
                 echo "Your local dotfiles are ahead of remote."
@@ -441,27 +398,6 @@ check-dotfiles-now() {
     # Return to original directory
     cd "$original_dir" 2>/dev/null
 }
-
-# Hook to check if update was requested via notification
-_dotfiles_prompt_hook() {
-    local temp_dir="/tmp"
-    if [ -d "/dev/shm" ]; then
-        temp_dir="/dev/shm"
-    fi
-    local trigger_file="${temp_dir}/dotfiles_trigger_$$"
-
-    if [ -f "$trigger_file" ]; then
-        rm -f "$trigger_file"
-        echo ""
-        echo -e "\033[1;36m━━━ Update requested via notification ━━━\033[0m"
-        perform_foreground_update
-    fi
-}
-
-# Add to PROMPT_COMMAND if not already there
-if [[ "$PROMPT_COMMAND" != *"_dotfiles_prompt_hook"* ]]; then
-    PROMPT_COMMAND="_dotfiles_prompt_hook;${PROMPT_COMMAND}"
-fi
 
 # Check on shell startup (non-blocking)
 if [ -z "$_DOTFILES_CHECK_STARTED" ]; then
