@@ -1,308 +1,115 @@
 #!/bin/bash
-# Dotfiles background update checker with simple notification
-# Uses only in-memory state management (no file writes)
+# Simplified dotfiles update checker
 
-# Function to send simple update notification
+# Send notification about available updates
 send_update_notification() {
-    # macOS using AppleScript
     if command -v osascript &>/dev/null; then
-        # Capture error output to see what's wrong if it fails
-        local error_output
-        error_output=$(osascript -e 'display notification "Run update-dotfiles to update" with title "Dotfiles Update Available"' 2>&1)
-        local result=$?
-
-        if [ $result -ne 0 ]; then
-            # Only show error if it's not a permissions issue
-            if [[ ! "$error_output" =~ "not authorized" ]] && [[ ! "$error_output" =~ "assistive access" ]]; then
-                echo "Notification error: $error_output" >&2
-            fi
-            return 1
-        fi
-        return 0
-
-    # Linux using notify-send
+        osascript -e 'display notification "Run update-dotfiles to update" with title "Dotfiles Update Available"' 2>/dev/null
     elif command -v notify-send &>/dev/null; then
-        notify-send "Dotfiles Update Available" "Run 'update-dotfiles' to update"
-        return $?
-
-    # Fallback - no notification available
-    else
-        return 1
+        notify-send "Dotfiles Update Available" "Run 'update-dotfiles' to update" 2>/dev/null
     fi
 }
 
-# Simple notification for non-critical alerts
-send_notification() {
-    local title="$1"
-    local message="$2"
-
-    if command -v osascript &>/dev/null; then
-        osascript -e "display notification \"$message\" with title \"$title\"" 2>/dev/null || return 1
-    elif command -v notify-send &>/dev/null; then
-        notify-send "$title" "$message" 2>/dev/null || return 1
-    else
-        return 1
-    fi
-}
-
-# Show terminal message (non-blocking)
-show_terminal_update_message() {
-    echo -e "\033[1;33m━━━ Dotfiles Update Available ━━━\033[0m"
-    echo -e "\033[0;33mRun 'update-dotfiles' to update your configuration.\033[0m"
-    echo ""
-}
-
-# Get time-based check decision (no files needed)
-should_check_for_updates() {
-    # If we've already checked in this shell session, don't check again
-    if [ -n "$_DOTFILES_CHECK_COMPLETED" ]; then
-        return 1
-    fi
-
-    # Always check (as long as it's the first time in this session)
-    return 0
-}
-
-# Background update check function
+# Background check for updates (runs once per shell session)
 background_dotfiles_check() {
+    # Only check once per shell session
+    [ -n "$_DOTFILES_CHECKED" ] && return 0
+    export _DOTFILES_CHECKED=1
+
     local dotfiles_dir="$HOME/dotfiles"
+    [ ! -d "$dotfiles_dir/.git" ] && return 0
 
-    # Don't run if dotfiles directory doesn't exist
-    if [ ! -d "$dotfiles_dir/.git" ]; then
-        return 0
-    fi
-
-    # Check if we should run the check
-    if ! should_check_for_updates; then
-        return 0
-    fi
-
-    # Mark that we're checking (for this shell session)
-    export _DOTFILES_CHECK_COMPLETED=1
-
-    # Run the check in background
+    # Run check in background
     (
         cd "$dotfiles_dir" 2>/dev/null || exit 0
 
-        # Fetch updates with timeout (if available)
-        local fetch_cmd="env GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet"
-
+        # Fetch with timeout
         if command -v timeout &>/dev/null; then
-            # Linux with timeout command
-            fetch_result=$(timeout 10s $fetch_cmd 2>/dev/null)
-            fetch_status=$?
+            timeout 10s git fetch --quiet 2>/dev/null
         elif command -v gtimeout &>/dev/null; then
-            # macOS with GNU timeout (from coreutils)
-            fetch_result=$(gtimeout 10s $fetch_cmd 2>/dev/null)
-            fetch_status=$?
+            gtimeout 10s git fetch --quiet 2>/dev/null
         else
-            # No timeout command, use background job with sleep
-            ( $fetch_cmd 2>/dev/null ) &
-            local fetch_pid=$!
-            local count=0
-            while kill -0 $fetch_pid 2>/dev/null && [ $count -lt 10 ]; do
-                sleep 1
-                count=$((count + 1))
-            done
-            if kill -0 $fetch_pid 2>/dev/null; then
-                kill $fetch_pid 2>/dev/null
-                fetch_status=124  # Timeout exit code
-            else
-                wait $fetch_pid
-                fetch_status=$?
-            fi
+            git fetch --quiet 2>/dev/null
         fi
 
-        if [ $fetch_status -eq 0 ]; then
+        # Check if behind remote
+        if [ $? -eq 0 ]; then
             local local_head=$(git rev-parse HEAD 2>/dev/null)
             local remote_head=$(git rev-parse @{u} 2>/dev/null)
 
             if [ -n "$remote_head" ] && [ "$local_head" != "$remote_head" ]; then
-                # Check if local is behind
                 if ! git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
-                    # Export for child shells to know
-                    export DOTFILES_UPDATE_PENDING=1
-
-                    # Send simple notification
-                    if ! send_update_notification; then
-                        # Notification failed - show terminal message as fallback
-                        show_terminal_update_message
-                    fi
-
-                elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
-                    # Local is ahead - just notify once per session
-                    if [ -z "$_DOTFILES_AHEAD_NOTIFIED" ]; then
-                        export _DOTFILES_AHEAD_NOTIFIED=1
-                        if ! send_notification "Dotfiles Out of Sync" "Your local dotfiles are ahead of remote."; then
-                            echo -e "\033[0;33mNote: Your local dotfiles are ahead of remote.\033[0m"
-                        fi
-                    fi
+                    send_update_notification
                 fi
-            else
-                # Up to date
-                unset DOTFILES_UPDATE_PENDING
             fi
         fi
     ) &
-
-    # Disown background job
     disown
 }
 
 # Manual update command
 update-dotfiles() {
     local dotfiles_dir="$HOME/dotfiles"
-    local original_dir="$(pwd)"
 
-    if [ ! -d "$dotfiles_dir/.git" ]; then
-        echo "Error: Dotfiles directory not found at $dotfiles_dir"
-        return 1
-    fi
+    [ ! -d "$dotfiles_dir/.git" ] && echo "Error: Dotfiles not found at $dotfiles_dir" && return 1
 
-    echo "Checking for updates..."
     cd "$dotfiles_dir" || return 1
 
-    # Fetch first to see if there are updates
-    if ! git fetch --no-tags --quiet; then
-        echo "Failed to check for updates"
-        cd "$original_dir" 2>/dev/null
-        return 1
-    fi
+    # Check for updates
+    echo "Checking for updates..."
+    git fetch --quiet || { echo "Failed to check for updates"; return 1; }
 
     local local_head=$(git rev-parse HEAD)
     local remote_head=$(git rev-parse @{u} 2>/dev/null)
 
     if [ "$local_head" = "$remote_head" ]; then
         echo "Already up to date!"
-        unset DOTFILES_UPDATE_PENDING
-        cd "$original_dir" 2>/dev/null
         return 0
     fi
 
-    # Terminal-based update flow
-    echo "Updates are available. Would you like to update now? (y/n)"
-    read -r response
+    # Pull updates
+    echo "Pulling updates..."
+    git pull || { echo "Failed to pull updates"; return 1; }
 
-    if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-        echo "Updating dotfiles..."
-        git pull
-        echo "Restowing common files..."
-        stow -t ~ common
+    # Restow common
+    echo "Restowing common files..."
+    stow -t ~ common
 
-        echo "Which profile would you like to stow?"
-        echo "  1) None (common only)"
-        echo "  2) Personal"
-        echo "  3) Work"
-        echo -n "Enter choice [1-3]: "
-        read -r choice
+    # Ask for profile
+    echo "Which profile would you like?"
+    echo "  1) None (common only)"
+    echo "  2) Personal"
+    echo "  3) Work"
+    echo -n "Enter choice [1-3]: "
+    read -r choice
 
-        case "$choice" in
-            2)
-                _switch_dotfiles_profile "personal"
-                ;;
-            3)
-                _switch_dotfiles_profile "work"
-                ;;
-            *)
-                # Default to none/common only
-                ;;
-        esac
+    case "$choice" in
+        2)
+            stow -D -t ~ work 2>/dev/null
+            stow -t ~ personal
+            echo "Applied personal profile"
+            ;;
+        3)
+            stow -D -t ~ personal 2>/dev/null
+            stow -t ~ work
+            echo "Applied work profile"
+            ;;
+        *)
+            stow -D -t ~ personal 2>/dev/null
+            stow -D -t ~ work 2>/dev/null
+            echo "Using common only"
+            ;;
+    esac
 
-        unset DOTFILES_UPDATE_PENDING
+    # Ask to reload bashrc
+    echo -n "Reload shell configuration? (y/n): "
+    read -r reload
 
-        # Send completion notification if available
-        send_notification "Dotfiles Updated" "Your dotfiles have been successfully updated."
-
-        echo "Update complete! Reloading configuration..."
+    if [[ "$reload" =~ ^[yY]$ ]]; then
         source ~/.bashrc
-        echo "Configuration reloaded."
-    else
-        echo "Update cancelled."
+        echo "Configuration reloaded"
     fi
-
-    # Return to original directory
-    cd "$original_dir" 2>/dev/null
 }
 
-# Force check command
-check-dotfiles-now() {
-    local dotfiles_dir="$HOME/dotfiles"
-    local original_dir="$(pwd)"
-
-    echo "Checking for dotfiles updates..."
-
-    cd "$dotfiles_dir" 2>/dev/null || {
-        echo "Error: Cannot access dotfiles directory"
-        return 1
-    }
-
-    # Reset check state to force a check
-    unset _DOTFILES_CHECK_COMPLETED
-
-    # Fetch updates with proper timeout handling
-    local fetch_cmd="env GIT_TERMINAL_PROMPT=0 git -c url.https://github.com/.insteadOf=git@github.com: fetch --no-tags --quiet"
-    local fetch_status
-
-    if command -v timeout &>/dev/null; then
-        # Linux with timeout command
-        timeout 10s $fetch_cmd 2>/dev/null
-        fetch_status=$?
-    elif command -v gtimeout &>/dev/null; then
-        # macOS with GNU timeout (from coreutils)
-        gtimeout 10s $fetch_cmd 2>/dev/null
-        fetch_status=$?
-    else
-        # No timeout command, use background job with sleep
-        ( $fetch_cmd 2>/dev/null ) &
-        local fetch_pid=$!
-        local count=0
-        while kill -0 $fetch_pid 2>/dev/null && [ $count -lt 10 ]; do
-            sleep 1
-            count=$((count + 1))
-        done
-        if kill -0 $fetch_pid 2>/dev/null; then
-            kill $fetch_pid 2>/dev/null
-            fetch_status=124  # Timeout exit code
-        else
-            wait $fetch_pid
-            fetch_status=$?
-        fi
-    fi
-
-    if [ $fetch_status -eq 0 ]; then
-        local local_head=$(git rev-parse HEAD 2>/dev/null)
-        local remote_head=$(git rev-parse @{u} 2>/dev/null)
-
-        if [ -n "$remote_head" ] && [ "$local_head" != "$remote_head" ]; then
-            if ! git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
-                export DOTFILES_UPDATE_PENDING=1
-                echo "Updates are available!"
-
-                # Send simple notification
-                if ! send_update_notification; then
-                    # Notification failed - show terminal message as fallback
-                    show_terminal_update_message
-                fi
-            elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
-                echo "Your local dotfiles are ahead of remote."
-            fi
-        else
-            echo "Your dotfiles are up to date!"
-            unset DOTFILES_UPDATE_PENDING
-        fi
-    else
-        echo "Failed to check for updates (network issue or timeout)"
-    fi
-
-    # Return to original directory
-    cd "$original_dir" 2>/dev/null
-}
-
-# Check on shell startup (non-blocking)
-if [ -z "$_DOTFILES_CHECK_STARTED" ]; then
-    export _DOTFILES_CHECK_STARTED=1
-    background_dotfiles_check
-fi
-
-# Note: DOTFILES_UPDATE_PENDING is only used as a marker for child shells
-# Messages are only shown if notifications fail, not on every shell open
+# Run check on shell startup
+background_dotfiles_check
