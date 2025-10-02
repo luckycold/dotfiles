@@ -5,6 +5,12 @@
 # Foreground update execution (called when user accepts update)
 perform_foreground_update() {
     local dotfiles_dir="$HOME/dotfiles"
+    local target_tty="$1"  # Optional: specific TTY to use
+    
+    # If a specific TTY was provided and it exists, redirect stdin to it
+    if [ -n "$target_tty" ] && [ -e "$target_tty" ]; then
+        exec <"$target_tty"
+    fi
     
     echo ""
     echo -e "\033[1;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
@@ -111,6 +117,59 @@ interactive_update_prompt() {
     fi
 }
 
+# Function to create an interactive update dialog with TTY support
+interactive_update_prompt() {
+    local target_tty="$1"  # The TTY to use for input
+    local dotfiles_dir="$HOME/dotfiles"
+
+    # macOS using AppleScript
+    if command -v osascript &>/dev/null; then
+        # Try to show dialog, check if it actually works
+        response=$(osascript -e 'display dialog "Your dotfiles are out of date! Would you like to update now?" buttons {"No", "Yes"} default button "Yes" with title "Dotfiles Update Available"' 2>/dev/null | cut -d: -f2)
+
+        # Check if osascript actually ran successfully
+        if [ -z "$response" ]; then
+            # Dialog failed to show
+            return 2
+        fi
+
+        if [[ "$response" == "Yes" ]]; then
+            # Perform the update in foreground with TTY
+            perform_foreground_update "$target_tty"
+            return $?
+        fi
+        return 1
+
+    # Linux using notify-send with actions
+    elif command -v notify-send &>/dev/null; then
+        # Check if notify-send supports actions (usually requires a notification daemon like dunst or mako)
+        if notify-send --help 2>&1 | grep -q -- '--action'; then
+            # Send notification with Yes/No actions
+            action=$(notify-send -u critical \
+                --wait \
+                --action="yes=Yes" \
+                --action="no=No" \
+                "Dotfiles Update Available" \
+                "Your dotfiles are out of date! Update now?" 2>/dev/null)
+
+            if [[ "$action" == "yes" ]]; then
+                # Perform update in foreground with TTY
+                perform_foreground_update "$target_tty"
+                return $?
+            fi
+            return 1
+        else
+            # Fallback: notify-send doesn't support actions, just send notification
+            notify-send -u critical "Dotfiles Update Available" "Update available! Run 'update-dotfiles' in your terminal to update."
+            return 2
+        fi
+
+    # Fallback - no notification available
+    else
+        return 2
+    fi
+}
+
 # Simple notification for non-critical alerts
 send_notification() {
     local title="$1"
@@ -160,6 +219,9 @@ background_dotfiles_check() {
     # Mark that we're checking (for this shell session)
     export _DOTFILES_CHECK_COMPLETED=1
 
+    # Capture the current TTY for later use
+    local current_tty=$(tty 2>/dev/null)
+
     # Run the check in background
     (
         cd "$dotfiles_dir" 2>/dev/null || exit 0
@@ -203,8 +265,8 @@ background_dotfiles_check() {
                     # Export for child shells to know
                     export DOTFILES_UPDATE_PENDING=1
 
-                    # Try interactive update prompt
-                    interactive_update_prompt
+                    # Try interactive update prompt with TTY
+                    interactive_update_prompt "$current_tty"
                     local prompt_result=$?
 
                     if [ $prompt_result -eq 0 ]; then
