@@ -85,6 +85,12 @@ if ! shopt -oq posix; then
   fi
 fi
 
+# Bitwarden SSH Agent setup
+if command -v bw &> /dev/null; then
+  export SSH_AUTH_SOCK=~/.bitwarden-ssh-agent.sock
+  SSH_AGENT_ACTIVE=1
+fi
+
 # Display SSH Agent MOTD once
 if [ -z "$_ssh_motd_shown" ] && [ "$SSH_AGENT_ACTIVE" = "1" ]; then
   echo -e "SSH Agent ✓"
