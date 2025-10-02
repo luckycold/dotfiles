@@ -1,111 +1,33 @@
 #!/bin/bash
-# Dotfiles background update checker with interactive notification support
+# Dotfiles background update checker with simple notification
 # Uses only in-memory state management (no file writes)
 
-# Function to create an interactive update dialog with profile selection
-interactive_update_prompt() {
-    local dotfiles_dir="$HOME/dotfiles"
-
+# Function to send simple update notification
+send_update_notification() {
     # macOS using AppleScript
     if command -v osascript &>/dev/null; then
-        # Try to show dialog, check if it actually works
-        response=$(osascript -e 'display dialog "Your dotfiles are out of date! Would you like to update now?" buttons {"No", "Yes"} default button "Yes" with title "Dotfiles Update Available"' 2>/dev/null | cut -d: -f2)
+        # Capture error output to see what's wrong if it fails
+        local error_output
+        error_output=$(osascript -e 'display notification "Run update-dotfiles to update" with title "Dotfiles Update Available"' 2>&1)
+        local result=$?
 
-        # Check if osascript actually ran successfully
-        if [ -z "$response" ]; then
-            # Dialog failed to show
-            return 2
-        fi
-
-        if [[ "$response" == "Yes" ]]; then
-            # Perform the update
-            cd "$dotfiles_dir" || return 1
-            git pull
-            stow -t ~ common
-
-            # Second dialog: Ask about profile
-            profile_response=$(osascript -e 'display dialog "Which profile would you like to stow?" buttons {"None", "Personal", "Work"} default button "None" with title "Select Dotfiles Profile"' 2>/dev/null | cut -d: -f2)
-
-            case "$profile_response" in
-                "Personal")
-                    _switch_dotfiles_profile "personal"
-                    ;;
-                "Work")
-                    _switch_dotfiles_profile "work"
-                    ;;
-                "None")
-                    # Already stowed common, nothing more to do
-                    ;;
-            esac
-
-            # Show completion notification
-            osascript -e 'display notification "Dotfiles updated successfully! Run: source ~/.bashrc" with title "Update Complete"'
-
-            # Reload the current shell
-            source ~/.bashrc
-
-            # Let user know they need to press enter to get prompt back
-            echo -e "\033[0;32m✓ Dotfiles updated and configuration reloaded. Press Enter to continue.\033[0m"
-
-            return 0
-        fi
-        return 1
-
-    # Linux using notify-send with actions
-    elif command -v notify-send &>/dev/null; then
-        # Check if notify-send supports actions (usually requires a notification daemon like dunst or mako)
-        if notify-send --help 2>&1 | grep -q -- '--action'; then
-            # Send notification with Yes/No actions
-            action=$(notify-send -u critical \
-                --action="yes=Yes" \
-                --action="no=No" \
-                "Dotfiles Update Available" \
-                "Your dotfiles are out of date! Update now?" 2>/dev/null)
-
-            if [[ "$action" == "yes" ]]; then
-                # Perform update
-                cd "$dotfiles_dir" || return 1
-                git pull
-                stow -t ~ common
-
-                # Ask about profile with another notification
-                profile_action=$(notify-send \
-                    --action="none=None" \
-                    --action="personal=Personal" \
-                    --action="work=Work" \
-                    "Select Profile" \
-                    "Which profile would you like to stow?" 2>/dev/null)
-
-                case "$profile_action" in
-                    "personal")
-                        _switch_dotfiles_profile "personal"
-                        ;;
-                    "work")
-                        _switch_dotfiles_profile "work"
-                        ;;
-                    *)
-                        # Default to none/common only
-                        ;;
-                esac
-
-                # Send completion notification
-                notify-send "Update Complete" "Dotfiles updated! Run: source ~/.bashrc"
-
-                # Reload the current shell
-                source ~/.bashrc
-
-                return 0
+        if [ $result -ne 0 ]; then
+            # Only show error if it's not a permissions issue
+            if [[ ! "$error_output" =~ "not authorized" ]] && [[ ! "$error_output" =~ "assistive access" ]]; then
+                echo "Notification error: $error_output" >&2
             fi
             return 1
-        else
-            # Fallback: notify-send doesn't support actions, just send notification
-            notify-send -u critical "Dotfiles Update Available" "Update available! Run 'update-dotfiles' in your terminal to update."
-            return 2
         fi
+        return 0
+
+    # Linux using notify-send
+    elif command -v notify-send &>/dev/null; then
+        notify-send "Dotfiles Update Available" "Run 'update-dotfiles' to update"
+        return $?
 
     # Fallback - no notification available
     else
-        return 2
+        return 1
     fi
 }
 
@@ -201,19 +123,11 @@ background_dotfiles_check() {
                     # Export for child shells to know
                     export DOTFILES_UPDATE_PENDING=1
 
-                    # Try interactive update prompt
-                    interactive_update_prompt
-                    local prompt_result=$?
-
-                    if [ $prompt_result -eq 0 ]; then
-                        # Success - update was performed
-                        unset DOTFILES_UPDATE_PENDING
-                    elif [ $prompt_result -eq 2 ]; then
-                        # Notification completely failed (no GUI available or error)
-                        # Show terminal message as fallback
+                    # Send simple notification
+                    if ! send_update_notification; then
+                        # Notification failed - show terminal message as fallback
                         show_terminal_update_message
                     fi
-                    # If result is 1, user declined via GUI - notification worked, user chose not to update
 
                 elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
                     # Local is ahead - just notify once per session
@@ -258,25 +172,14 @@ update-dotfiles() {
     local local_head=$(git rev-parse HEAD)
     local remote_head=$(git rev-parse @{u} 2>/dev/null)
 
-    if [ "$local_head" == "$remote_head" ]; then
+    if [ "$local_head" = "$remote_head" ]; then
         echo "Already up to date!"
         unset DOTFILES_UPDATE_PENDING
         cd "$original_dir" 2>/dev/null
         return 0
     fi
 
-    # Try GUI update first
-    interactive_update_prompt
-    local prompt_result=$?
-
-    if [ $prompt_result -eq 0 ]; then
-        unset DOTFILES_UPDATE_PENDING
-        echo "Update complete! Configuration reloaded."
-        cd "$original_dir" 2>/dev/null
-        return 0
-    fi
-
-    # Fallback to terminal-based update flow
+    # Terminal-based update flow
     echo "Updates are available. Would you like to update now? (y/n)"
     read -r response
 
@@ -375,13 +278,9 @@ check-dotfiles-now() {
                 export DOTFILES_UPDATE_PENDING=1
                 echo "Updates are available!"
 
-                # Try interactive prompt
-                interactive_update_prompt
-                local prompt_result=$?
-
-                if [ $prompt_result -eq 0 ]; then
-                    unset DOTFILES_UPDATE_PENDING
-                elif [ $prompt_result -eq 2 ]; then
+                # Send simple notification
+                if ! send_update_notification; then
+                    # Notification failed - show terminal message as fallback
                     show_terminal_update_message
                 fi
             elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
