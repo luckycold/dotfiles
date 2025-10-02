@@ -50,6 +50,7 @@ background_dotfiles_check() {
 # Manual update command
 update-dotfiles() {
     local dotfiles_dir="$HOME/dotfiles"
+    local original_dir="$(pwd)"
 
     [ ! -d "$dotfiles_dir/.git" ] && echo "Error: Dotfiles not found at $dotfiles_dir" && return 1
 
@@ -57,19 +58,20 @@ update-dotfiles() {
 
     # Check for updates
     echo "Checking for updates..."
-    git fetch --quiet || { echo "Failed to check for updates"; return 1; }
+    git fetch --quiet || { echo "Failed to check for updates"; cd "$original_dir"; return 1; }
 
     local local_head=$(git rev-parse HEAD)
     local remote_head=$(git rev-parse @{u} 2>/dev/null)
 
     if [ "$local_head" = "$remote_head" ]; then
         echo "Already up to date!"
+        cd "$original_dir"
         return 0
     fi
 
     # Pull updates
     echo "Pulling updates..."
-    git pull || { echo "Failed to pull updates"; return 1; }
+    git pull || { echo "Failed to pull updates"; cd "$original_dir"; return 1; }
 
     # Restow common
     echo "Restowing common files..."
@@ -109,6 +111,8 @@ update-dotfiles() {
         source ~/.bashrc
         echo "Configuration reloaded"
     fi
+
+    cd "$original_dir"
 }
 
 # Run check on shell startup
