@@ -2,6 +2,63 @@
 # Dotfiles background update checker with interactive notification support
 # Uses only in-memory state management (no file writes)
 
+# Foreground update execution (called when user accepts update)
+perform_foreground_update() {
+    local dotfiles_dir="$HOME/dotfiles"
+    
+    echo ""
+    echo -e "\033[1;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "\033[1;32m    Updating Dotfiles Repository\033[0m"
+    echo -e "\033[1;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo ""
+    
+    cd "$dotfiles_dir" || {
+        echo -e "\033[0;31mError: Cannot access dotfiles directory\033[0m"
+        return 1
+    }
+    
+    echo "Pulling latest changes..."
+    if ! git pull; then
+        echo -e "\033[0;31mError: git pull failed\033[0m"
+        return 1
+    fi
+    
+    echo ""
+    echo "Restowing common files..."
+    if ! stow -t ~ common; then
+        echo -e "\033[0;31mError: Failed to stow common files\033[0m"
+        return 1
+    fi
+    
+    echo ""
+    echo "Which profile would you like to stow?"
+    echo "  1) None (common only)"
+    echo "  2) Personal"
+    echo "  3) Work"
+    echo -n "Enter choice [1-3]: "
+    read -r choice
+    
+    case "$choice" in
+        2)
+            _switch_dotfiles_profile "personal"
+            ;;
+        3)
+            _switch_dotfiles_profile "work"
+            ;;
+        *)
+            echo "Keeping common-only configuration."
+            ;;
+    esac
+    
+    echo ""
+    echo -e "\033[0;32m✓ Update complete! Reloading configuration...\033[0m"
+    source ~/.bashrc
+    echo -e "\033[0;32m✓ Configuration reloaded.\033[0m"
+    echo ""
+    
+    return 0
+}
+
 # Function to create an interactive update dialog with profile selection
 interactive_update_prompt() {
     local dotfiles_dir="$HOME/dotfiles"
@@ -18,36 +75,9 @@ interactive_update_prompt() {
         fi
 
         if [[ "$response" == "Yes" ]]; then
-            # Perform the update
-            cd "$dotfiles_dir" || return 1
-            git pull
-            stow -t ~ common
-
-            # Second dialog: Ask about profile
-            profile_response=$(osascript -e 'display dialog "Which profile would you like to stow?" buttons {"None", "Personal", "Work"} default button "None" with title "Select Dotfiles Profile"' 2>/dev/null | cut -d: -f2)
-
-            case "$profile_response" in
-                "Personal")
-                    _switch_dotfiles_profile "personal"
-                    ;;
-                "Work")
-                    _switch_dotfiles_profile "work"
-                    ;;
-                "None")
-                    # Already stowed common, nothing more to do
-                    ;;
-            esac
-
-            # Show completion notification
-            osascript -e 'display notification "Dotfiles updated successfully! Run: source ~/.bashrc" with title "Update Complete"'
-
-            # Reload the current shell
-            source ~/.bashrc
-
-            # Let user know they need to press enter to get prompt back
-            echo -e "\033[0;32m✓ Dotfiles updated and configuration reloaded. Press Enter to continue.\033[0m"
-
-            return 0
+            # Perform the update in foreground
+            perform_foreground_update
+            return $?
         fi
         return 1
 
@@ -64,39 +94,9 @@ interactive_update_prompt() {
                 "Your dotfiles are out of date! Update now?" 2>/dev/null)
 
             if [[ "$action" == "yes" ]]; then
-                # Perform update
-                cd "$dotfiles_dir" || return 1
-                git pull
-                stow -t ~ common
-
-                # Ask about profile with another notification
-                profile_action=$(notify-send\
-                    --wait \
-                    --action="none=None" \
-                    --action="personal=Personal" \
-                    --action="work=Work" \
-                    "Select Profile" \
-                    "Which profile would you like to stow?" 2>/dev/null)
-
-                case "$profile_action" in
-                    "personal")
-                        _switch_dotfiles_profile "personal"
-                        ;;
-                    "work")
-                        _switch_dotfiles_profile "work"
-                        ;;
-                    *)
-                        # Default to none/common only
-                        ;;
-                esac
-
-                # Send completion notification
-                notify-send "Update Complete" "Dotfiles updated! Running: source ~/.bashrc"
-
-                # Reload the current shell
-                source ~/.bashrc
-
-                return 0
+                # Perform update in foreground
+                perform_foreground_update
+                return $?
             fi
             return 1
         else
@@ -267,54 +267,16 @@ update-dotfiles() {
         return 0
     fi
 
-    # Try GUI update first
-    interactive_update_prompt
-    local prompt_result=$?
-
-    if [ $prompt_result -eq 0 ]; then
-        unset DOTFILES_UPDATE_PENDING
-        echo "Update complete! Configuration reloaded."
-        cd "$original_dir" 2>/dev/null
-        return 0
-    fi
-
-    # Fallback to terminal-based update flow
-    echo "Updates are available. Would you like to update now? (y/n)"
+    echo ""
+    echo -n "Updates are available. Would you like to update now? (y/n): "
     read -r response
 
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-        echo "Updating dotfiles..."
-        git pull
-        echo "Restowing common files..."
-        stow -t ~ common
-
-        echo "Which profile would you like to stow?"
-        echo "  1) None (common only)"
-        echo "  2) Personal"
-        echo "  3) Work"
-        echo -n "Enter choice [1-3]: "
-        read -r choice
-
-        case "$choice" in
-            2)
-                _switch_dotfiles_profile "personal"
-                ;;
-            3)
-                _switch_dotfiles_profile "work"
-                ;;
-            *)
-                # Default to none/common only
-                ;;
-        esac
-
-        unset DOTFILES_UPDATE_PENDING
-
-        # Send completion notification if available
-        send_notification "Dotfiles Updated" "Your dotfiles have been successfully updated."
-
-        echo "Update complete! Reloading configuration..."
-        source ~/.bashrc
-        echo "Configuration reloaded."
+        perform_foreground_update
+        if [ $? -eq 0 ]; then
+            unset DOTFILES_UPDATE_PENDING
+            send_notification "Dotfiles Updated" "Your dotfiles have been successfully updated."
+        fi
     else
         echo "Update cancelled."
     fi
@@ -376,15 +338,17 @@ check-dotfiles-now() {
             if ! git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
                 export DOTFILES_UPDATE_PENDING=1
                 echo "Updates are available!"
-
-                # Try interactive prompt
-                interactive_update_prompt
-                local prompt_result=$?
-
-                if [ $prompt_result -eq 0 ]; then
-                    unset DOTFILES_UPDATE_PENDING
-                elif [ $prompt_result -eq 2 ]; then
-                    show_terminal_update_message
+                echo ""
+                echo -n "Would you like to update now? (y/n): "
+                read -r response
+                
+                if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+                    perform_foreground_update
+                    if [ $? -eq 0 ]; then
+                        unset DOTFILES_UPDATE_PENDING
+                    fi
+                else
+                    echo "Update cancelled. Run 'update-dotfiles' later to update."
                 fi
             elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
                 echo "Your local dotfiles are ahead of remote."
