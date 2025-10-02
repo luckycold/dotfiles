@@ -45,11 +45,11 @@ automatically-unhide-macos-hidden-apps = false
 
 
 [workspace-to-monitor-force-assignment]
-6 = 1
-7 = 1
-8 = 1
-9 = 1
-10 = 1
+6 = 'secondary'
+7 = 'secondary'
+8 = 'secondary'
+9 = 'secondary'
+10 = 'secondary'
 
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
 # Possible values:
@@ -149,6 +149,7 @@ automatically-unhide-macos-hidden-apps = false
     alt-tab = 'workspace-back-and-forth'
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
     alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
+    alt-super-l = 'move-workspace-to-monitor --wrap-around right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#mode
     alt-shift-semicolon = 'mode service'
