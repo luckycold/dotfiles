@@ -169,9 +169,13 @@ background_dotfiles_check() {
     # Mark that we're checking (for this shell session)
     export _DOTFILES_CHECK_COMPLETED=1
 
-    # Create FIFO in /dev/shm (RAM-based, cleared on reboot)
+    # Create FIFO in temp directory (RAM-based on macOS, cleared on reboot)
     # Use PID to ensure uniqueness
-    local fifo_path="/dev/shm/dotfiles_update_fifo_$$"
+    local temp_dir="/tmp"
+    if [ -d "/dev/shm" ]; then
+        temp_dir="/dev/shm"  # Prefer /dev/shm on Linux
+    fi
+    local fifo_path="${temp_dir}/dotfiles_update_fifo_$$"
 
     # Clean up FIFO on shell exit
     trap "rm -f '$fifo_path' 2>/dev/null" EXIT
@@ -196,7 +200,7 @@ background_dotfiles_check() {
             fetch_status=$?
         else
             # No timeout command, use background job with sleep
-            ( $fetch_cmd 2>/dev/null ) &
+            ( eval $fetch_cmd 2>/dev/null ) &
             local fetch_pid=$!
             local count=0
             while kill -0 $fetch_pid 2>/dev/null && [ $count -lt 10 ]; do
@@ -224,6 +228,7 @@ background_dotfiles_check() {
 
                     # Send notification with action that writes to FIFO
                     if command -v notify-send &>/dev/null && notify-send --help 2>&1 | grep -q -- '--action'; then
+                        # Linux with action support
                         (
                             action=$(notify-send -u critical \
                                 --wait \
@@ -233,6 +238,22 @@ background_dotfiles_check() {
                                 "New updates available for your dotfiles" 2>/dev/null)
 
                             if [ "$action" = "update" ]; then
+                                echo "yes" > "$fifo_path" 2>/dev/null
+                            fi
+                        ) &
+                    elif command -v osascript &>/dev/null; then
+                        # macOS: Show notification and then dialog
+                        (
+                            # First show notification
+                            osascript -e 'display notification "New updates available for your dotfiles" with title "Dotfiles Update Available"' 2>/dev/null
+
+                            # Wait a moment for notification to appear
+                            sleep 1
+
+                            # Show dialog
+                            response=$(osascript -e 'display dialog "Your dotfiles are out of date! Would you like to update now?" buttons {"Later", "Update Now"} default button "Update Now" with title "Dotfiles Update Available"' 2>&1)
+
+                            if echo "$response" | grep -q "Update Now"; then
                                 echo "yes" > "$fifo_path" 2>/dev/null
                             fi
                         ) &
@@ -264,7 +285,11 @@ background_dotfiles_check() {
     # This runs in the background but will bring update to foreground when triggered
     (
         local parent_pid=$$
-        local trigger_file="/dev/shm/dotfiles_trigger_${parent_pid}"
+        local temp_dir="/tmp"
+        if [ -d "/dev/shm" ]; then
+            temp_dir="/dev/shm"
+        fi
+        local trigger_file="${temp_dir}/dotfiles_trigger_${parent_pid}"
 
         # Read from FIFO with timeout (30 minutes = 1800 seconds)
         if command -v timeout &>/dev/null; then
@@ -366,7 +391,7 @@ check-dotfiles-now() {
         fetch_status=$?
     else
         # No timeout command, use background job with sleep
-        ( $fetch_cmd 2>/dev/null ) &
+        ( eval $fetch_cmd 2>/dev/null ) &
         local fetch_pid=$!
         local count=0
         while kill -0 $fetch_pid 2>/dev/null && [ $count -lt 10 ]; do
@@ -419,7 +444,11 @@ check-dotfiles-now() {
 
 # Hook to check if update was requested via notification
 _dotfiles_prompt_hook() {
-    local trigger_file="/dev/shm/dotfiles_trigger_$$"
+    local temp_dir="/tmp"
+    if [ -d "/dev/shm" ]; then
+        temp_dir="/dev/shm"
+    fi
+    local trigger_file="${temp_dir}/dotfiles_trigger_$$"
 
     if [ -f "$trigger_file" ]; then
         rm -f "$trigger_file"
