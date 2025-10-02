@@ -9,9 +9,9 @@ if [ -f /etc/os-release ]; then
         alias update='sudo dnf upgrade'
     fi
 fi
-if flatpak list | grep -q "com.quexten.Goldwarden"; then
+if command -v flatpak &>/dev/null && flatpak list 2>/dev/null | grep -q "com.quexten.Goldwarden"; then
     alias goldwarden="flatpak run --command=goldwarden com.quexten.Goldwarden"
 fi
-if kubectl version --client=true | grep -qi "Client"; then
+if command -v kubectl &>/dev/null; then
     alias k="kubectl"
 fi

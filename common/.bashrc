@@ -1,7 +1,7 @@
 # General Terminal Setup
 
-if [ ! -d "~/.local/share/omarchy" ]; then
-  source ~/.local/share/omarchy/default/bash/rc
+if [ -d "$HOME/.local/share/omarchy" ]; then
+  [ -f "$HOME/.local/share/omarchy/default/bash/rc" ] && source "$HOME/.local/share/omarchy/default/bash/rc" 2>/dev/null
 fi
 
 # Source global definitions (cross-distro compatible)
