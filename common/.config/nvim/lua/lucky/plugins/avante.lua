@@ -22,28 +22,16 @@ return {
         endpoint = 'https://api.anthropic.com',
         model = 'claude-sonnet-4-5',
         timeout = 30000, -- Timeout in milliseconds
-        extra_request_body = {
-          temperature = 0.75,
-          max_tokens = 20480,
-        },
       },
       moonshot = {
         endpoint = 'https://api.moonshot.ai/v1',
         model = 'kimi-k2-0711-preview',
-        timeout = 30000, -- Timeout in milliseconds
-        extra_request_body = {
-          temperature = 0.75,
-          max_tokens = 32768,
-        },
-        provider = 'openrouter',
-        providers = {
-          openrouter = {
-            __inherited_from = 'openai',
-            endpoint = 'https://openrouter.ai/api/v1',
-            api_key_name = 'OPENROUTER_API_KEY',
-            model = 'z-ai/glm-4.6',
-          },
-        },
+      },
+      openrouter = {
+        __inherited_from = 'openai',
+	endpoint = 'https://openrouter.ai/api/v1',
+	api_key_name = 'OPENROUTER_API_KEY',
+	model = 'z-ai/glm-4-7',
       },
     },
   },
