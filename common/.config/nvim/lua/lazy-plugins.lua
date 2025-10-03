@@ -91,6 +91,8 @@ require('lazy').setup({
   require 'lucky/plugins/overseer',
 
   require 'lucky/plugins/toggleterm',
+
+  require 'lucky/plugins/avante',
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',

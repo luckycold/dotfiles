@@ -15,3 +15,5 @@ fi
 if command -v kubectl &>/dev/null; then
     alias k="kubectl"
 fi
+
+alias avante='nvim -c "lua vim.defer_fn(function()require(\"avante.api\").zen_mode()end, 100)"'
