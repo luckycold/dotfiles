@@ -17,11 +17,6 @@ return {
       openai = {
         endpoint = 'https://api.openai.com',
         model = 'gpt-5-codex',
-        timeout = 30000,
-        extra_request_body = {
-          temperature = 0.75,
-          max_tokens = 128000,
-        },
       },
       claude = {
         endpoint = 'https://api.anthropic.com',
@@ -39,6 +34,15 @@ return {
         extra_request_body = {
           temperature = 0.75,
           max_tokens = 32768,
+        },
+        provider = 'openrouter',
+        providers = {
+          openrouter = {
+            __inherited_from = 'openai',
+            endpoint = 'https://openrouter.ai/api/v1',
+            api_key_name = 'OPENROUTER_API_KEY',
+            model = 'z-ai/glm-4.6',
+          },
         },
       },
     },
