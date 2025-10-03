@@ -29,9 +29,9 @@ return {
       },
       openrouter = {
         __inherited_from = 'openai',
-	endpoint = 'https://openrouter.ai/api/v1',
-	api_key_name = 'OPENROUTER_API_KEY',
-	model = 'z-ai/glm-4-7',
+        endpoint = 'https://openrouter.ai/api/v1',
+        api_key_name = 'OPENROUTER_API_KEY',
+        model = 'z-ai/glm-4.6',
       },
     },
   },
