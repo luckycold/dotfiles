@@ -12,26 +12,32 @@ return {
     -- this file can contain specific instructions for your project
     instructions_file = 'avante.md',
     -- for example
-    provider = 'claude',
+    auto_suggestions_provider = 'x',
+    provider = 'z',
     providers = {
       openai = {
-        endpoint = 'https://api.openai.com',
-        model = 'gpt-5-codex',
+        __inherited_from = 'openai',
+        endpoint = 'https://openrouter.ai/api/v1',
+        api_key_name = 'OPENROUTER_API_KEY',
+        model = 'openai/gpt-5-codex',
       },
-      claude = {
-        endpoint = 'https://api.anthropic.com',
-        model = 'claude-sonnet-4-5',
-        timeout = 30000, -- Timeout in milliseconds
+      anthropic = {
+        __inherited_from = 'openai',
+        endpoint = 'https://openrouter.ai/api/v1',
+        api_key_name = 'OPENROUTER_API_KEY',
+        model = 'anthropic/sonnet-4.7',
       },
-      moonshot = {
-        endpoint = 'https://api.moonshot.ai/v1',
-        model = 'kimi-k2-0711-preview',
-      },
-      openrouter = {
+      z = {
         __inherited_from = 'openai',
         endpoint = 'https://openrouter.ai/api/v1',
         api_key_name = 'OPENROUTER_API_KEY',
         model = 'z-ai/glm-4.6',
+      },
+      x = {
+        __inherited_from = 'openai',
+        endpoint = 'https://openrouter.ai/api/v1',
+        api_key_name = 'OPENROUTER_API_KEY',
+        model = 'x-ai/grok-4-fast',
       },
     },
   },
