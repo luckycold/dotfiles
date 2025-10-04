@@ -201,7 +201,7 @@ stow-profile           # Interactive profile switching
 
 ### Keeping Updated
 ```bash
-update-dotfiles        # Check for and apply updates
+update-dotfiles        # Check and apply updates (includes profile management)
 ```
 
 ### Neovim Setup

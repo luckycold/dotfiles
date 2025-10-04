@@ -9,11 +9,14 @@ if [ -f /etc/os-release ]; then
         alias update='sudo dnf upgrade'
     fi
 fi
-if command -v flatpak &>/dev/null && flatpak list 2>/dev/null | grep -q "com.quexten.Goldwarden"; then
-    alias goldwarden="flatpak run --command=goldwarden com.quexten.Goldwarden"
-fi
 if command -v kubectl &>/dev/null; then
     alias k="kubectl"
 fi
+
+
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
 
 alias avante='nvim -c "lua vim.defer_fn(function()require(\"avante.api\").zen_mode()end, 100)"'

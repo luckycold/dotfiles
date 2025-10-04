@@ -1,5 +1,5 @@
 #!/bin/bash
-# Simplified dotfiles update checker
+# Dotfiles Management and Update Checker (merged)
 
 # Send notification about available updates
 send_update_notification() {
@@ -88,7 +88,7 @@ background_dotfiles_check() {
     fi
 }
 
-# Manual update command
+# Manual update command (includes profile management after update)
 update-dotfiles() {
     local dotfiles_dir="$HOME/dotfiles"
     local original_dir="$(pwd)"
@@ -154,6 +154,93 @@ update-dotfiles() {
     fi
 
     cd "$original_dir"
+}
+
+# --- Dotfiles Profile Management Functions ---
+
+# Internal function to switch stow profiles
+_switch_dotfiles_profile() {
+  local target_profile="$1"
+  local dotfiles_dir="$HOME/dotfiles" # Assume fixed location
+
+  # Check if dotfiles directory exists
+  if [ ! -d "$dotfiles_dir" ]; then
+    echo "Error: Dotfiles directory '$dotfiles_dir' not found." >&2
+    return 1
+  fi
+
+  echo "Switching profile in $dotfiles_dir..."
+  pushd "$dotfiles_dir" >/dev/null || return 1
+
+  # Unstow potential existing profiles (ignore errors)
+  echo "(Attempting to unstow existing profiles...)"
+  stow -D -t ~ personal >/dev/null 2>&1
+  stow -D -t ~ work >/dev/null 2>&1
+
+  # Stow the target profile or ensure common is stowed
+  if [[ "$target_profile" =~ ^(personal|work)$ ]]; then
+    if [ -d "$target_profile" ]; then
+      echo "Stowing '$target_profile' profile..."
+      if stow -t ~ "$target_profile"; then
+        echo "Profile '$target_profile' stowed successfully."
+      else
+        echo "Error stowing profile '$target_profile'." >&2
+      fi
+    else
+      echo "Error: Profile directory '$target_profile' not found." >&2
+    fi
+  elif [[ -z "$target_profile" || "$target_profile" == "skip" || "$target_profile" == "none" ]]; then
+    echo "Ensuring only 'common' profile is stowed..."
+    if [ -d "common" ]; then
+      if stow -t ~ common; then
+        echo "'common' profile stowed successfully."
+      else
+        echo "Error stowing 'common' profile." >&2
+      fi
+    else
+      echo "Error: Profile directory 'common' not found." >&2
+    fi
+  else
+    echo "Warning: Invalid target profile specified: '$target_profile'. No profile stowed." >&2
+  fi
+
+  popd >/dev/null
+  echo "Profile switch complete."
+}
+
+# Function to manually switch profiles
+stow-profile() {
+  local choice
+  local confirmation
+  echo "Which profile would you like to stow?"
+  echo "  1) None (common only)"
+  echo "  2) Personal"
+  echo "  3) Work"
+  echo -n "Enter choice [1-3]: "
+  read -r choice
+
+  case "$choice" in
+    1)
+      echo "This will ensure only the 'common' profile is active."
+      echo "Continue? (Y/n)"
+      read -r confirmation
+      if [[ "$confirmation" =~ ^[nN] ]]; then
+        echo "Aborting profile switch."
+        return 0
+      fi
+      _switch_dotfiles_profile "none"
+      ;;
+    2)
+      _switch_dotfiles_profile "personal"
+      ;;
+    3)
+      _switch_dotfiles_profile "work"
+      ;;
+    *)
+      echo "Invalid choice. Aborting."
+      return 1
+      ;;
+  esac
 }
 
 # Run check on shell startup
