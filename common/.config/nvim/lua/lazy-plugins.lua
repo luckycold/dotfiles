@@ -79,9 +79,6 @@ require('lazy').setup({
   -- Remove trailing whitespace and highlight them in red when typing
   require 'lucky/plugins/trim',
 
-  -- ChatGPT in Neovim!
-  require 'lucky/plugins/chatgpt',
-
   -- Refactoring (Originally got this for extracting functions)
   require 'lucky/plugins/refactoring',
   --  Here are some example plugins that have been included in the Kickstart repository.
