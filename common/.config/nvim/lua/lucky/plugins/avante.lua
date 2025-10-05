@@ -13,7 +13,14 @@ return {
     instructions_file = 'avante.md',
     -- for example
     auto_suggestions_provider = 'x',
-    provider = 'x',
+    provider = 'codex',
+    acp_providers = {
+      ['codex'] = {
+        command = 'codex-acp',
+        args = {},
+        env = {},
+      },
+    },
     providers = {
       openai = {
         __inherited_from = 'openai',
