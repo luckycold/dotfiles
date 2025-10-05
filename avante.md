@@ -155,7 +155,6 @@ stow -D -t ~ personal && stow -D -t ~ work && stow -t ~ common
 - **Manual Commands**:
   ```bash
   update-dotfiles        # Check and apply updates
-  check-dotfiles-now     # Force immediate check
   ```
 
 #### Personal Profile Additions
@@ -228,4 +227,3 @@ nvim                   # First run auto-installs plugins
 - Git-aware prompt and SSH agent setup
 
 This architecture provides a flexible, maintainable setup that adapts to different contexts (personal/work) while maintaining consistency across different Linux distributions.
-

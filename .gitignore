@@ -1,2 +1,5 @@
 # Ignore systemd enablement directories managed by systemctl
 /common/.config/systemd/user/*.wants/ 
+
+# Ignore local Codex integration assets
+personal/Applications/codex-acp
