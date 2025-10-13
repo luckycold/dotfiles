@@ -101,7 +101,7 @@ automatically-unhide-macos-hidden-apps = false
     # '''
 
     alt-w = 'close --quit-if-last-window'
-    alt-m = 'fullscreen'
+    alt-shift-m = 'fullscreen'
 
     alt-enter = 'exec-and-forget open -n -a Ghostty'
 
