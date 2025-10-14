@@ -4,6 +4,10 @@ if [ -d "$HOME/.local/share/omarchy" ]; then
   [ -f "$HOME/.local/share/omarchy/default/bash/rc" ] && source "$HOME/.local/share/omarchy/default/bash/rc" 2>/dev/null
 fi
 
+if [ -d "$HOME/.local/share/omarchy/bin/" ]; then
+  PATH="$HOME/.local/share/omarchy/bin:$PATH"
+fi
+
 # Source global definitions (cross-distro compatible)
 [ -f /etc/bashrc ] && . /etc/bashrc           # Fedora/RHEL
 [ -f /etc/bash.bashrc ] && . /etc/bash.bashrc # Debian/Ubuntu/Pop_OS

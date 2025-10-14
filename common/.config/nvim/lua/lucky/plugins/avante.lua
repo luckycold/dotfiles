@@ -12,13 +12,19 @@ return {
     -- this file can contain specific instructions for your project
     instructions_file = 'avante.md',
     -- for example
-    auto_suggestions_provider = 'x',
+    web_search_engine = {
+      provider = 'brave',
+      proxy = nil,
+    },
     provider = 'codex',
+    auto_suggestions_provider = 'z',
     acp_providers = {
       ['codex'] = {
         command = 'codex-acp',
-        args = {},
-        env = {},
+        args = { 'quiet' },
+        env = {
+          RUST_LOG = 'error',
+        },
       },
     },
     providers = {
@@ -47,6 +53,26 @@ return {
         model = 'x-ai/grok-4-fast',
       },
     },
+  },
+  rag_service = { -- RAG Service configuration
+    enabled = false, -- Enables the RAG service
+    host_mount = os.getenv 'HOME', -- Host mount path for the rag service (Docker will mount this path)
+    runner = 'docker', -- Runner for the RAG service (can use docker or nix)
+    llm = { -- Language Model (LLM) configuration for RAG service
+      provider = 'openai', -- LLM provider
+      endpoint = 'https://api.openai.com/v1', -- LLM API endpoint
+      api_key = 'OPENAI_API_KEY', -- Environment variable name for the LLM API key
+      model = 'gpt-4o-mini', -- LLM model name
+      extra = nil, -- Additional configuration options for LLM
+    },
+    embed = { -- Embedding model configuration for RAG service
+      provider = 'openai', -- Embedding provider
+      endpoint = 'https://api.openai.com/v1', -- Embedding API endpoint
+      api_key = 'OPENAI_API_KEY', -- Environment variable name for the embedding API key
+      model = 'text-embedding-3-large', -- Embedding model name
+      extra = nil, -- Additional configuration options for the embedding model
+    },
+    docker_extra_args = '', -- Extra arguments to pass to the docker command
   },
   dependencies = {
     'nvim-lua/plenary.nvim',
