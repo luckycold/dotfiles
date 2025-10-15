@@ -100,6 +100,7 @@ automatically-unhide-macos-hidden-apps = false
     # end tell'
     # '''
 
+    alt-shift-w = 'close'
     alt-w = 'close --quit-if-last-window'
     alt-shift-m = 'fullscreen'
 
