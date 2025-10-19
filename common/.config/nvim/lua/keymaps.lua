@@ -53,3 +53,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
+
+-- Yank to clipboard
+vim.keymap.set('n', '<leader>y', '"+y', { desc = 'Yank to clipboard' })
+vim.keymap.set('v', '<leader>y', '"+y', { desc = 'Yank to clipboard (visual)' })
