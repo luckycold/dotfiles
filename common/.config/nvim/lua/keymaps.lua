@@ -5,7 +5,23 @@
 vim.keymap.set('v', '<leader>yy', '"*y')
 vim.keymap.set('n', '<leader>pp', '"*p')
 vim.keymap.set('i', 'jj', '<Esc>')
-vim.keymap.set('n', '<leader>pv', vim.cmd.Ex)
+
+vim.keymap.set('n', '<leader>pv', function()
+  -- Get current file or Suda buffer path
+  local file = vim.api.nvim_buf_get_name(0)
+
+  -- If it’s a Suda buffer (e.g. suda:///etc/hosts), remove the prefix
+  local real_path = file:gsub('^suda://', '') -- remove one leading 'suda://' if present
+  local dir = vim.fn.fnamemodify(real_path, ':p:h')
+
+  -- Ensure fallback in case buffer has no valid path
+  if dir == '' or vim.fn.isdirectory(dir) == 0 then
+    dir = vim.fn.getcwd()
+  end
+
+  -- Open the cleaned directory directly with Netrw
+  vim.cmd('edit ' .. vim.fn.fnameescape(dir))
+end, { desc = 'Open netrw at real directory (handles suda:// buffers)' })
 
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true
