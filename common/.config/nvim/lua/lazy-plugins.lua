@@ -63,6 +63,8 @@ require('lazy').setup({
 
   -- Code Snippets
   require 'lucky/plugins/cmp',
+  require 'lucky/plugins/supermaven',
+  require 'lucky/plugins/opencode',
 
   -- Tokyo Night Theme
   require 'lucky/plugins/tokyonight',
@@ -88,8 +90,6 @@ require('lazy').setup({
   require 'lucky/plugins/overseer',
 
   require 'lucky/plugins/toggleterm',
-
-  require 'lucky/plugins/avante',
 
   require 'lucky/plugins/suda',
   -- require 'kickstart.plugins.debug',

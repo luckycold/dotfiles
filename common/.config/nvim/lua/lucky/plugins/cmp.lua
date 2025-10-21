@@ -85,10 +85,17 @@
           --
           -- <c-l> will move you to the right of each of the expansion locations.
           -- <c-h> is similar, except moving you backwards.
-          ['<C-l>'] = cmp.mapping(function()
+          ['<C-l>'] = cmp.mapping(function(fallback)
+            local has_supermaven, preview = pcall(require, 'supermaven-nvim.completion_preview')
+            if has_supermaven and preview.has_suggestion and preview.has_suggestion() then
+              preview.on_accept_suggestion()
+              return
+            end
             if luasnip.expand_or_locally_jumpable() then
               luasnip.expand_or_jump()
+              return
             end
+            fallback()
           end, { 'i', 's' }),
           ['<C-h>'] = cmp.mapping(function()
             if luasnip.locally_jumpable(-1) then
