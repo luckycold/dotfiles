@@ -112,6 +112,9 @@ automatically-unhide-macos-hidden-apps = false
     alt-k = 'focus up --boundaries all-monitors-outer-frame'
     alt-l = 'focus right --boundaries all-monitors-outer-frame'
 
+    alt-shift-backslash = 'layout horizontal'
+    alt-shift-minus = 'layout vertical'
+
     # See: https://nikitabobko.github.io/AeroSpace/commands#move
     alt-shift-h = 'move left --boundaries all-monitors-outer-frame'
     alt-shift-j = 'move down --boundaries all-monitors-outer-frame'
