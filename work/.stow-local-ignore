@@ -22,3 +22,5 @@ _darcs
 ^/README.*
 ^/LICENSE.*
 ^/COPYING
+
+Library/Preferences/com.googlecode.iterm2.plist
