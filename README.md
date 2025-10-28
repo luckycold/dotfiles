@@ -4,27 +4,52 @@ These are the dotfiles for my system
 
 ## Requirements
 
+### Minimum
 Make sure you have the these installed on your system
 
-### Git
-#### Fedora
+#### For Linux
+##### Arch
 ```bash
-sudo dnf install git
+sudo pacman -S git stow
 ```
-#### Debian
+##### Debian
 ```bash
-sudo apt install git
+sudo apt install git stow
+```
+##### Fedora
+```bash
+sudo dnf install git stow
 ```
 
-### Stow
-#### Fedora
+#### For Mac (Mostly for work)
 ```bash
-sudo dnf install stow
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install stow git
 ```
-#### Debian
+
+### Recommended
+
+#### For Linux
+##### Arch
 ```bash
-sudo apt install stow
+sudo pacman -S yay
+yay -S stow git gh neovim ghostty bitwarden-bin bw
 ```
+##### Debian/Ubuntu
+```bash
+sudo apt install stow git gh neovim ghostty
+```
+##### Fedora
+```bash
+sudo dnf install stow git gh neovim ghostty bitwarden bw
+```
+
+#### For Mac (Mostly for work)
+```bash
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli
+```
+
 
 ## Installation
 
