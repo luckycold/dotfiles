@@ -104,7 +104,7 @@ automatically-unhide-macos-hidden-apps = false
     alt-w = 'close --quit-if-last-window'
     alt-shift-m = 'fullscreen'
 
-    alt-enter = 'exec-and-forget open -n -a Ghostty'
+    alt-enter = 'exec-and-forget open -n -a iterm'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
     alt-h = 'focus left --boundaries all-monitors-outer-frame'
