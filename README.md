@@ -50,6 +50,13 @@ sudo dnf install stow git gh neovim ghostty bitwarden bw
 brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli
 ```
 
+##### Caveat for Mac
+iterm2's settings does not allow for symlinking, you'll need to hardlink the files instead.
+
+```bash
+ln -s ~/dotfiles/work/Library/Preferences/com.googlecode.iterm2.plist ~/Library/Preferences/com.googlecode.iterm2.plist
+```
+
 
 ## Installation
 
