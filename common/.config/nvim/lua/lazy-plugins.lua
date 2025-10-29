@@ -92,6 +92,8 @@ require('lazy').setup({
   require 'lucky/plugins/toggleterm',
 
   require 'lucky/plugins/suda',
+
+  require 'lucky/plugins/sops',
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
