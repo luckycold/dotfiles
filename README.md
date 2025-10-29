@@ -4,29 +4,6 @@ These are the dotfiles for my system
 
 ## Requirements
 
-### Minimum
-Make sure you have the these installed on your system
-
-#### For Linux
-##### Arch
-```bash
-sudo pacman -S git stow
-```
-##### Debian
-```bash
-sudo apt install git stow
-```
-##### Fedora
-```bash
-sudo dnf install git stow
-```
-
-#### For Mac (Mostly for work)
-```bash
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install stow git
-```
-
 ### Recommended
 
 #### For Linux
@@ -57,6 +34,29 @@ iterm2's settings does not allow for symlinking, you'll need to hardlink the fil
 ln -s ~/dotfiles/work/Library/Preferences/com.googlecode.iterm2.plist ~/Library/Preferences/com.googlecode.iterm2.plist
 ```
 
+
+### Minimum
+Make sure you have the these installed on your system
+
+#### For Linux
+##### Arch
+```bash
+sudo pacman -S git stow
+```
+##### Debian
+```bash
+sudo apt install git stow
+```
+##### Fedora
+```bash
+sudo dnf install git stow
+```
+
+#### For Mac (Mostly for work)
+```bash
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install stow git
+```
 
 ## Installation
 
