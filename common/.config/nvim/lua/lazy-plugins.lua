@@ -96,6 +96,8 @@ require('lazy').setup({
   require 'lucky/plugins/sops',
 
   require 'lucky/plugins/fugitive',
+
+  require 'lucky/plugins/neotest',
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
