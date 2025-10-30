@@ -42,3 +42,20 @@
 # # Just for example:
 # resize-overlay-duration = 4s 200ms
 theme = omarchy.conf
+# After Karabiner swaps modifiers, intercept and send proper control sequences
+
+# Send SIGINT (interrupt process)
+keybind = cmd+c=text:\x03
+
+# Send SIGTSTP (suspend process)
+keybind = cmd+z=text:\x1a
+
+# Send EOF
+keybind = cmd+d=text:\x04
+
+# SIGQUIT
+keybind = cmd+shift+backslash=text:\x1c
+
+# Copy and paste (after Karabiner swaps modifiers)
+keybind = cmd+shift+c=copy_to_clipboard
+keybind = cmd+shift+v=paste_from_clipboard

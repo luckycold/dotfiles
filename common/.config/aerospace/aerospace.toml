@@ -36,7 +36,7 @@ on-focus-changed = ['move-mouse window-lazy-center'] # Mouse lazily follows any 
 # You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
 # Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
 # Also see: https://nikitabobko.github.io/AeroSpace/goodies#disable-hide-app
-automatically-unhide-macos-hidden-apps = false
+automatically-unhide-macos-hidden-apps = true
 
 # Possible values: (qwerty|dvorak|colemak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -100,63 +100,63 @@ automatically-unhide-macos-hidden-apps = false
     # end tell'
     # '''
 
-    alt-shift-w = 'close'
-    alt-w = 'close --quit-if-last-window'
-    alt-shift-m = 'fullscreen'
+    #ctrl-shift-w = 'close'
+    #ctrl-w = 'close --quit-if-last-window'
+    ctrl-shift-m = 'fullscreen'
 
-    alt-enter = 'exec-and-forget open -n -a iterm'
+    ctrl-enter = 'exec-and-forget open -n -a ghostty'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
-    alt-h = 'focus left --boundaries all-monitors-outer-frame'
-    alt-j = 'focus down --boundaries all-monitors-outer-frame'
-    alt-k = 'focus up --boundaries all-monitors-outer-frame'
-    alt-l = 'focus right --boundaries all-monitors-outer-frame'
+    ctrl-h = 'focus left --boundaries all-monitors-outer-frame'
+    ctrl-j = 'focus down --boundaries all-monitors-outer-frame'
+    ctrl-k = 'focus up --boundaries all-monitors-outer-frame'
+    ctrl-l = 'focus right --boundaries all-monitors-outer-frame'
 
-    alt-shift-backslash = 'layout horizontal'
-    alt-shift-minus = 'layout vertical'
+    ctrl-shift-backslash = 'layout horizontal'
+    ctrl-shift-minus = 'layout vertical'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move
-    alt-shift-h = 'move left --boundaries all-monitors-outer-frame'
-    alt-shift-j = 'move down --boundaries all-monitors-outer-frame'
-    alt-shift-k = 'move up --boundaries all-monitors-outer-frame'
-    alt-shift-l = 'move right --boundaries all-monitors-outer-frame'
+    ctrl-shift-h = 'move left --boundaries all-monitors-outer-frame'
+    ctrl-shift-j = 'move down --boundaries all-monitors-outer-frame'
+    ctrl-shift-k = 'move up --boundaries all-monitors-outer-frame'
+    ctrl-shift-l = 'move right --boundaries all-monitors-outer-frame'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#resize
-    alt-minus = 'resize smart -50'
-    alt-equal = 'resize smart +50'
+    ctrl-minus = 'resize smart -50'
+    ctrl-equal = 'resize smart +50'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace
-    alt-1 = 'workspace 1'
-    alt-2 = 'workspace 2'
-    alt-3 = 'workspace 3'
-    alt-4 = 'workspace 4'
-    alt-5 = 'workspace 5'
-    alt-6 = 'workspace 6'
-    alt-7 = 'workspace 7'
-    alt-8 = 'workspace 8'
-    alt-9 = 'workspace 9'
-    alt-0 = 'workspace 10'
+    ctrl-1 = 'workspace 1'
+    ctrl-2 = 'workspace 2'
+    ctrl-3 = 'workspace 3'
+    ctrl-4 = 'workspace 4'
+    ctrl-5 = 'workspace 5'
+    ctrl-6 = 'workspace 6'
+    ctrl-7 = 'workspace 7'
+    ctrl-8 = 'workspace 8'
+    ctrl-9 = 'workspace 9'
+    ctrl-0 = 'workspace 10'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
-    alt-shift-1 = 'move-node-to-workspace 1'
-    alt-shift-2 = 'move-node-to-workspace 2'
-    alt-shift-3 = 'move-node-to-workspace 3'
-    alt-shift-4 = 'move-node-to-workspace 4'
-    alt-shift-5 = 'move-node-to-workspace 5'
-    alt-shift-6 = 'move-node-to-workspace 6'
-    alt-shift-7 = 'move-node-to-workspace 7'
-    alt-shift-8 = 'move-node-to-workspace 8'
-    alt-shift-9 = 'move-node-to-workspace 9'
-    alt-shift-0 = 'move-node-to-workspace 10'
+    ctrl-shift-1 = 'move-node-to-workspace 1'
+    ctrl-shift-2 = 'move-node-to-workspace 2'
+    ctrl-shift-3 = 'move-node-to-workspace 3'
+    ctrl-shift-4 = 'move-node-to-workspace 4'
+    ctrl-shift-5 = 'move-node-to-workspace 5'
+    ctrl-shift-6 = 'move-node-to-workspace 6'
+    ctrl-shift-7 = 'move-node-to-workspace 7'
+    ctrl-shift-8 = 'move-node-to-workspace 8'
+    ctrl-shift-9 = 'move-node-to-workspace 9'
+    ctrl-shift-0 = 'move-node-to-workspace 10'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
-    alt-tab = 'workspace-back-and-forth'
+    ctrl-tab = 'workspace-back-and-forth'
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
-    alt-ctrl-h = 'move-workspace-to-monitor left'
-    alt-ctrl-l = 'move-workspace-to-monitor right'
+    ctrl-cmd-h = 'move-workspace-to-monitor left'
+    ctrl-cmd-l = 'move-workspace-to-monitor right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#mode
-    alt-shift-semicolon = 'mode service'
+    ctrl-shift-semicolon = 'mode service'
 
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -169,7 +169,7 @@ automatically-unhide-macos-hidden-apps = false
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
 
-    alt-shift-h = ['join-with left', 'mode main']
-    alt-shift-j = ['join-with down', 'mode main']
-    alt-shift-k = ['join-with up', 'mode main']
-    alt-shift-l = ['join-with right', 'mode main']
+    ctrl-shift-h = ['join-with left', 'mode main']
+    ctrl-shift-j = ['join-with down', 'mode main']
+    ctrl-shift-k = ['join-with up', 'mode main']
+    ctrl-shift-l = ['join-with right', 'mode main']

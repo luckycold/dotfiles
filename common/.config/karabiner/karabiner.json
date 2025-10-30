@@ -4,13 +4,14 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Swap right-ctrl and command except in Terminal",
+                        "description": "Swap right-ctrl and command except in Terminal and Ghostty",
                         "manipulators": [
                             {
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
-                                            "^com\\.apple\\.Terminal"
+                                            "^com\\.apple\\.Terminal",
+                                            "^com\\.mitchellh\\.ghostty"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -23,7 +24,8 @@
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
-                                            "^com\\.apple\\.Terminal"
+                                            "^com\\.apple\\.Terminal",
+                                            "^com\\.mitchellh\\.ghostty"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -35,13 +37,14 @@
                         ]
                     },
                     {
-                        "description": "Swap left-ctrl and command except in Terminal",
+                        "description": "Swap right-ctrl and command except in Terminal and Ghostty",
                         "manipulators": [
                             {
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
-                                            "^com\\.apple\\.Terminal"
+                                            "^com\\.apple\\.Terminal",
+                                            "^com\\.mitchellh\\.ghostty"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -54,7 +57,8 @@
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
-                                            "^com\\.apple\\.Terminal"
+                                            "^com\\.apple\\.Terminal",
+                                            "^com\\.mitchellh\\.ghostty"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
