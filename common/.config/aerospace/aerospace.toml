@@ -152,8 +152,8 @@ automatically-unhide-macos-hidden-apps = true
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
     ctrl-tab = 'workspace-back-and-forth'
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
-    ctrl-cmd-h = 'move-workspace-to-monitor left'
-    ctrl-cmd-l = 'move-workspace-to-monitor right'
+    ctrl-alt-h = 'move-workspace-to-monitor left'
+    ctrl-alt-l = 'move-workspace-to-monitor right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#mode
     ctrl-shift-semicolon = 'mode service'
