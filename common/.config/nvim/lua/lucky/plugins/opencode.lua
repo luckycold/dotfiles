@@ -3,7 +3,7 @@ return {
     'NickvanDyke/opencode.nvim',
     event = 'VeryLazy',
     dependencies = {
-      { 'folke/snacks.nvim', opts = { input = {}, picker = {} } },
+      { 'folke/snacks.nvim', opts = { terminal = {}, input = {}, picker = {} } },
     },
     config = function()
       ---@type opencode.Opts
@@ -24,7 +24,7 @@ return {
         require('opencode').select()
       end, 'Select prompt')
       map({ 'n', 'x' }, '<leader>o+', function()
-        require('opencode').prompt('@this')
+        require('opencode').prompt '@this'
       end, 'Add this')
       map('n', '<leader>ot', function()
         require('opencode').toggle()
@@ -33,20 +33,22 @@ return {
         require('opencode').command()
       end, 'Select command')
       map('n', '<leader>on', function()
-        require('opencode').command('session_new')
+        require('opencode').command 'session_new'
       end, 'New session')
       map('n', '<leader>oi', function()
-        require('opencode').command('session_interrupt')
+        require('opencode').command 'session_interrupt'
       end, 'Interrupt session')
       map('n', '<leader>oA', function()
-        require('opencode').command('agent_cycle')
+        require('opencode').command 'agent_cycle'
       end, 'Cycle agent')
       map('n', '<S-C-u>', function()
-        require('opencode').command('messages_half_page_up')
+        require('opencode').command 'messages_half_page_up'
       end, 'Messages up')
       map('n', '<S-C-d>', function()
-        require('opencode').command('messages_half_page_down')
+        require('opencode').command 'messages_half_page_down'
       end, 'Messages down')
+      -- Exit terminal mode with ESC (or ESC ESC)
+      vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
     end,
   },
 }

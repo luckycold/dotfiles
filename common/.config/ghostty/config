@@ -47,3 +47,6 @@ theme = omarchy.conf
 # Copy and paste (after Karabiner swaps modifiers)
 keybind = cmd+shift+c=copy_to_clipboard
 keybind = cmd+shift+v=paste_from_clipboard
+
+# Slowdown mouse scrolling
+mouse-scroll-multiplier = 0.95

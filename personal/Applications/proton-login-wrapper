@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Wrapper script for Proton Login Autostart
+# Notifies user of start and verifies success
+
+notify_user() {
+    local title="$1"
+    local message="$2"
+    local urgency="${3:-low}"
+
+    if command -v notify-send &>/dev/null; then
+        notify-send --urgency="$urgency" "$title" "$message" 2>/dev/null
+    elif command -v osascript &>/dev/null; then
+        osascript -e "display notification \"$message\" with title \"$title\"" 2>/dev/null
+    fi
+}
+
+# Notify start
+notify_user "Proton Pass" "Starting login verification..."
+
+# Resolve script directory
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+PROTON_LOGIN_SCRIPT="$SCRIPT_DIR/proton-login"
+
+# Check if main script exists
+if [ ! -x "$PROTON_LOGIN_SCRIPT" ]; then
+    notify_user "Proton Pass Error" "Could not find executable proton-login script." "critical"
+    exit 1
+fi
+
+# Run the login script
+"$PROTON_LOGIN_SCRIPT"
+EXIT_CODE=$?
+
+# Check results
+if [ $EXIT_CODE -eq 0 ]; then
+    # Double check with pass-cli test
+    if pass-cli test >/dev/null 2>&1; then
+        notify_user "Proton Pass" "✅ Startup checks passed. Ready."
+    else
+        notify_user "Proton Pass Warning" "⚠️ Script finished but login test failed." "critical"
+    fi
+else
+    # proton-login sends its own specific error notifications, but we can log here
+    echo "Proton login script failed with exit code $EXIT_CODE"
+fi

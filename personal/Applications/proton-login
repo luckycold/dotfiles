@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Function to send native notifications
+notify_user() {
+    local title="$1"
+    local message="$2"
+    local urgency="${3:-normal}" # low, normal, critical
+
+    if command -v osascript &>/dev/null; then
+        osascript -e "display notification \"$message\" with title \"$title\"" 2>/dev/null
+    elif command -v notify-send &>/dev/null; then
+        notify-send --urgency="$urgency" "$title" "$message" 2>/dev/null
+    fi
+}
+
+# Check for required dependencies
+for cmd in pass-cli secret-tool oathtool; do
+    if ! command -v "$cmd" &>/dev/null; then
+        msg="Missing dependency: $cmd"
+        echo "❌ $msg"
+        notify_user "Proton Login Failed" "$msg" "critical"
+        exit 1
+    fi
+done
+
+# 1. Check if we are already logged in
+if pass-cli test >/dev/null 2>&1; then
+    echo "✅ Already logged into Proton Pass."
+    exit 0
+fi
+
+echo "🔄 Session expired or missing. Logging in..."
+
+# 2. Fetch Password from keyring
+export PROTON_PASS_PASSWORD="$(secret-tool lookup service proton-pass type password)"
+
+# 3. Fetch TOTP Secret and generate code
+TOTP_SECRET="$(secret-tool lookup service proton-pass type totp)"
+
+if [ -n "$TOTP_SECRET" ]; then
+    # oathtool: --totp for time-based, -b for base32 input
+    export PROTON_PASS_TOTP="$(oathtool --totp -b "$TOTP_SECRET")"
+else
+    msg="Could not retrieve TOTP secret from keyring."
+    echo "❌ Error: $msg"
+    notify_user "Proton Login Failed" "$msg" "critical"
+    exit 1
+fi
+
+# 4. Log in
+# Replace 'your_email@proton.me' with your actual email
+if pass-cli login --interactive hello@lukewilliams.org; then
+    echo "✅ Login successful."
+else
+    msg="Login failed. Check connection or credentials."
+    echo "❌ $msg"
+    notify_user "Proton Login Failed" "$msg" "critical"
+    exit 1
+fi
+
+# 5. Cleanup variables
+unset PROTON_PASS_PASSWORD
+unset PROTON_PASS_TOTP
