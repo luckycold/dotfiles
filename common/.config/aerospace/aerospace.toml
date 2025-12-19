@@ -154,8 +154,8 @@ automatically-unhide-macos-hidden-apps = true
     ctrl-shift-tab = 'workspace --wrap-around prev'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
-    ctrl-alt-h = 'move-workspace-to-monitor left'
-    ctrl-alt-l = 'move-workspace-to-monitor right'
+    ctrl-shift-alt-h = 'move-workspace-to-monitor left'
+    ctrl-shift-alt-l = 'move-workspace-to-monitor right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#mode
     ctrl-shift-semicolon = 'mode service'
