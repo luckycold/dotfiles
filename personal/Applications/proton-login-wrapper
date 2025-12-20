@@ -1,12 +1,39 @@
 #!/bin/bash
 
 # Wrapper script for Proton Login Autostart
-# Notifies user of start and verifies success
+# Notifies user of start, waits for network, logs in, and ensures SSH agent is ready
+
+SSH_AGENT_SOCKET="$HOME/.ssh/proton-pass-agent.sock"
+SSH_AGENT_WAIT_SECONDS=30  # Increased for slow boot environments
+MAX_NETWORK_WAIT_SECONDS=30
+NETWORK_CHECK_HOST="1.1.1.1"
+
+log_msg() {
+    local level="$1"
+    shift
+    local ts
+    ts="$(date +"%Y-%m-%d %H:%M:%S")"
+    printf '%s [%s] %s\n' "$ts" "$level" "$*"
+}
+
+log_info() {
+    log_msg "INFO" "$@"
+}
+
+log_warn() {
+    log_msg "WARN" "$@"
+}
+
+log_error() {
+    log_msg "ERROR" "$@"
+}
 
 notify_user() {
     local title="$1"
     local message="$2"
     local urgency="${3:-low}"
+
+    log_info "Notification: $title - $message (urgency: $urgency)"
 
     if command -v notify-send &>/dev/null; then
         notify-send --urgency="$urgency" "$title" "$message" 2>/dev/null
@@ -15,51 +42,113 @@ notify_user() {
     fi
 }
 
-# Notify start
+is_ssh_agent_active() {
+    if [ ! -S "$SSH_AGENT_SOCKET" ]; then
+        return 1
+    fi
+
+    # ssh-add -l returns:
+    # 0: Success (identities found)
+    # 1: Success (no identities found, but agent is alive)
+    # 2: Failure (cannot contact agent)
+    SSH_AUTH_SOCK="$SSH_AGENT_SOCKET" ssh-add -l >/dev/null 2>&1
+    local ret=$?
+    
+    if [ $ret -le 1 ]; then
+        return 0
+    fi
+    return 1
+}
+
+stop_stale_ssh_agents() {
+    if ! command -v pgrep >/dev/null 2>&1; then
+        return
+    fi
+
+    local pattern="pass-cli ssh-agent start"
+    local stale_pids
+    stale_pids=$(pgrep -f "$pattern" || true)
+
+    if [ -n "$stale_pids" ]; then
+        log_warn "Terminating stale SSH agent processes: $stale_pids"
+        echo "$stale_pids" | xargs kill -9 >/dev/null 2>&1 || true
+    fi
+}
+
+start_ssh_agent() {
+    log_info "Ensuring Proton Pass SSH agent is running."
+
+    if is_ssh_agent_active; then
+        export SSH_AUTH_SOCK="$SSH_AGENT_SOCKET"
+        notify_user "SSH Agent" "✅ SSH agent already running at $SSH_AGENT_SOCKET."
+        return 0
+    fi
+
+    log_warn "SSH agent not responding. Cleaning up socket and old processes."
+    stop_stale_ssh_agents
+    rm -f "$SSH_AGENT_SOCKET"
+    mkdir -p "$(dirname "$SSH_AGENT_SOCKET")"
+    chmod 700 "$(dirname "$SSH_AGENT_SOCKET")"
+
+    log_info "Starting SSH agent in background..."
+    nohup pass-cli ssh-agent start --socket-path "$SSH_AGENT_SOCKET" --vault-name Main >/dev/null 2>&1 &
+    local agent_pid=$!
+    
+    log_info "Waiting up to ${SSH_AGENT_WAIT_SECONDS}s for SSH agent socket to appear (PID: $agent_pid)."
+    for ((i = 0; i < SSH_AGENT_WAIT_SECONDS; i++)); do
+        sleep 1
+        if is_ssh_agent_active; then
+            export SSH_AUTH_SOCK="$SSH_AGENT_SOCKET"
+            notify_user "SSH Agent" "✅ SSH agent ready at $SSH_AGENT_SOCKET."
+            return 0
+        fi
+        
+        # Check if the process is still alive. 
+        # We don't break immediately if it's "dead" because it might have fork-backgrounded 
+        # (though pass-cli shouldn't). But we log it.
+        if ! kill -0 "$agent_pid" 2>/dev/null; then
+             log_warn "Process $agent_pid vanished, but still checking for socket..."
+        fi
+    done
+
+    log_error "SSH agent failed to start or socket not available after ${SSH_AGENT_WAIT_SECONDS}s."
+    notify_user "SSH Agent Error" "❌ SSH agent failed to start." "critical"
+    return 1
+}
+
+log_info "Starting Proton Pass login wrapper."
 notify_user "Proton Pass" "Starting login verification..."
 
-# Wait for internet connection (up to 30 seconds)
-# This handles cases where the script runs before the network is fully up
-MAX_RETRIES=30
+log_info "Waiting for network connectivity..."
 RETRY=0
-while ! ping -c 1 -W 1 1.1.1.1 &>/dev/null; do
+while ! ping -c 1 -W 1 "$NETWORK_CHECK_HOST" &>/dev/null; do
     ((RETRY++))
-    if [ $RETRY -ge $MAX_RETRIES ]; then
+    if [ $RETRY -ge $MAX_NETWORK_WAIT_SECONDS ]; then
+        log_warn "Network check timed out. Continuing..."
         break
     fi
     sleep 1
 done
 
-# Resolve script directory
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 PROTON_LOGIN_SCRIPT="$SCRIPT_DIR/proton-login"
 
-# Check if main script exists
 if [ ! -x "$PROTON_LOGIN_SCRIPT" ]; then
-    notify_user "Proton Pass Error" "Could not find executable proton-login script." "critical"
+    log_error "Could not find executable proton-login script."
     exit 1
 fi
 
-# Run the login script
+log_info "Invoking proton-login script."
 "$PROTON_LOGIN_SCRIPT"
 EXIT_CODE=$?
 
-# Check results
 if [ $EXIT_CODE -eq 0 ]; then
-    # Double check with pass-cli test
     if pass-cli test >/dev/null 2>&1; then
         notify_user "Proton Pass" "✅ Startup checks passed. Ready."
-
-        # Start SSH agent
-        if pass-cli ssh-agent start; then
-            notify_user "SSH Agent" "✅ SSH agent started successfully."
-        else
-            notify_user "SSH Agent Error" "❌ Failed to start SSH agent." "critical"
-        fi
+        start_ssh_agent
     else
-        notify_user "Proton Pass Warning" "⚠️ Script finished but login test failed." "critical"
+        notify_user "Proton Pass Warning" "⚠️ Login test failed." "critical"
     fi
 else
-    # proton-login sends its own specific error notifications, but we can log here
-    echo "Proton login script failed with exit code $EXIT_CODE"
+    log_error "proton-login failed with exit code $EXIT_CODE."
 fi
