@@ -4,16 +4,22 @@
 # Notifies user of start, waits for network, logs in, and ensures SSH agent is ready
 
 SSH_AGENT_SOCKET="$HOME/.ssh/proton-pass-agent.sock"
-SSH_AGENT_WAIT_SECONDS=30  # Increased for slow boot environments
+SSH_AGENT_WAIT_SECONDS=30
 MAX_NETWORK_WAIT_SECONDS=30
 NETWORK_CHECK_HOST="1.1.1.1"
+LOG_FILE="/tmp/proton-login-wrapper.log"
+
+# Clear log file on fresh run
+: > "$LOG_FILE"
 
 log_msg() {
     local level="$1"
     shift
     local ts
     ts="$(date +"%Y-%m-%d %H:%M:%S")"
-    printf '%s [%s] %s\n' "$ts" "$level" "$*"
+    local msg="[$ts] [$level] $*"
+    echo "$msg"
+    echo "$msg" >> "$LOG_FILE"
 }
 
 log_info() {
@@ -47,10 +53,6 @@ is_ssh_agent_active() {
         return 1
     fi
 
-    # ssh-add -l returns:
-    # 0: Success (identities found)
-    # 1: Success (no identities found, but agent is alive)
-    # 2: Failure (cannot contact agent)
     SSH_AUTH_SOCK="$SSH_AGENT_SOCKET" ssh-add -l >/dev/null 2>&1
     local ret=$?
     
@@ -103,9 +105,6 @@ start_ssh_agent() {
             return 0
         fi
         
-        # Check if the process is still alive. 
-        # We don't break immediately if it's "dead" because it might have fork-backgrounded 
-        # (though pass-cli shouldn't). But we log it.
         if ! kill -0 "$agent_pid" 2>/dev/null; then
              log_warn "Process $agent_pid vanished, but still checking for socket..."
         fi
@@ -139,7 +138,7 @@ if [ ! -x "$PROTON_LOGIN_SCRIPT" ]; then
 fi
 
 log_info "Invoking proton-login script."
-"$PROTON_LOGIN_SCRIPT"
+"$PROTON_LOGIN_SCRIPT" >> "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
