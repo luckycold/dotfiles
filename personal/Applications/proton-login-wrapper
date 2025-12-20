@@ -18,6 +18,18 @@ notify_user() {
 # Notify start
 notify_user "Proton Pass" "Starting login verification..."
 
+# Wait for internet connection (up to 30 seconds)
+# This handles cases where the script runs before the network is fully up
+MAX_RETRIES=30
+RETRY=0
+while ! ping -c 1 -W 1 1.1.1.1 &>/dev/null; do
+    ((RETRY++))
+    if [ $RETRY -ge $MAX_RETRIES ]; then
+        break
+    fi
+    sleep 1
+done
+
 # Resolve script directory
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 PROTON_LOGIN_SCRIPT="$SCRIPT_DIR/proton-login"
@@ -37,6 +49,13 @@ if [ $EXIT_CODE -eq 0 ]; then
     # Double check with pass-cli test
     if pass-cli test >/dev/null 2>&1; then
         notify_user "Proton Pass" "✅ Startup checks passed. Ready."
+
+        # Start SSH agent
+        if pass-cli ssh-agent start; then
+            notify_user "SSH Agent" "✅ SSH agent started successfully."
+        else
+            notify_user "SSH Agent Error" "❌ Failed to start SSH agent." "critical"
+        fi
     else
         notify_user "Proton Pass Warning" "⚠️ Script finished but login test failed." "critical"
     fi

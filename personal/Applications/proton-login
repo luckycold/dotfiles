@@ -34,18 +34,25 @@ echo "🔄 Session expired or missing. Logging in..."
 # 2. Fetch Password from keyring
 export PROTON_PASS_PASSWORD="$(secret-tool lookup service proton-pass type password)"
 
+if [ -z "$PROTON_PASS_PASSWORD" ]; then
+    msg="Password missing in keyring. Run: secret-tool store --label='Proton Pass Password' service proton-pass type password"
+    echo "❌ $msg"
+    notify_user "Proton Login Failed" "Password missing in keyring." "critical"
+    exit 1
+fi
+
 # 3. Fetch TOTP Secret and generate code
 TOTP_SECRET="$(secret-tool lookup service proton-pass type totp)"
 
-if [ -n "$TOTP_SECRET" ]; then
-    # oathtool: --totp for time-based, -b for base32 input
-    export PROTON_PASS_TOTP="$(oathtool --totp -b "$TOTP_SECRET")"
-else
-    msg="Could not retrieve TOTP secret from keyring."
-    echo "❌ Error: $msg"
-    notify_user "Proton Login Failed" "$msg" "critical"
+if [ -z "$TOTP_SECRET" ]; then
+    msg="TOTP secret missing in keyring. Run: secret-tool store --label='Proton Pass TOTP' service proton-pass type totp"
+    echo "❌ $msg"
+    notify_user "Proton Login Failed" "TOTP secret missing in keyring." "critical"
     exit 1
 fi
+
+# oathtool: --totp for time-based, -b for base32 input
+export PROTON_PASS_TOTP="$(oathtool --totp -b "$TOTP_SECRET")"
 
 # 4. Log in
 # Replace 'your_email@proton.me' with your actual email
