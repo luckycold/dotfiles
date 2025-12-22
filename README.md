@@ -10,21 +10,27 @@ These are the dotfiles for my system
 ##### Arch
 ```bash
 sudo pacman -S yay
-yay -S stow git gh neovim ghostty bitwarden-bin bw
+yay -S stow git gh neovim ghostty bitwarden-bin bw lsof
 ```
 ##### Debian/Ubuntu
 ```bash
-sudo apt install stow git gh neovim ghostty
+sudo apt install stow git gh neovim ghostty lsof
 ```
 ##### Fedora
 ```bash
-sudo dnf install stow git gh neovim ghostty bitwarden bw
+sudo dnf install stow git gh neovim ghostty bitwarden bw lsof
+```
+
+##### Universal Extras
+```bash
+#Proton Pass CLI
+curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
 ```
 
 #### For Mac (Mostly for work)
 ```bash
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli
+brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof
 ```
 
 ##### Caveat for Mac
