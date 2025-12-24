@@ -1,6 +1,53 @@
 #!/bin/bash
 # Dotfiles Management and Update Checker (merged)
 
+# Desktop notification helper (freedesktop.org spec)
+_can_send_desktop_notification() {
+    command -v notify-send &>/dev/null || return 1
+    [ -n "${DBUS_SESSION_BUS_ADDRESS-}" ] || return 1
+
+    # Probe for a running notification service if possible
+    if command -v gdbus &>/dev/null; then
+        gdbus call --session \
+            --dest org.freedesktop.Notifications \
+            --object-path /org/freedesktop/Notifications \
+            --method org.freedesktop.Notifications.GetServerInformation \
+            >/dev/null 2>&1 || return 1
+    fi
+
+    return 0
+}
+
+_notify_desktop() {
+    _can_send_desktop_notification || return 1
+    notify-send "$@" 2>/dev/null
+}
+
+_dotfiles_notifications_available() {
+    # Prefer checking D-Bus ownership (most universal).
+    if command -v gdbus &>/dev/null; then
+        local has_owner
+        has_owner=$(gdbus call --session \
+            --dest org.freedesktop.DBus \
+            --object-path /org/freedesktop/DBus \
+            --method org.freedesktop.DBus.NameHasOwner \
+            org.freedesktop.Notifications 2>/dev/null) || return 1
+
+        case "$has_owner" in
+            *true*) return 0 ;;
+            *) return 1 ;;
+        esac
+    fi
+
+    # Fallback for systems without gdbus.
+    if command -v busctl &>/dev/null; then
+        busctl --user --quiet status org.freedesktop.Notifications >/dev/null 2>&1
+        return $?
+    fi
+
+    return 1
+}
+
 # Send notification about available updates
 # Wrapper to ensure we use the new action-based notification system
 send_update_notification() {
@@ -22,8 +69,8 @@ send_update_notification() {
     # Legacy fallback if something is really broken
     if command -v osascript &>/dev/null; then
         osascript -e 'display notification "Run update-dotfiles to update" with title "Dotfiles Update Available"' 2>/dev/null || return 1
-    elif command -v notify-send &>/dev/null; then
-        notify-send "Dotfiles Update Available" "Run 'update-dotfiles' to update" 2>/dev/null || return 1
+    elif _notify_desktop "Dotfiles Update Available" "Run 'update-dotfiles' to update"; then
+        return 0
     else
         return 1
     fi
@@ -165,8 +212,13 @@ update-dotfiles() {
     fi
 
     # Send completion notification since we actually updated
+    # Prefer notifications when available, fall back to terminal output.
     if command -v notify-send &>/dev/null; then
-        notify-send -u normal -i dialog-information "Update Complete" "Restart your terminals to apply changes"
+        if ! notify-send -u normal -i dialog-information "Update Complete" "Restart your terminals to apply changes" 2>/dev/null; then
+            echo "Update complete. Restart your terminals to apply changes."
+        fi
+    else
+        echo "Update complete. Restart your terminals to apply changes."
     fi
 
     cd "$original_dir"
