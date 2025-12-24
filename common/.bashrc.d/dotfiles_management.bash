@@ -2,7 +2,24 @@
 # Dotfiles Management and Update Checker (merged)
 
 # Send notification about available updates
+# Wrapper to ensure we use the new action-based notification system
 send_update_notification() {
+    # If the new function exists, use it
+    if command -v send_dotfiles_notification &>/dev/null; then
+        send_dotfiles_notification
+        return $?
+    fi
+
+    # Fallback to sourcing the file if function not found (e.g. background subshell)
+    if [ -f "$HOME/dotfiles/common/.bashrc.d/dotfiles_notify.bash" ]; then
+        source "$HOME/dotfiles/common/.bashrc.d/dotfiles_notify.bash"
+        if command -v send_dotfiles_notification &>/dev/null; then
+            send_dotfiles_notification
+            return $?
+        fi
+    fi
+
+    # Legacy fallback if something is really broken
     if command -v osascript &>/dev/null; then
         osascript -e 'display notification "Run update-dotfiles to update" with title "Dotfiles Update Available"' 2>/dev/null || return 1
     elif command -v notify-send &>/dev/null; then
@@ -44,11 +61,8 @@ background_dotfiles_check() {
 
                     if [ -n "$remote_head" ] && [ "$local_head" != "$remote_head" ]; then
                         if ! git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
-                            # Try to send notification, fall back to terminal message
-                            if ! send_update_notification; then
-                                echo -e "\n\033[1;33m━━━ Dotfiles Update Available ━━━\033[0m"
-                                echo -e "\033[0;33mRun 'update-dotfiles' to update your configuration.\033[0m"
-                            fi
+                            # Send action-based notification with terminal update support
+                            send_update_notification
                         fi
                     fi
                 fi
@@ -75,11 +89,8 @@ background_dotfiles_check() {
 
                 if [ -n "$remote_head" ] && [ "$local_head" != "$remote_head" ]; then
                     if ! git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
-                        # Try to send notification, fall back to terminal message
-                        if ! send_update_notification; then
-                            echo -e "\n\033[1;33m━━━ Dotfiles Update Available ━━━\033[0m"
-                            echo -e "\033[0;33mRun 'update-dotfiles' to update your configuration.\033[0m"
-                        fi
+                        # Send action-based notification with terminal update support
+                        send_update_notification
                     fi
                 fi
             fi
@@ -151,6 +162,11 @@ update-dotfiles() {
     if [[ "$reload" =~ ^[yY]$ ]]; then
         source ~/.bashrc
         echo "Configuration reloaded"
+    fi
+
+    # Send completion notification since we actually updated
+    if command -v notify-send &>/dev/null; then
+        notify-send -u normal -i dialog-information "Update Complete" "Restart your terminals to apply changes"
     fi
 
     cd "$original_dir"

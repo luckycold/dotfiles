@@ -1,0 +1,13 @@
+# User mako config overlayed on Omarchy theme
+# Portable via dotfiles: includes current Omarchy theme then applies overrides
+
+# User mako config overlayed on Omarchy theme
+# Portable via dotfiles: includes current Omarchy theme then applies overrides
+
+include=~/.config/omarchy/current/theme/mako.ini
+
+# Style actionable notifications and enable Walker modal on middle-click
+[actionable=true]
+border-color=#FFA500
+border-size=3
+on-button-middle=exec makoctl menu -- walker --dmenu -p 'Select action: '
