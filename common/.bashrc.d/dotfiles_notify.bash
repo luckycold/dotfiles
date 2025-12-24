@@ -38,8 +38,8 @@ send_dotfiles_notification() {
     esac
   else
     # Backup notifier for headless environments
-    echo -e "\n\033[1;33m━━━ Dotfiles Update Available ━━━\033[0m"
+    # \r\033[K clears the current line (prompt) to avoid visual glitching
+    echo -e "\r\033[K\n\033[1;33m━━━ Dotfiles Update Available ━━━\033[0m"
     echo -e "\033[0;33m$body\033[0m"
-    echo -e "\033[0;33mRun: update-dotfiles\033[0m"
   fi
 }
