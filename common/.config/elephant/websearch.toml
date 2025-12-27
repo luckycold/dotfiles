@@ -1,0 +1,4 @@
+[[entries]]
+name = "Kagi"
+url = "https://kagi.com/search?q=%TERM%"
+default = true
