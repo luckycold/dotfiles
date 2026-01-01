@@ -1,54 +1,39 @@
 return {
-  {
-    'NickvanDyke/opencode.nvim',
-    event = 'VeryLazy',
-    dependencies = {
-      { 'folke/snacks.nvim', opts = { terminal = {}, input = {}, picker = {} } },
-    },
-    config = function()
-      ---@type opencode.Opts
-      vim.g.opencode_opts = {
-        auto_reload = true,
-      }
-      -- auto_reload needs autoread so buffers update when opencode edits files
-      vim.opt.autoread = true
-
-      local map = function(mode, lhs, rhs, desc)
-        vim.keymap.set(mode, lhs, rhs, { desc = 'Opencode: ' .. desc })
-      end
-
-      map({ 'n', 'x' }, '<leader>oa', function()
-        require('opencode').ask('@this: ', { submit = true })
-      end, 'Ask about this')
-      map({ 'n', 'x' }, '<leader>os', function()
-        require('opencode').select()
-      end, 'Select prompt')
-      map({ 'n', 'x' }, '<leader>o+', function()
-        require('opencode').prompt '@this'
-      end, 'Add this')
-      map('n', '<leader>ot', function()
-        require('opencode').toggle()
-      end, 'Toggle embedded')
-      map('n', '<leader>oc', function()
-        require('opencode').command()
-      end, 'Select command')
-      map('n', '<leader>on', function()
-        require('opencode').command 'session_new'
-      end, 'New session')
-      map('n', '<leader>oi', function()
-        require('opencode').command 'session_interrupt'
-      end, 'Interrupt session')
-      map('n', '<leader>oA', function()
-        require('opencode').command 'agent_cycle'
-      end, 'Cycle agent')
-      map('n', '<S-C-u>', function()
-        require('opencode').command 'messages_half_page_up'
-      end, 'Messages up')
-      map('n', '<S-C-d>', function()
-        require('opencode').command 'messages_half_page_down'
-      end, 'Messages down')
-      -- Exit terminal mode with ESC (or ESC ESC)
-      vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
-    end,
+  "NickvanDyke/opencode.nvim",
+  dependencies = {
+    -- Recommended for `ask()` and `select()`.
+    -- Required for `snacks` provider.
+    ---@module 'snacks' <- Loads `snacks.nvim` types for configuration intellisense.
+    { "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },
   },
+  config = function()
+    ---@type opencode.Opts
+    vim.g.opencode_opts = {
+      -- Your configuration, if any — see `lua/opencode/config.lua`, or "goto definition".
+    }
+
+    -- Required for `opts.events.reload`.
+    vim.o.autoread = true
+
+    -- Recommended/example keymaps.
+    vim.keymap.set({ "n", "x" }, "<C-a>", function() require("opencode").ask("@this: ", { submit = true }) end,
+      { desc = "Ask opencode" })
+    vim.keymap.set({ "n", "x" }, "<C-x>", function() require("opencode").select() end,
+      { desc = "Execute opencode action…" })
+    vim.keymap.set({ "n", "t" }, "<C-.>", function() require("opencode").toggle() end, { desc = "Toggle opencode" })
+
+    vim.keymap.set({ "n", "x" }, "go", function() return require("opencode").operator("@this ") end,
+      { expr = true, desc = "Add range to opencode" })
+    vim.keymap.set("n", "goo", function() return require("opencode").operator("@this ") .. "_" end,
+      { expr = true, desc = "Add line to opencode" })
+
+    vim.keymap.set("n", "<S-C-u>", function() require("opencode").command("session.half.page.up") end,
+      { desc = "opencode half page up" })
+    vim.keymap.set("n", "<S-C-d>", function() require("opencode").command("session.half.page.down") end,
+      { desc = "opencode half page down" })
+
+    -- You may want these if you stick with the opinionated "<C-a>" and "<C-x>" above — otherwise consider "<leader>o".
+    vim.keymap.set("n", "+", "<C-a>", { desc = "Increment", noremap = true })
+    vim.keymap.set("n", "-", "<C-x>", { desc = "Decrement", noremap = true })
+  end,
 }
