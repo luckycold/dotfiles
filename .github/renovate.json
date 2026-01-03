@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["regex"],
+  "regexManagers": [
+    {
+      "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
+      "matchStrings": [
+        "\\\"opencode-openai-codex-auth@(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "numman-ali/opencode-openai-codex-auth",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
+      "matchStrings": [
+        "\\\"@mohak34/opencode-notifier@(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@mohak34/opencode-notifier",
+      "versioningTemplate": "semver",
+      "registryUrlTemplate": "https://npm.pkg.github.com"
+    },
+    {
+      "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
+      "matchStrings": [
+        "\\\"opencode-google-antigravity-auth@(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "shekohex/opencode-google-antigravity-auth",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
+  ]
+}

@@ -1,23 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-gemini-auth","opencode-openai-codex-auth"],
-  "mcp": {
-    "kagi-search": {
-      "type": "local",
-      "command": [
-        "pass-cli",
-        "run",
-        "--",
-        "bash",
-        "-lc",
-        "bun x github:czottmann/kagi-ken-mcp"
-      ]
-      ,
-
-      "environment": {
-        "KAGI_SESSION_TOKEN": "pass://Main/Kagi/kagi-token"
-      }
-
-    }
-  }
+  "plugin":
+  [
+    "opencode-openai-codex-auth@4.2.0",
+    "@mohak34/opencode-notifier@0.1.0",
+    "opencode-google-antigravity-auth@0.2.12"
+  ]
 }
