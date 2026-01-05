@@ -25,10 +25,10 @@
     {
       "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
       "matchStrings": [
-        "\\\"opencode-google-antigravity-auth@(?<currentValue>[^\\\"]+)\\\""
+        "\\\"opencode-gemini-auth@(?<currentValue>[^\\\"]+)\\\""
       ],
       "datasourceTemplate": "github-releases",
-      "depNameTemplate": "shekohex/opencode-google-antigravity-auth",
+      "depNameTemplate": "jenslys/opencode-gemini-auth",
       "versioningTemplate": "semver",
       "extractVersionTemplate": "^v(?<version>.+)$"
     }
