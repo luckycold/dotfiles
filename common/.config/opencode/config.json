@@ -3,7 +3,7 @@
   "plugin":
   [
     "opencode-openai-codex-auth@4.2.0",
-    "@mohak34/opencode-notifier@0.1.0",
+    "@mohak34/opencode-notifier@0.1.10",
     "opencode-google-antigravity-auth@0.2.12"
   ]
 }
