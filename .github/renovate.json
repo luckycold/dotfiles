@@ -20,8 +20,7 @@
       ],
       "datasourceTemplate": "npm",
       "depNameTemplate": "@mohak34/opencode-notifier",
-      "versioningTemplate": "semver",
-      "registryUrlTemplate": "https://npm.pkg.github.com"
+      "versioningTemplate": "semver"
     },
     {
       "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
