@@ -1,10 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "enabledManagers": ["regex"],
-  "regexManagers": [
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "custom.regex"
+  ],
+  "customManagers": [
     {
-      "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.config/opencode/config\\.json$/"
+      ],
       "matchStrings": [
         "\\\"opencode-openai-codex-auth@(?<currentValue>[^\\\"]+)\\\""
       ],
@@ -14,7 +21,10 @@
       "extractVersionTemplate": "^v(?<version>.+)$"
     },
     {
-      "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.config/opencode/config\\.json$/"
+      ],
       "matchStrings": [
         "\\\"@mohak34/opencode-notifier@(?<currentValue>[^\\\"]+)\\\""
       ],
@@ -23,7 +33,10 @@
       "versioningTemplate": "semver"
     },
     {
-      "fileMatch": ["^common/\\.config/opencode/config\\.json$"],
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.config/opencode/config\\.json$/"
+      ],
       "matchStrings": [
         "\\\"opencode-gemini-auth@(?<currentValue>[^\\\"]+)\\\""
       ],
