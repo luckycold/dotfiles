@@ -2,5 +2,7 @@
   "BraveVPNDisabled": 1,
   "BraveAIChatEnabled": false,
   "BraveRewardsDisabled": true,
-  "BraveWalletDisabled": true
+  "BraveWalletDisabled": true,
+  "DefaultSearchProviderEnabled": true,
+  "DefaultSearchProviderSearchURL": "https://kagi.com/search?q={searchTerms}"
 }
