@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Check for required dependencies
+check_deps() {
+  local missing=()
+  
+  if ! command -v flatpak &>/dev/null; then
+    missing+=("flatpak")
+  fi
+  
+  if ! command -v fzf &>/dev/null; then
+    missing+=("fzf")
+  fi
+  
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "Error: Missing required dependencies: ${missing[*]}" >&2
+    echo "Please install: ${missing[*]}" >&2
+    exit 1
+  fi
+}
+
+# Main function to browse and install Flatpak apps
+fp_browse() {
+  flatpak remote-ls flathub --app --columns=application,name \
+  | fzf --multi --with-nth=2 \
+        --preview='flatpak remote-info flathub {1} 2>/dev/null || true' \
+  | awk '{print $1}' \
+  | while read -r app; do
+      flatpak install -y flathub "$app" </dev/tty
+    done
+}
+
+# Run the script
+check_deps
+fp_browse
