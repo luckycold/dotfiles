@@ -9,16 +9,16 @@ These are the dotfiles for my system
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay
-yay -S stow git gh neovim ghostty bitwarden-bin bw lsof
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit
+# yay -S ...
 ```
 ##### Debian/Ubuntu
 ```bash
-sudo apt install stow git gh neovim ghostty lsof
+sudo apt install stow git gh neovim ghostty lsof oathtool
 ```
 ##### Fedora
 ```bash
-sudo dnf install stow git gh neovim ghostty bitwarden bw lsof
+sudo dnf install stow git gh neovim ghostty bitwarden bw lsof oathtool
 ```
 
 ##### Universal Extras
