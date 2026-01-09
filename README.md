@@ -78,7 +78,8 @@ then use GNU stow to create symlinks
 ```bash
 stow -t ~ common
 stow -t ~ personal
-#stow -t ~ work (or go with this if you want to get configs for work instead of personal)
+# For systems with my exclusive use
+# stow -t / root
 ```
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
 
