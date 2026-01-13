@@ -172,35 +172,27 @@ update-dotfiles() {
     echo "Pulling updates..."
     git pull || { echo "Failed to pull updates"; cd "$original_dir"; return 1; }
 
-    # Restow common
-    echo "Restowing common files..."
-    stow -t ~ common
-
     # Ask for profile
+    local profiles=()
+    local i=1
+
     echo "Which profile would you like?"
-    echo "  1) None (common only)"
-    echo "  2) Personal"
-    echo "  3) Work"
-    echo -n "Enter choice [1-3]: "
+    echo "  1) none (common only)"
+    while IFS= read -r profile; do
+      ((i++))
+      profiles+=("$profile")
+      echo "  $i) $profile"
+    done < <(_list_dotfiles_profiles)
+    echo ""
+    echo -n "Enter choice [1-$i]: "
     read -r choice
 
-    case "$choice" in
-        2)
-            stow -D -t ~ work 2>/dev/null
-            stow -t ~ personal
-            echo "Applied personal profile"
-            ;;
-        3)
-            stow -D -t ~ personal 2>/dev/null
-            stow -t ~ work
-            echo "Applied work profile"
-            ;;
-        *)
-            stow -D -t ~ personal 2>/dev/null
-            stow -D -t ~ work 2>/dev/null
-            echo "Using common only"
-            ;;
-    esac
+    local target_profile="none"
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 2 && choice <= i )); then
+      target_profile="${profiles[$((choice - 2))]}"
+    fi
+
+    _switch_dotfiles_profile "$target_profile"
 
     # Ask to reload bashrc
     echo -n "Reload shell configuration? (y/n): "
@@ -229,9 +221,8 @@ update-dotfiles() {
 # Internal function to switch stow profiles
 _switch_dotfiles_profile() {
   local target_profile="$1"
-  local dotfiles_dir="$HOME/dotfiles" # Assume fixed location
+  local dotfiles_dir="$HOME/dotfiles"
 
-  # Check if dotfiles directory exists
   if [ ! -d "$dotfiles_dir" ]; then
     echo "Error: Dotfiles directory '$dotfiles_dir' not found." >&2
     return 1
@@ -240,72 +231,98 @@ _switch_dotfiles_profile() {
   echo "Switching profile in $dotfiles_dir..."
   pushd "$dotfiles_dir" >/dev/null || return 1
 
-  # Unstow potential existing profiles (ignore errors)
-  echo "(Attempting to unstow existing profiles...)"
-  stow -D -t ~ personal >/dev/null 2>&1
-  stow -D -t ~ work >/dev/null 2>&1
+  # Unstow all non-common profiles (any directory that isn't common or hidden)
+  echo "(Unstowing existing profiles...)"
+  for dir in */; do
+    dir="${dir%/}"
+    [[ "$dir" == "common" ]] && continue
+    stow -D -t ~ "$dir" 2>/dev/null
+  done
 
-  # Restow common to pick up any changes
+  # Always restow common
   if [ -d "common" ]; then
     echo "Restowing 'common' profile..."
     stow -R -t ~ common
   fi
 
-  # Stow the target profile or ensure common is stowed
-  if [[ "$target_profile" =~ ^(personal|work)$ ]]; then
-    if [ -d "$target_profile" ]; then
+  # Stow the target profile if specified and not "none"
+  if [[ -n "$target_profile" && "$target_profile" != "none" ]]; then
+    if [[ "$target_profile" == "common" ]]; then
+      echo "Note: 'common' is always included, no additional profile selected."
+    elif [ -d "$target_profile" ]; then
       echo "Restowing '$target_profile' profile..."
       if stow -R -t ~ "$target_profile"; then
         echo "Profile '$target_profile' stowed successfully."
       else
         echo "Error stowing profile '$target_profile'." >&2
+        popd >/dev/null
+        return 1
       fi
     else
       echo "Error: Profile directory '$target_profile' not found." >&2
+      popd >/dev/null
+      return 1
     fi
-  elif [[ -z "$target_profile" || "$target_profile" == "skip" || "$target_profile" == "none" ]]; then
-    echo "Only 'common' profile is now active."
   else
-    echo "Warning: Invalid target profile specified: '$target_profile'. No profile stowed." >&2
+    echo "Only 'common' profile is now active."
   fi
 
   popd >/dev/null
   echo "Profile switch complete."
 }
 
-# Function to manually switch profiles
-stow-profile() {
-  local choice
-  local confirmation
-  echo "Which profile would you like to stow?"
-  echo "  1) None (common only)"
-  echo "  2) Personal"
-  echo "  3) Work"
-  echo -n "Enter choice [1-3]: "
-  read -r choice
+# List available profiles
+_list_dotfiles_profiles() {
+  local dotfiles_dir="$HOME/dotfiles"
+  local profiles=()
 
-  case "$choice" in
-    1)
-      echo "This will ensure only the 'common' profile is active."
-      echo "Continue? (Y/n)"
-      read -r confirmation
-      if [[ "$confirmation" =~ ^[nN] ]]; then
-        echo "Aborting profile switch."
-        return 0
-      fi
-      _switch_dotfiles_profile "none"
-      ;;
-    2)
-      _switch_dotfiles_profile "personal"
-      ;;
-    3)
-      _switch_dotfiles_profile "work"
-      ;;
-    *)
+  for dir in "$dotfiles_dir"/*/; do
+    dir="${dir%/}"
+    dir="${dir##*/}"
+    [[ "$dir" == "common" ]] && continue
+    profiles+=("$dir")
+  done
+
+  printf '%s\n' "${profiles[@]}"
+}
+
+# Function to manually switch profiles
+# Usage: stow-profile [profile_name]
+stow-profile() {
+  local target_profile="$1"
+
+  # If no argument provided, show numbered menu
+  if [[ -z "$target_profile" ]]; then
+    local profiles=()
+    local i=1
+
+    echo "Available profiles:"
+    echo "  1) none (common only)"
+    while IFS= read -r profile; do
+      ((i++))
+      profiles+=("$profile")
+      echo "  $i) $profile"
+    done < <(_list_dotfiles_profiles)
+    echo ""
+    echo -n "Enter choice [1-$i]: "
+    read -r choice
+
+    if [[ -z "$choice" ]]; then
+      echo "No selection made. Aborting."
+      return 1
+    fi
+
+    if [[ "$choice" == "1" ]]; then
+      target_profile="none"
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 2 && choice <= i )); then
+      target_profile="${profiles[$((choice - 2))]}"
+    else
       echo "Invalid choice. Aborting."
       return 1
-      ;;
-  esac
+    fi
+  fi
+
+  _switch_dotfiles_profile "$target_profile"
 }
 
 # Run check on shell startup
