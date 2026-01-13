@@ -245,11 +245,17 @@ _switch_dotfiles_profile() {
   stow -D -t ~ personal >/dev/null 2>&1
   stow -D -t ~ work >/dev/null 2>&1
 
+  # Restow common to pick up any changes
+  if [ -d "common" ]; then
+    echo "Restowing 'common' profile..."
+    stow -R -t ~ common
+  fi
+
   # Stow the target profile or ensure common is stowed
   if [[ "$target_profile" =~ ^(personal|work)$ ]]; then
     if [ -d "$target_profile" ]; then
-      echo "Stowing '$target_profile' profile..."
-      if stow -t ~ "$target_profile"; then
+      echo "Restowing '$target_profile' profile..."
+      if stow -R -t ~ "$target_profile"; then
         echo "Profile '$target_profile' stowed successfully."
       else
         echo "Error stowing profile '$target_profile'." >&2
@@ -258,16 +264,7 @@ _switch_dotfiles_profile() {
       echo "Error: Profile directory '$target_profile' not found." >&2
     fi
   elif [[ -z "$target_profile" || "$target_profile" == "skip" || "$target_profile" == "none" ]]; then
-    echo "Ensuring only 'common' profile is stowed..."
-    if [ -d "common" ]; then
-      if stow -t ~ common; then
-        echo "'common' profile stowed successfully."
-      else
-        echo "Error stowing 'common' profile." >&2
-      fi
-    else
-      echo "Error: Profile directory 'common' not found." >&2
-    fi
+    echo "Only 'common' profile is now active."
   else
     echo "Warning: Invalid target profile specified: '$target_profile'. No profile stowed." >&2
   fi
