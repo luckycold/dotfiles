@@ -1,5 +1,12 @@
 %YAML 1.3
 ---
+- And:
+  - MouseGesture: []
+- KeyPress:
+  - XF86_AudioPlay
+  - click
+...
+---
 - MouseGesture: Mouse Left
 - KeyPress:
   - XF86_AudioPrev
@@ -9,13 +16,6 @@
 - MouseGesture: Mouse Right
 - KeyPress:
   - XF86_AudioNext
-  - click
-...
----
-- And:
-  - MouseGesture: []
-- KeyPress:
-  - XF86_AudioPlay
   - click
 ...
 --- []
