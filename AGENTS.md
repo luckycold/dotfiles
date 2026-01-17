@@ -2,11 +2,11 @@
 
 ## Project Structure & Module Organization
 Dotfiles are grouped into five GNU Stow packages:
-- `common/` - Base shell configuration (`.bashrc`, `.bash_aliases`, modular `.bashrc.d/` scripts), Neovim at `.config/nvim/`, and configs for Ghostty, Hyprland, Mako, Aerospace, Karabiner, Cursor, OpenCode, Elephant, and envman. Also includes utility scripts in `Applications/` (fp-browse, k-notify, proton-login).
+- `common/` - Base shell configuration (`.bashrc`, `.bash_aliases`, modular `.bashrc.d/` scripts), Neovim at `.config/nvim/`, and configs for Ghostty, Hyprland, Mako, Aerospace, Karabiner, Cursor, OpenCode, Elephant, Solaar, and envman. Includes Flatpak overrides in `.local/share/flatpak/overrides/`. Also includes utility scripts in `Applications/` (fp-browse, k-notify, proton-login).
 - `personal/` - Personal workstation overrides: Ghostty themes, Hyprland autostart, and Exercism shell completions in `.bashrc.d/`.
 - `work/` - Work-specific configs: netbird login helper in `.bashrc.d/` and work Hyprland autostart.
 - `mac/` - macOS-specific configs: iTerm2 preferences in `Library/Preferences/`.
-- `root/` - System-level configs deployed to `/` (not `$HOME`): Brave browser policies at `etc/brave/policies/`.
+- `root/` - System-level configs deployed to `/` (not `$HOME`): Brave browser policies at `etc/brave/policies/` and udev rules at `etc/udev/rules.d/`.
 
 Packages `common/`, `personal/`, and `mac/` include `.stow-local-ignore` files so only intentional files are linked; edit inside the package before restowing.
 
