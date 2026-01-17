@@ -268,6 +268,13 @@ _switch_dotfiles_profile() {
   fi
 
   popd >/dev/null
+
+  # Reload Hyprland configuration if applicable
+  if command -v hyprctl &>/dev/null && pgrep -x Hyprland &>/dev/null; then
+    echo "Reloading Hyprland configuration..."
+    hyprctl reload >/dev/null 2>&1
+  fi
+
   echo "Profile switch complete."
 }
 
