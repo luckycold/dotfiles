@@ -9,16 +9,16 @@ These are the dotfiles for my system
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode
 # yay -S ...
 ```
 ##### Debian/Ubuntu
 ```bash
-sudo apt install stow git gh neovim ghostty lsof oathtool solaar
+sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 ```
 ##### Fedora
 ```bash
-sudo dnf install stow git gh neovim ghostty bitwarden bw lsof oathtool solaar
+sudo dnf install stow git gh neovim ghostty bitwarden bw lsof oathtool solaar opencode
 ```
 
 ##### Universal Extras
@@ -31,7 +31,7 @@ flatpak install io.github.pwr_solaar.solaar
 #### For Mac (Mostly for work)
 ```bash
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof
+brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof opencode
 ```
 
 ##### Caveat for Mac
