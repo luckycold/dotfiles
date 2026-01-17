@@ -9,22 +9,23 @@ These are the dotfiles for my system
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar
 # yay -S ...
 ```
 ##### Debian/Ubuntu
 ```bash
-sudo apt install stow git gh neovim ghostty lsof oathtool
+sudo apt install stow git gh neovim ghostty lsof oathtool solaar
 ```
 ##### Fedora
 ```bash
-sudo dnf install stow git gh neovim ghostty bitwarden bw lsof oathtool
+sudo dnf install stow git gh neovim ghostty bitwarden bw lsof oathtool solaar
 ```
 
 ##### Universal Extras
 ```bash
 #Proton Pass CLI
 curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
+flatpak install io.github.pwr_solaar.solaar
 ```
 
 #### For Mac (Mostly for work)
