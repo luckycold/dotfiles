@@ -19,8 +19,8 @@ check_deps() {
   fi
 }
 
-# Main function to browse and install Flatpak apps
-fp_browse() {
+# Browse and install Flatpak apps
+fp_install() {
   flatpak remote-ls flathub --app --columns=application,name \
   | fzf --multi --with-nth=2 \
         --preview='flatpak remote-info flathub {1} 2>/dev/null || true' \
@@ -30,6 +30,25 @@ fp_browse() {
     done
 }
 
-# Run the script
+# Browse and remove installed Flatpak apps
+fp_remove() {
+  flatpak list --app --columns=application,name \
+  | fzf --multi --with-nth=2 \
+        --preview='flatpak info {1}' \
+  | awk '{print $1}' \
+  | while read -r app; do
+      flatpak uninstall -y "$app" </dev/tty
+    done
+}
+
+# Main script logic
 check_deps
-fp_browse
+
+case "$1" in
+  -r|--remove|remove)
+    fp_remove
+    ;;
+  *)
+    fp_install
+    ;;
+esac
