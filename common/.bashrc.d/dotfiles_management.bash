@@ -275,6 +275,12 @@ _switch_dotfiles_profile() {
     hyprctl reload >/dev/null 2>&1
   fi
 
+  # Reload systemd user units if applicable
+  if command -v systemctl &>/dev/null; then
+    echo "Reloading systemd user units..."
+    systemctl --user daemon-reload >/dev/null 2>&1
+  fi
+
   echo "Profile switch complete."
 }
 
