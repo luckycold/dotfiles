@@ -1,15 +1,15 @@
 [Unit]
-Description=Proton Pass CLI auto-login and SSH agent bootstrap
+Description=Proton Pass CLI auto-login, SSH agent, and health monitor
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
 Environment=SSH_AGENT_SOCKET=%h/.ssh/proton-pass-agent.sock
 Environment=SSH_AGENT_WAIT_SECONDS=30
 Environment=MAX_NETWORK_WAIT_SECONDS=30
 Environment=NETWORK_CHECK_HOST=1.1.1.1
+Environment=HEALTHCHECK_INTERVAL=300
 
 ExecStart=/bin/bash -lc '\
 notify() { \
@@ -30,7 +30,7 @@ stop_stale_agents() { \
 start_ssh_agent() { \
   echo "Ensuring Proton Pass SSH agent is running..."; \
   if is_agent_active; then \
-    notify "SSH Agent" "Already running at $SSH_AGENT_SOCKET"; \
+    echo "SSH agent already active"; \
     return 0; \
   fi; \
   echo "Agent not responding. Cleaning up..."; \
@@ -52,32 +52,64 @@ start_ssh_agent() { \
   notify "SSH Agent Error" "Failed to start after ${SSH_AGENT_WAIT_SECONDS}s" critical; \
   return 1; \
 }; \
-notify "Proton Pass" "Starting login verification..."; \
-echo "Waiting for network..."; \
-for i in $(seq 1 $MAX_NETWORK_WAIT_SECONDS); do \
-  ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && break; \
-  [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ] && echo "Network wait timed out, continuing..."; \
-  sleep 1; \
-done; \
-PROTON_LOGIN="$HOME/Applications/proton-login"; \
-if [ ! -x "$PROTON_LOGIN" ]; then \
-  notify "Proton Pass Error" "proton-login script not found" critical; \
-  exit 1; \
-fi; \
-echo "Running proton-login..."; \
-"$PROTON_LOGIN"; \
-rc=$?; \
-if [ $rc -eq 0 ]; then \
-  if pass-cli test >/dev/null 2>&1; then \
-    notify "Proton Pass" "Startup checks passed. Ready."; \
-    start_ssh_agent; \
-  else \
-    notify "Proton Pass Warning" "Login test failed" critical; \
+do_login() { \
+  echo "Waiting for network..."; \
+  for i in $(seq 1 $MAX_NETWORK_WAIT_SECONDS); do \
+    ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && break; \
+    [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ] && echo "Network wait timed out, continuing..."; \
+    sleep 1; \
+  done; \
+  PROTON_LOGIN="$HOME/Applications/proton-login"; \
+  if [ ! -x "$PROTON_LOGIN" ]; then \
+    notify "Proton Pass Error" "proton-login script not found" critical; \
+    return 1; \
   fi; \
-else \
-  echo "proton-login failed with exit code $rc"; \
-fi \
+  echo "Running proton-login..."; \
+  "$PROTON_LOGIN"; \
+  local rc=$?; \
+  if [ $rc -eq 0 ] && pass-cli test >/dev/null 2>&1; then \
+    notify "Proton Pass" "Login verified. Ready."; \
+    start_ssh_agent; \
+    return 0; \
+  else \
+    notify "Proton Pass Warning" "Login failed" critical; \
+    return 1; \
+  fi; \
+}; \
+healthcheck() { \
+  echo "Running health check..."; \
+  if ! pass-cli test >/dev/null 2>&1; then \
+    echo "Login check failed, re-authenticating..."; \
+    do_login; \
+    return; \
+  fi; \
+  if ! is_agent_active; then \
+    echo "SSH agent not responding, restarting..."; \
+    start_ssh_agent; \
+    return; \
+  fi; \
+  echo "Health check passed."; \
+}; \
+notify "Proton Pass" "Starting login verification..."; \
+do_login; \
+echo "Starting monitor loop (healthcheck every ${HEALTHCHECK_INTERVAL}s, plus resume events)..."; \
+last_check=$(date +%s); \
+gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 2>/dev/null | \
+while read -r line; do \
+  now=$(date +%s); \
+  if echo "$line" | grep -q "PrepareForSleep.*false"; then \
+    echo "System resumed, running health check in 5s..."; \
+    sleep 5; \
+    healthcheck; \
+    last_check=$now; \
+  elif [ $((now - last_check)) -ge $HEALTHCHECK_INTERVAL ]; then \
+    healthcheck; \
+    last_check=$now; \
+  fi; \
+done \
 '
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=default.target
