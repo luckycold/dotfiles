@@ -1,0 +1,83 @@
+[Unit]
+Description=Proton Pass CLI auto-login and SSH agent bootstrap
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=SSH_AGENT_SOCKET=%h/.ssh/proton-pass-agent.sock
+Environment=SSH_AGENT_WAIT_SECONDS=30
+Environment=MAX_NETWORK_WAIT_SECONDS=30
+Environment=NETWORK_CHECK_HOST=1.1.1.1
+
+ExecStart=/bin/bash -lc '\
+notify() { \
+  local title="$1" msg="$2" urg="${3:-low}"; \
+  echo "$title: $msg"; \
+  command -v notify-send >/dev/null && notify-send --urgency="$urg" "$title" "$msg" 2>/dev/null || true; \
+}; \
+is_agent_active() { \
+  [ -S "$SSH_AGENT_SOCKET" ] || return 1; \
+  SSH_AUTH_SOCK="$SSH_AGENT_SOCKET" ssh-add -l >/dev/null 2>&1; \
+  [ $? -le 1 ]; \
+}; \
+stop_stale_agents() { \
+  command -v pgrep >/dev/null || return 0; \
+  local pids; pids=$(pgrep -x pass-cli || true); \
+  [ -n "$pids" ] && { echo "Killing stale SSH agent PIDs: $pids"; echo "$pids" | xargs kill -9 2>/dev/null || true; }; \
+}; \
+start_ssh_agent() { \
+  echo "Ensuring Proton Pass SSH agent is running..."; \
+  if is_agent_active; then \
+    notify "SSH Agent" "Already running at $SSH_AGENT_SOCKET"; \
+    return 0; \
+  fi; \
+  echo "Agent not responding. Cleaning up..."; \
+  stop_stale_agents; \
+  rm -f "$SSH_AGENT_SOCKET"; \
+  mkdir -p "$(dirname "$SSH_AGENT_SOCKET")"; \
+  chmod 700 "$(dirname "$SSH_AGENT_SOCKET")"; \
+  echo "Starting SSH agent in background..."; \
+  nohup pass-cli ssh-agent start --socket-path "$SSH_AGENT_SOCKET" --vault-name Main >/dev/null 2>&1 & \
+  local pid=$!; \
+  echo "Waiting up to ${SSH_AGENT_WAIT_SECONDS}s for socket (PID $pid)..."; \
+  for i in $(seq 1 $SSH_AGENT_WAIT_SECONDS); do \
+    sleep 1; \
+    if is_agent_active; then \
+      notify "SSH Agent" "Ready at $SSH_AGENT_SOCKET"; \
+      return 0; \
+    fi; \
+  done; \
+  notify "SSH Agent Error" "Failed to start after ${SSH_AGENT_WAIT_SECONDS}s" critical; \
+  return 1; \
+}; \
+notify "Proton Pass" "Starting login verification..."; \
+echo "Waiting for network..."; \
+for i in $(seq 1 $MAX_NETWORK_WAIT_SECONDS); do \
+  ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && break; \
+  [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ] && echo "Network wait timed out, continuing..."; \
+  sleep 1; \
+done; \
+PROTON_LOGIN="$HOME/Applications/proton-login"; \
+if [ ! -x "$PROTON_LOGIN" ]; then \
+  notify "Proton Pass Error" "proton-login script not found" critical; \
+  exit 1; \
+fi; \
+echo "Running proton-login..."; \
+"$PROTON_LOGIN"; \
+rc=$?; \
+if [ $rc -eq 0 ]; then \
+  if pass-cli test >/dev/null 2>&1; then \
+    notify "Proton Pass" "Startup checks passed. Ready."; \
+    start_ssh_agent; \
+  else \
+    notify "Proton Pass Warning" "Login test failed" critical; \
+  fi; \
+else \
+  echo "proton-login failed with exit code $rc"; \
+fi \
+'
+
+[Install]
+WantedBy=default.target
