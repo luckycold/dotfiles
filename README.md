@@ -82,6 +82,22 @@ stow -t ~ personal
 # For systems with my exclusive use
 # stow -t / root
 ```
+
+### Post-stow: Enable systemd user services
+
+After stowing `common`, enable the Proton Pass auto-login service:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now proton-pass-cli-autologin.service
+```
+
+This service logs into Proton Pass at login and starts the SSH agent. View logs with:
+
+```bash
+journalctl --user -u proton-pass-cli-autologin.service
+```
+
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
 
 ## Instructional Video
