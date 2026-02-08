@@ -11,19 +11,31 @@ if command -v bitwarden-desktop &> /dev/null && [ -z "$SSH_AGENT_ACTIVE" ]; then
   SSH_AGENT_ACTIVE=1
 fi
 
-ssh_restore_tty() {
+ssh_tty_state() {
   if [ -t 0 ] && [ -t 1 ] && command -v stty >/dev/null 2>&1; then
-    stty sane </dev/tty > /dev/tty 2>/dev/null || true
+    stty -g </dev/tty 2>/dev/null
+  fi
+}
+
+ssh_restore_tty() {
+  local tty_state="$1"
+
+  if [ -t 0 ] && [ -t 1 ] && command -v stty >/dev/null 2>&1; then
+    if [ -n "$tty_state" ]; then
+      stty "$tty_state" </dev/tty 2>/dev/null || stty sane </dev/tty 2>/dev/null || true
+    else
+      stty sane </dev/tty 2>/dev/null || true
+    fi
   fi
 }
 
 ssh() {
+  local initial_tty_state
+  initial_tty_state=$(ssh_tty_state)
+
   command ssh "$@"
   local ssh_exit=$?
-
-  if [ $ssh_exit -eq 255 ]; then
-    ssh_restore_tty
-  fi
+  ssh_restore_tty "$initial_tty_state"
 
   if [ $ssh_exit -ne 0 ]; then
     # Check if agent is reachable (0 = keys found, 1 = no keys, 2 = connection refused)
@@ -63,11 +75,12 @@ ssh() {
           local check=$?
           if [ $check -le 1 ]; then
             echo "SSH agent ready. Retrying connection..." >&2
+
+            local retry_tty_state
+            retry_tty_state=$(ssh_tty_state)
             command ssh "$@"
             local retry_exit=$?
-            if [ $retry_exit -eq 255 ]; then
-              ssh_restore_tty
-            fi
+            ssh_restore_tty "$retry_tty_state"
             return $retry_exit
           fi
         fi
