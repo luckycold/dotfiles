@@ -11,4 +11,8 @@ if [ -d "$HOME/.opencode/bin" ]; then
     PATH="$PATH:$HOME/.opencode/bin"
 fi
 
+if [ -f "$HOME/.local/bin/env" ]; then
+    . "$HOME/.local/bin/env"
+fi
+
 export PATH
