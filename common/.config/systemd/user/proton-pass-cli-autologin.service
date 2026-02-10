@@ -95,44 +95,35 @@ run_resume_healthcheck() { \
   echo "System resumed, running health check in 5s..."; \
   sleep 5; \
   healthcheck; \
-  last_check=$(date +%s); \
+  last_check=$(date +%%s); \
 }; \
 notify "Proton Pass" "Starting login verification..."; \
 do_login; \
 echo "Starting monitor loop (healthcheck every ${HEALTHCHECK_INTERVAL}s, plus resume events)..."; \
-last_check=$(date +%s); \
+last_check=$(date +%%s); \
 last_tick=$last_check; \
 resume_signal_pending=0; \
 gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 2>/dev/null | \
 while true; do \
   did_resume_check=0; \
   if read -t 60 -r line; then \
-    case "$line" in \
-      *PrepareForSleep*false*|*PreparingForSleep*false*) \
-        run_resume_healthcheck; \
-        resume_signal_pending=0; \
-        did_resume_check=1; \
-        ;; \
-      *PrepareForSleep*true*|*PreparingForSleep*true*) \
-        resume_signal_pending=1; \
-        ;; \
-      *PrepareForSleep*|*PreparingForSleep*) \
-        resume_signal_pending=1; \
-        ;; \
-      *boolean\ false*) \
-        if [ "$resume_signal_pending" -eq 1 ]; then \
-          run_resume_healthcheck; \
-          resume_signal_pending=0; \
-          did_resume_check=1; \
-        fi; \
-        ;; \
-    esac; \
+    if [[ "$line" == *PrepareForSleep*false* ]] || [[ "$line" == *PreparingForSleep*false* ]]; then \
+      run_resume_healthcheck; \
+      resume_signal_pending=0; \
+      did_resume_check=1; \
+    elif [[ "$line" == *PrepareForSleep*true* ]] || [[ "$line" == *PreparingForSleep*true* ]] || [[ "$line" == *PrepareForSleep* ]] || [[ "$line" == *PreparingForSleep* ]]; then \
+      resume_signal_pending=1; \
+    elif [[ "$line" == *boolean*false* ]] && [ "$resume_signal_pending" -eq 1 ]; then \
+      run_resume_healthcheck; \
+      resume_signal_pending=0; \
+      did_resume_check=1; \
+    fi; \
   fi; \
-  now=$(date +%s); \
+  now=$(date +%%s); \
   if [ "$did_resume_check" -eq 0 ] && [ $((now - last_tick)) -ge 90 ]; then \
     echo "Detected suspend/hibernate time jump, running health check..."; \
     run_resume_healthcheck; \
-    now=$(date +%s); \
+    now=$(date +%%s); \
   fi; \
   if [ $((now - last_check)) -ge $HEALTHCHECK_INTERVAL ]; then \
     healthcheck; \
