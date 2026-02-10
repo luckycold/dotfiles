@@ -98,6 +98,8 @@ require('lazy').setup({
   require 'lucky/plugins/fugitive',
 
   require 'lucky/plugins/neotest',
+
+  require 'lucky/plugins/render-markdown',
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
