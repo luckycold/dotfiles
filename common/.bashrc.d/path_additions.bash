@@ -12,7 +12,7 @@ if [ -d "$HOME/.opencode/bin" ]; then
 fi
 
 # bun
-if [ -d "$HOME/.bun" && -f "$HOME/.bun/bin/bun" ]; then
+if [ -d "$HOME/.bun" ] && [ -f "$HOME/.bun/bin/bun" ]; then
   PATH="$HOME/.bun/bin:$PATH"
 fi
 
