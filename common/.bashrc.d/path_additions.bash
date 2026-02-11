@@ -16,6 +16,11 @@ if [ -d "$HOME/.bun" ] && [ -f "$HOME/.bun/bin/bun" ]; then
   PATH="$HOME/.bun/bin:$PATH"
 fi
 
+# bun (cache bin)
+if [ -d "$HOME/.cache/.bun/bin" ]; then
+  PATH="$HOME/.cache/.bun/bin:$PATH"
+fi
+
 if [ -f "$HOME/.local/bin/env" ]; then
     . "$HOME/.local/bin/env"
 fi
