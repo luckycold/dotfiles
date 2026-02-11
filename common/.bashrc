@@ -12,11 +12,6 @@ fi
 [ -f /etc/bashrc ] && . /etc/bashrc           # Fedora/RHEL
 [ -f /etc/bash.bashrc ] && . /etc/bash.bashrc # Debian/Ubuntu/Pop_OS
 
-# User-specific PATH additions
-if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
-  PATH="$HOME/.local/bin:$HOME/bin:$PATH"
-fi
-
 # Only run in interactive shells
 case $- in
 *i*) ;;
