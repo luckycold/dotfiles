@@ -59,4 +59,6 @@ export WARP_ENABLE_WAYLAND=1
 export WGPU_BACKEND=gl
 
 # OpenClaw Completion
-source "/home/lucky/.openclaw/completions/openclaw.bash"
+if [ -d "/home/lucky/.openclaw/completions" ]; then
+  [ -f "/home/lucky/.openclaw/completions/openclaw.bash" ] && source "/home/lucky/.openclaw/completions/openclaw.bash"
+fi
