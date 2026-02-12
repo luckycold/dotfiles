@@ -61,12 +61,12 @@
 
     // Delay (in seconds) before TTS reminder fires
     // Set globally or per-notification type
-    "ttsReminderDelaySeconds": 60,         // Global default
-    "idleReminderDelaySeconds": 60,        // For task completion notifications
+    "ttsReminderDelaySeconds": 30,         // Global default
+    "idleReminderDelaySeconds": 30,        // For task completion notifications
     "permissionReminderDelaySeconds": 20,  // For permission requests (more urgent)
 
     // Follow-up reminders if user STILL doesn't respond after first TTS
-    "enableFollowUpReminders": true,
+    "enableFollowUpReminders": false,
     "maxFollowUpReminders": 3,              // Max number of follow-up TTS reminders
     "reminderBackoffMultiplier": 1.5,       // Each follow-up waits longer (30s, 45s, 67s...)
 
