@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic Kokoro FastAPI GPU switch check
+Requires=kokoro-fastapi-gpu-switch.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15sec
+
+[Install]
+WantedBy=timers.target

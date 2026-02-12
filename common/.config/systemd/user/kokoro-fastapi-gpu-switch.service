@@ -1,0 +1,9 @@
+[Unit]
+Description=Kokoro FastAPI GPU mode switch check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/systemd/user/kokoro-fastapi-mode-check.sh
+LogLevelMax=warning

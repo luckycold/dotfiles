@@ -5,8 +5,11 @@ After=network-online.target
 
 [Service]
 Type=simple
+Environment=KOKORO_IMAGE=ghcr.io/remsky/kokoro-fastapi-cpu:latest
+Environment=KOKORO_DOCKER_ARGS=
+EnvironmentFile=-%h/.config/kokoro-fastapi.env
 ExecStartPre=-/usr/bin/docker rm -f kokoro-fastapi
-ExecStart=/usr/bin/docker run --name kokoro-fastapi -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-cpu:latest
+ExecStart=/usr/bin/bash -lc 'exec /usr/bin/docker run --name kokoro-fastapi -p 8880:8880 ${KOKORO_DOCKER_ARGS} ${KOKORO_IMAGE}'
 ExecStop=/usr/bin/docker stop -t 10 kokoro-fastapi
 ExecStopPost=-/usr/bin/docker rm -f kokoro-fastapi
 Restart=always
