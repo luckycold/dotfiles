@@ -3,7 +3,7 @@
   "plugin":
   [
     "opencode-openai-codex-auth@4.3.0",
-    "@mohak34/opencode-notifier@0.1.10",
+    "@mohak34/opencode-notifier@0.1.19",
     "opencode-gemini-auth@1.3.6",
     "opencode-scheduler"
   ],
