@@ -44,6 +44,18 @@
       "depNameTemplate": "jenslys/opencode-gemini-auth",
       "versioningTemplate": "semver",
       "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.local/bin/opencode-kagi-ken-mcp$/"
+      ],
+      "matchStrings": [
+        "package_ref=\\\"@iflow-mcp/kagi-ken-mcp@(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@iflow-mcp/kagi-ken-mcp",
+      "versioningTemplate": "semver"
     }
   ]
 }
