@@ -8,6 +8,7 @@ Type=simple
 KillMode=process
 Environment=SSH_AGENT_SOCKET=%h/.ssh/proton-pass-agent.sock
 Environment=SSH_AGENT_WAIT_SECONDS=30
+Environment=MAX_WIFI_WAIT_SECONDS=45
 Environment=MAX_NETWORK_WAIT_SECONDS=30
 Environment=NETWORK_CHECK_HOST=1.1.1.1
 Environment=HEALTHCHECK_INTERVAL=300
@@ -22,6 +23,28 @@ is_agent_active() { \
   [ -S "$SSH_AGENT_SOCKET" ] || return 1; \
   SSH_AUTH_SOCK="$SSH_AGENT_SOCKET" ssh-add -l >/dev/null 2>&1; \
   [ $? -le 1 ]; \
+}; \
+is_wifi_connected() { \
+  command -v nmcli >/dev/null 2>&1 || return 1; \
+  nmcli -t -f TYPE,STATE device 2>/dev/null | grep -q "^wifi:connected$"; \
+}; \
+wait_for_wifi() { \
+  command -v nmcli >/dev/null 2>&1 || { echo "nmcli not found, skipping Wi-Fi wait"; return 0; }; \
+  nmcli -t -f TYPE device 2>/dev/null | grep -q "^wifi$" || { echo "No Wi-Fi device detected, skipping Wi-Fi wait"; return 0; }; \
+  echo "Waiting for Wi-Fi..."; \
+  notify "Proton Pass" "Waiting for Wi-Fi (up to ${MAX_WIFI_WAIT_SECONDS}s)..."; \
+  for i in $(seq 1 $MAX_WIFI_WAIT_SECONDS); do \
+    if is_wifi_connected; then \
+      echo "Wi-Fi connected"; \
+      return 0; \
+    fi; \
+    if [ "$i" -eq "$MAX_WIFI_WAIT_SECONDS" ]; then \
+      echo "Wi-Fi wait timed out, continuing..."; \
+      notify "Proton Pass Warning" "Wi-Fi not connected after ${MAX_WIFI_WAIT_SECONDS}s, continuing..."; \
+    fi; \
+    sleep 1; \
+  done; \
+  return 0; \
 }; \
 stop_stale_agents() { \
   command -v pgrep >/dev/null || return 0; \
@@ -54,10 +77,15 @@ start_ssh_agent() { \
   return 1; \
 }; \
 do_login() { \
+  wait_for_wifi; \
   echo "Waiting for network..."; \
+  notify "Proton Pass" "Waiting for network (up to ${MAX_NETWORK_WAIT_SECONDS}s)..."; \
   for i in $(seq 1 $MAX_NETWORK_WAIT_SECONDS); do \
     ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && break; \
-    [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ] && echo "Network wait timed out, continuing..."; \
+    if [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ]; then \
+      echo "Network wait timed out, continuing..."; \
+      notify "Proton Pass Warning" "Network wait timed out after ${MAX_NETWORK_WAIT_SECONDS}s, continuing..."; \
+    fi; \
     sleep 1; \
   done; \
   PROTON_LOGIN="$HOME/Applications/proton-login"; \
