@@ -1,0 +1,14 @@
+[Unit]
+Description=Agent TTS server
+Wants=network-online.target kokoro-fastapi.service
+After=network-online.target kokoro-fastapi.service
+
+[Service]
+Type=simple
+Environment=NODE_ENV=production
+ExecStart=/bin/bash -lc 'exec agent-tts'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

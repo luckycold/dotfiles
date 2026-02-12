@@ -1,0 +1,16 @@
+[Unit]
+Description=Kokoro FastAPI TTS server (Docker)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/docker rm -f kokoro-fastapi
+ExecStart=/usr/bin/docker run --name kokoro-fastapi -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-cpu:latest
+ExecStop=/usr/bin/docker stop -t 10 kokoro-fastapi
+ExecStopPost=-/usr/bin/docker rm -f kokoro-fastapi
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
