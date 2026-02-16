@@ -13,6 +13,13 @@ Packages `common/`, `personal/`, and `mac/` include `.stow-local-ignore` files s
 ## Build, Test, and Development Commands
 Use GNU Stow to manage deployment. `stow -t ~ common` installs the base profile, while `stow -t ~ personal` or `stow -t ~ work` switches personas. Run dry runs with `stow -n -t ~ common`, and refresh symlinks after edits with `stow -R -t ~ common`. Keep package roots clean because Stow mirrors folder layout directly into your home directory.
 
+Some configs are generated from secret templates discovered by
+`init-env-secrets`. Templates must follow `*.template.*`, where
+`template` is the second-to-last `.` segment in the filename
+(for example `foo.template.jsonc` -> `foo.jsonc`). After updating
+template-based configs or profile links, rerun secret injection with
+`init-env-secrets -r` (interactive picker) or `init-env-secrets --all`.
+
 ## Coding Style & Naming Conventions
 Shell files stay POSIX-friendly with two-space indents and lowercase function names; reserve uppercase for exported environment variables. Alias names mirror the command they wrap (see `common/.bash_aliases`). Lua modules in `common/.config/nvim` also use two-space indents, return tables, and keep camelCase for plugin keys to match upstream defaults. Match existing directory casing when adding new trees.
 
