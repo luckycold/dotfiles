@@ -57,6 +57,7 @@ require('lazy').setup({
   -- An LSP is a language server protocal. It helps with things like sutocompletion and debugging of programming languages.
   -- Look inside lsp-config to see the components of how an LSP works including one of the dependencies Mason that downloads some for you.
   require 'lucky/plugins/lsp-config',
+  require 'lucky/plugins/venv-selector',
 
   -- Autoformat
   require 'lucky/plugins/conform',
