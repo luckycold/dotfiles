@@ -281,6 +281,16 @@ _switch_dotfiles_profile() {
     systemctl --user daemon-reload >/dev/null 2>&1
   fi
 
+  # Offer to refresh generated secrets for the new active profile.
+  if declare -F init-env-secrets >/dev/null && [ -t 0 ] && [ -t 1 ]; then
+    echo -n "Refresh generated secrets now? (y/N): "
+    read -r refresh_secrets
+
+    if [[ "$refresh_secrets" =~ ^[yY]$ ]]; then
+      init-env-secrets
+    fi
+  fi
+
   echo "Profile switch complete."
 }
 
