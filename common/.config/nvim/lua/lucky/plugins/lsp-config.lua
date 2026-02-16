@@ -160,6 +160,47 @@ return { -- LSP Configuration & Plugins
     local capabilities = vim.lsp.protocol.make_client_capabilities()
     capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
+    local resolve_python_path = function(root_dir)
+      local executable_candidates = {}
+
+      if vim.env.VIRTUAL_ENV then
+        table.insert(executable_candidates, vim.env.VIRTUAL_ENV .. '/bin/python')
+        table.insert(executable_candidates, vim.env.VIRTUAL_ENV .. '/Scripts/python.exe')
+      end
+
+      if root_dir then
+        table.insert(executable_candidates, root_dir .. '/.venv/bin/python')
+        table.insert(executable_candidates, root_dir .. '/.venv/Scripts/python.exe')
+        table.insert(executable_candidates, root_dir .. '/venv/bin/python')
+        table.insert(executable_candidates, root_dir .. '/venv/Scripts/python.exe')
+      end
+
+      table.insert(executable_candidates, 'python3')
+      table.insert(executable_candidates, 'python')
+
+      for _, executable in ipairs(executable_candidates) do
+        if vim.fn.executable(executable) == 1 then
+          return executable
+        end
+      end
+
+      return nil
+    end
+
+    local set_pyright_python_path = function(config, root_dir)
+      config.settings = config.settings or {}
+      config.settings.python = config.settings.python or {}
+
+      if config.settings.python.pythonPath then
+        return
+      end
+
+      local python_path = resolve_python_path(root_dir)
+      if python_path then
+        config.settings.python.pythonPath = python_path
+      end
+    end
+
     -- Enable the following language servers
     --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
     --
@@ -172,7 +213,14 @@ return { -- LSP Configuration & Plugins
     local servers = {
       -- clangd = {},
       -- gopls = {},
-      pyright = {},
+      pyright = {
+        before_init = function(_, config)
+          set_pyright_python_path(config, config.root_dir)
+        end,
+        on_new_config = function(new_config, new_root_dir)
+          set_pyright_python_path(new_config, new_root_dir)
+        end,
+      },
       -- rust_analyzer = {},
       -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
       --
