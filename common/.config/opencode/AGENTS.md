@@ -6,9 +6,14 @@ It applies globally across coding projects unless a project-specific
 
 ## Core Preferences
 
-1. Prefer functional programming wherever practical.
+1. Coding preferences
+
+1a. Prefer functional programming wherever practical.
    - Favor pure functions, immutability, composition, and explicit data flow.
    - Avoid unnecessary side effects.
+
+1b. Always satisfy the type checker.
+   - Ask Luke for confirmation if solution looks complicated and therefore brittle.
 
 2. Prioritize project preferences over personal preferences.
    - Follow the repository's existing style, architecture, and conventions.
