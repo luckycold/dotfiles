@@ -37,7 +37,7 @@
     // Enable or disable reminders for specific event types.
     // If disabled, the initial notification will still fire, but no
     // follow-up TTS reminders will be scheduled.
-    "enableIdleReminder": true,
+    "enableIdleReminder": false,
     "enablePermissionReminder": true,
     "enableQuestionReminder": true,
     "enableErrorReminder": false,
