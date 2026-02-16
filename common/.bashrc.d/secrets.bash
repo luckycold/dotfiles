@@ -1,9 +1,9 @@
 # Hardcoded template locations (template:output)
 _SECRET_TEMPLATES=(
   # For Kagi-Ken MCP (https://github.com/czottmann/kagi-ken-mcp)
-  "$HOME/.kagi_session_token.template:$HOME/.kagi_session_token"
+  "$HOME/.template.kagi_session_token:$HOME/.kagi_session_token"
   # For OpenCode Smart Voice Notify (https://github.com/MasuRii/opencode-smart-voice-notify)
-  "$HOME/.config/opencode/smart-voice-notify.jsonc.template:$HOME/.config/opencode/smart-voice-notify.jsonc"
+  "$HOME/.config/opencode/smart-voice-notify.template.jsonc:$HOME/.config/opencode/smart-voice-notify.jsonc"
 )
 
 init-env-secrets() {
