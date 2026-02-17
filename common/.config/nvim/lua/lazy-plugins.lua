@@ -99,6 +99,7 @@ require('lazy').setup({
   require 'lucky/plugins/fugitive',
 
   require 'lucky/plugins/neotest',
+  require 'lucky/plugins/neo-tree',
 
   require 'lucky/plugins/render-markdown',
   -- require 'kickstart.plugins.debug',

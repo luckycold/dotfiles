@@ -6,22 +6,7 @@ vim.keymap.set('v', '<leader>yy', '"*y', { desc = 'Yank to system clipboard' })
 vim.keymap.set('n', '<leader>pp', '"*p', { desc = 'Paste from system clipboard' })
 vim.keymap.set('i', 'jj', '<Esc>')
 
-vim.keymap.set('n', '<leader>pv', function()
-  -- Get current file or Suda buffer path
-  local file = vim.api.nvim_buf_get_name(0)
-
-  -- If it’s a Suda buffer (e.g. suda:///etc/hosts), remove the prefix
-  local real_path = file:gsub('^suda://', '') -- remove one leading 'suda://' if present
-  local dir = vim.fn.fnamemodify(real_path, ':p:h')
-
-  -- Ensure fallback in case buffer has no valid path
-  if dir == '' or vim.fn.isdirectory(dir) == 0 then
-    dir = vim.fn.getcwd()
-  end
-
-  -- Open the cleaned directory directly with Netrw
-  vim.cmd('edit ' .. vim.fn.fnameescape(dir))
-end, { desc = 'Open netrw at real directory (handles suda:// buffers)' })
+vim.keymap.set('n', '<leader>pv', '<cmd>Neotree reveal<CR>', { desc = '[P]roject [V]iew (Neo-tree)' })
 
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true
@@ -32,6 +17,7 @@ vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<leader>lr', '<cmd>LspRestart<CR>', { desc = '[L]SP [R]estart' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
