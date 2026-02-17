@@ -324,3 +324,100 @@ init-env-secrets() {
   echo "Secrets refresh complete: updated=$updated skipped=$skipped failed=$failed selected=${#matched_records[@]}"
   (( failed == 0 ))
 }
+
+_secret_count_stale_mappings() {
+  local discovered record
+  local id template output
+  local stale=0
+
+  discovered="$(_secret_discover_active_mappings)" || return 1
+
+  while IFS= read -r record; do
+    [ -n "$record" ] || continue
+    IFS=$'\t' read -r id template output <<< "$record"
+
+    if [ ! -f "$output" ] || [ "$template" -nt "$output" ]; then
+      ((stale++))
+    fi
+  done <<< "$discovered"
+
+  printf '%s\n' "$stale"
+}
+
+_secret_extract_refresh_count() {
+  local summary_line="$1"
+  local key="$2"
+
+  if [[ "$summary_line" =~ ${key}=([0-9]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+  else
+    printf '0\n'
+  fi
+}
+
+_secret_send_refresh_notification() {
+  local summary="$1"
+  local body="$2"
+  local urgency="${3:-normal}"
+
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u "$urgency" -i dialog-information "$summary" "$body" >/dev/null 2>&1 || true
+  fi
+}
+
+background_secret_refresh() {
+  [ -n "${_SECRET_AUTO_REFRESH_STARTED-}" ] && return 0
+  export _SECRET_AUTO_REFRESH_STARTED=1
+
+  command -v pass-cli >/dev/null 2>&1 || return 0
+
+  (
+    local stale_count refresh_output refresh_status summary_line line
+    local updated failed
+    local lock_file="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-secrets-refresh.lock"
+
+    if ! ( set -o noclobber; : > "$lock_file" ) 2>/dev/null; then
+      exit 0
+    fi
+    trap 'rm -f "$lock_file"' EXIT
+
+    stale_count="$(_secret_count_stale_mappings)" || exit 0
+    [[ "$stale_count" =~ ^[0-9]+$ ]] || exit 0
+    (( stale_count > 0 )) || exit 0
+
+    _secret_send_refresh_notification \
+      "Stale Secrets Detected" \
+      "Found $stale_count stale template-generated secret file(s). Refreshing in background..."
+
+    refresh_output="$(init-env-secrets --all 2>&1)"
+    refresh_status=$?
+
+    while IFS= read -r line; do
+      case "$line" in
+        "Secrets refresh complete:"*)
+          summary_line="$line"
+          ;;
+      esac
+    done <<< "$refresh_output"
+
+    updated="$(_secret_extract_refresh_count "$summary_line" "updated")"
+    failed="$(_secret_extract_refresh_count "$summary_line" "failed")"
+
+    if (( refresh_status == 0 )); then
+      _secret_send_refresh_notification \
+        "Secrets Updated" \
+        "Refreshed $updated template-generated secret file(s)."
+    elif (( updated > 0 || failed > 0 )); then
+      _secret_send_refresh_notification \
+        "Secrets Refresh Issues" \
+        "Detected $stale_count stale file(s): updated $updated, failed $failed. Run init-env-secrets --all."
+    else
+      _secret_send_refresh_notification \
+        "Secrets Refresh Failed" \
+        "Detected $stale_count stale file(s). Run init-env-secrets --all for details."
+    fi
+  ) &
+  disown 2>/dev/null || true
+}
+
+background_secret_refresh
