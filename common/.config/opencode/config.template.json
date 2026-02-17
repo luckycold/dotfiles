@@ -20,7 +20,7 @@
       "url": "https://mcp.context7.com/mcp",
       "headers": {
       },
-      "enabled": true
+      "enabled": false
     },
     "linear": {
       "type": "remote",
