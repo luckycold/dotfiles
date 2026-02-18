@@ -58,6 +58,7 @@ require('lazy').setup({
   -- Look inside lsp-config to see the components of how an LSP works including one of the dependencies Mason that downloads some for you.
   require 'lucky/plugins/lsp-config',
   require 'lucky/plugins/venv-selector',
+  require 'lucky/plugins/workspace-diagnostics',
 
   -- Autoformat
   require 'lucky/plugins/conform',

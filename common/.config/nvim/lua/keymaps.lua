@@ -18,6 +18,9 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagn
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 vim.keymap.set('n', '<leader>lr', '<cmd>LspRestart<CR>', { desc = '[L]SP [R]estart' })
+vim.keymap.set('n', '<leader>wd', '<cmd>WorkspaceDiagnostics<CR>', { desc = '[W]orkspace [D]iagnostics' })
+vim.keymap.set('n', '<leader>wR', '<cmd>WorkspaceDiagnosticsRefresh<CR>', { desc = '[W]orkspace Diagnostics [R]efresh' })
+vim.keymap.set('n', '<leader>wS', '<cmd>WorkspaceDiagnosticsStatus<CR>', { desc = '[W]orkspace Diagnostics [S]tatus' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
