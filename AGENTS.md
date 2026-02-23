@@ -21,3 +21,8 @@
 ## Security
 - Do not commit real secrets or host-specific credentials.
 - Keep secrets in template placeholders and local-only overlays.
+
+## Working agreement
+- This file is a shared agreement between Luke and OpenCode.
+- It can be updated as we discover better operating rules over time.
+- If OpenCode updates this file after deeper/long-form discovery, OpenCode must explicitly notify Luke in the response.
