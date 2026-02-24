@@ -10,7 +10,7 @@
   "mcp": {
     "kagi-ken": {
       "type": "local",
-      "command": ["/home/lucky/.local/bin/opencode-kagi-ken-mcp"],
+      "command": ["npx", "-y", "github:czottmann/kagi-ken-mcp"],
       "enabled": true
     },
     "context7": {
