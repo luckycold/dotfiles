@@ -1,25 +1,21 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin":
-  [
+  "plugin": [
     "opencode-openai-codex-auth@4.3.0",
     "opencode-gemini-auth@1.3.6",
     "opencode-scheduler",
     "opencode-smart-voice-notify@latest"
   ],
+
   "mcp": {
     "kagi-ken": {
       "type": "local",
       "command": ["/home/lucky/.local/bin/opencode-kagi-ken-mcp"],
-      "environment": {
-      },
       "enabled": true
     },
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
-      "headers": {
-      },
       "enabled": true
     },
     "linear": {
