@@ -20,7 +20,7 @@
       "url": "https://mcp.context7.com/mcp",
       "headers": {
       },
-      "enabled": false
+      "enabled": true
     },
     "linear": {
       "type": "remote",
@@ -39,6 +39,10 @@
         "Authorization": "Bearer {{pass://Main/Home Assistant/MCP API Key}}"
       },
       "enabled": false
+    },
+    "gh_grep": {
+      "type": "remote",
+      "url": "https://mcp.grep.app"
     }
   }
 }
