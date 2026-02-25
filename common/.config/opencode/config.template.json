@@ -10,7 +10,7 @@
   "mcp": {
     "kagi-ken": {
       "type": "local",
-      "command": ["npx", "-y", "github:czottmann/kagi-ken-mcp"],
+      "command": ["npx", "-y", "czottmann/kagi-ken-mcp"],
       "enabled": true
     },
     "context7": {
