@@ -31,9 +31,6 @@
     "home-assistant": {
       "type": "remote",
       "url": "https://home.1al.cc/api/mcp",
-      "headers": {
-        "Authorization": "Bearer {{pass://Main/Home Assistant/MCP API Key}}"
-      },
       "enabled": false
     },
     "gh_grep": {
