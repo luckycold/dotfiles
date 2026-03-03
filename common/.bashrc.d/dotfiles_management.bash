@@ -283,11 +283,11 @@ _switch_dotfiles_profile() {
 
   # Offer to refresh generated secrets for the new active profile.
   if declare -F init-env-secrets >/dev/null && [ -t 0 ] && [ -t 1 ]; then
-    echo -n "Refresh generated secrets now? (y/N): "
+    echo -n "Refresh all generated secrets now? (y/N): "
     read -r refresh_secrets
 
     if [[ "$refresh_secrets" =~ ^[yY]$ ]]; then
-      init-env-secrets
+      init-env-secrets --all
     fi
   fi
 
