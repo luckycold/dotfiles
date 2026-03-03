@@ -5,6 +5,8 @@
 	br = branch
 	ci = commit
 	st = status
+[core]
+	editor = nvim
 [init]
 	defaultBranch = master
 [pull]
