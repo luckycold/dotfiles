@@ -3,3 +3,11 @@
 
 # Ignore local Codex integration assets
 personal/Applications/codex-acp
+common/.config/systemd/user/openclaw-gateway.service
+common/.config/systemd/user/protonmail-bridge.service
+common/.config/systemd/user/opencode.service
+common/.config/systemd/user/9router.service
+common/.local/bin
+common/.local/share/nvim
+common/.local/share
+common/.local/state
