@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "home-assistant": {
+      "baseUrl": "https://home.1al.cc/api/mcp",
+      "headers": {
+        "Authorization": "Bearer {{pass://Main/Home Assistant/MCP API Key}}"
+      }
+    },
+    "netbox": {
+      "command": [
+        "sh",
+        "-lc",
+        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+      ]
+    },
+    "gravwell-prod": {
+      "command": [
+        "node",
+        "/home/lucky/Documents/Work/hydra/gravwell-mcp/build/index.js"
+      ]
+    },
+    "kagi-ken": {
+      "command": [
+        "npx",
+        "-y",
+        "czottmann/kagi-ken-mcp"
+      ]
+    },
+    "context7": {
+      "baseUrl": "https://mcp.context7.com/mcp"
+    },
+    "linear": {
+      "baseUrl": "https://mcp.linear.app/mcp",
+      "auth": "oauth",
+      "oauthRedirectUrl": "http://127.0.0.1:38701/callback"
+    },
+    "clickup": {
+      "command": [
+        "npx",
+        "-y",
+        "mcp-remote",
+        "https://mcp.clickup.com/mcp"
+      ]
+    },
+    "gh_grep": {
+      "baseUrl": "https://mcp.grep.app"
+    },
+    "gitlab": {
+      "baseUrl": "https://gitlab.com/api/v4/mcp",
+      "auth": "oauth",
+      "oauthRedirectUrl": "http://127.0.0.1:38702/callback"
+    },
+    "pylon": {
+      "baseUrl": "https://mcp.usepylon.com",
+      "auth": "oauth",
+      "oauthRedirectUrl": "http://127.0.0.1:38703/callback"
+    }
+  },
+  "imports": []
+}
