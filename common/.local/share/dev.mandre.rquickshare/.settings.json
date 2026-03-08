@@ -1,0 +1,7 @@
+{
+  "autostart": true,
+  "startminimized": true,
+  "realclose": false,
+  "visibility": 0,
+  "port": 46899
+}
