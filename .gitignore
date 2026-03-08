@@ -14,4 +14,5 @@ common/.local/state
 common/.config/opencode/assets
 common/.config/opencode/logs
 common/.config/opencode/smart-voice-notify.jsonc
+/common/.config/opencode/opencode.json
 /common/.config/mcporter/mcporter.json
