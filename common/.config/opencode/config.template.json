@@ -31,6 +31,9 @@
     "home-assistant": {
       "type": "remote",
       "url": "https://home.1al.cc/api/mcp",
+      "headers": {
+        "Authorization": "Bearer {{pass://Main/Home Assistant/MCP API Key}}"
+      },
       "enabled": false
     },
     "gh_grep": {
@@ -42,6 +45,23 @@
       "type": "remote",
       "url": "https://gitlab.com/api/v4/mcp",
       "enabled": true
+    },
+    "pylon": {
+      "type": "remote",
+      "url": "https://mcp.usepylon.com",
+      "enabled": false
+    },
+    "netbox": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+      ],
+      "environment": {
+        "NETBOX_URL": "https://netbox.prod.hydra.host/"
+      },
+      "enabled": false
     }
   }
 }
