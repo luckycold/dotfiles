@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "netbox": {
+      "env": {
+        "NETBOX_URL": "https://netbox.prod.hydra.host/",
+        "NETBOX_TOKEN": "{{pass://Main/NetBox/API Token}}"
+      },
+      "command": [
+        "sh",
+        "-lc",
+        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+      ]
+    },
+    "gravwell-prod": {
+      "env": {
+        "GRAVWELL_URL": "https://gravwell.prod.hydra.host",
+        "GRAVWELL_API_TOKEN": "{{pass://Main/Gravwell/Prod API Token}}",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      },
+      "command": [
+        "sh",
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"gravwell-prod launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/mcporter/gravwell-prod\"; url=\"git@gitlab.com:hydrahost-developers/infrastructure/repositories/gravwell-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; elif [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --omit=dev --no-audit --no-fund --quiet >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ]
+    },
+    "gravwell-dev": {
+      "env": {
+        "GRAVWELL_URL": "https://gravwell.dev.hydra.host",
+        "GRAVWELL_API_TOKEN": "{{pass://Main/Gravwell/Dev API Token}}",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      },
+      "command": [
+        "sh",
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"gravwell-dev launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/mcporter/gravwell-dev\"; url=\"git@gitlab.com:hydrahost-developers/infrastructure/repositories/gravwell-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; elif [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --omit=dev --no-audit --no-fund --quiet >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ]
+    },
+    "gravwell-stg": {
+      "env": {
+        "GRAVWELL_URL": "https://gravwell.stg.hydra.host",
+        "GRAVWELL_API_TOKEN": "{{pass://Main/Gravwell/Stg API Token}}",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      },
+      "command": [
+        "sh",
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"gravwell-stg launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/mcporter/gravwell-stg\"; url=\"git@gitlab.com:hydrahost-developers/infrastructure/repositories/gravwell-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; elif [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --omit=dev --no-audit --no-fund --quiet >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ]
+    }
+  },
+  "imports": [
+    "opencode"
+  ]
+}
