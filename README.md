@@ -113,12 +113,21 @@ For my personal Framework AMD + Thunderbolt dock + NVIDIA eGPU setup, the power-
 - `personal/` for user-session behavior
 - `root/` for machine policy under `/etc` and `/usr/local/bin`
 
+Scope note:
+
+- the `personal/` changes here are still primarily aimed at this AMD Framework laptop, but the `uwsm` GPU pin is now conditional instead of hardcoded
+- `personal/.config/uwsm/env` only exports `AQ_DRM_DEVICES` when both an AMD DRM card and an NVIDIA DRM card are present, and then picks the first AMD card it finds
+- that makes the `personal/` side safer across other machines, but it is still not meant as a fully generic power profile for every AMD laptop
+- `root/` is even more hardware-specific because it includes Framework, Thunderbolt dock, eGPU, and boot-chain assumptions
+
 Overview of what had to be fixed to make this setup reliable:
 
 - keep Hyprland on the AMD iGPU so the desktop session is not tied to the NVIDIA eGPU on boot, suspend, or wake
 - remove the old `hypridle` DPMS-off behavior that could leave wakeup in a broken state
 - disable NVIDIA's suspend video-memory preservation path, which was breaking suspend and hibernate with the eGPU attached
 - disable Thunderbolt dock wake sources so suspend does not immediately wake back up
+- use both `tmpfiles.d` and a udev rule so wakeup gets disabled both at boot and when dock/eGPU PCI devices hotplug later
+- override NVIDIA's sleep-unit drop-ins so systemd freezes user sessions again during suspend, hibernate, and suspend-then-hibernate
 - wire hibernate to the real swapfile with the correct `resume=` and `resume_offset=` values
 - disable zram so hibernate does not fail from memory pressure while building the image
 - refresh Limine EFI binaries and boot order so fallback boot and hibernate resume use the same working path
@@ -126,12 +135,16 @@ Overview of what had to be fixed to make this setup reliable:
 
 Files involved in this setup:
 
-- `personal/.config/uwsm/env` - pins Hyprland to the AMD iGPU with `AQ_DRM_DEVICES`
+- `personal/.config/uwsm/env` - conditionally pins Hyprland to the AMD DRM card when both AMD and NVIDIA GPUs are present
 - `personal/.config/hypr/hypridle.conf` - keeps the safer lock/suspend behavior without the old DPMS-off listener
 - `root/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
 - `root/etc/modprobe.d/nvidia-sleep.conf` - should be linked to `/dev/null` by the bootstrap script to disable the vendor sleep override
 - `root/etc/modprobe.d/gsr-nvidia.conf` - should be linked to `/dev/null` by the bootstrap script to disable the conflicting vendor override
 - `root/etc/tmpfiles.d/no-dock-wakeup.conf` - disables the Thunderbolt dock PCI wake sources on boot
+- `root/etc/udev/rules.d/43-framework-dock-wakeup.rules` - disables wake on the same PCI devices when the dock/eGPU chain appears later via hotplug or resume
+- `root/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for suspend
+- `root/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for hibernate
+- `root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for delayed hibernate
 - `root/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
 - `root/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
 - `root/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the hibernate delay to 30 minutes
@@ -160,6 +173,7 @@ What this covers:
 - keep `hypridle` from using the old DPMS-off path in `personal/.config/hypr/hypridle.conf`
 - disable NVIDIA suspend integration that breaks suspend/hibernate with the eGPU
 - disable Thunderbolt dock wakeups
+- restore systemd's default user-session freezing during sleep operations
 - force hibernate to use the swapfile instead of zram
 - set lid-close to `suspend-then-hibernate` after 30 minutes
 - regenerate Limine boot artifacts and refresh fallback EFI binaries

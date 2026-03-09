@@ -1,0 +1,6 @@
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:00:04.1", ATTR{power/wakeup}="disabled"
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:62:00.0", ATTR{power/wakeup}="disabled"
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:c3:00.5", ATTR{power/wakeup}="disabled"
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:c3:00.3", ATTR{power/wakeup}="disabled"
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:c3:00.4", ATTR{power/wakeup}="disabled"
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:c3:00.6", ATTR{power/wakeup}="disabled"
