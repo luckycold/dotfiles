@@ -30,6 +30,14 @@
       "url": "https://mcp.usepylon.com",
       "enabled": false
     },
+    "home-assistant": {
+      "type": "remote",
+      "url": "https://home.1al.cc/api/mcp",
+      "headers": {
+        "Authorization": "Bearer {{pass://Main/Home Assistant/MCP API Key}}"
+      },
+      "enabled": false
+    },
     "netbox": {
       "type": "local",
       "command": [

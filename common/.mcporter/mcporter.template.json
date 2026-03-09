@@ -1,5 +1,11 @@
 {
   "mcpServers": {
+    "home-assistant": {
+      "baseUrl": "https://home.1al.cc/api/mcp",
+      "headers": {
+        "Authorization": "Bearer {{pass://Main/Home Assistant/MCP API Key}}"
+      }
+    },
     "netbox": {
       "env": {
         "NETBOX_URL": "https://netbox.prod.hydra.host/",
