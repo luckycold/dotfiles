@@ -3,7 +3,23 @@
 [alias]
 	co = checkout
 	br = branch
-	ci = commit
+	ci = "!f() { \
+		if [ \"$(git config --type=bool --get commit.gpgsign 2>/dev/null)\" != \"true\" ]; then \
+			exec git commit \"$@\"; \
+		fi; \
+		signing_key_blob=$(git config --get user.signingkey 2>/dev/null | awk 'NF>=2 && $1 ~ /^ssh-/ {print $2}'); \
+		if [ -z \"$signing_key_blob\" ]; then \
+			exec git commit \"$@\"; \
+		fi; \
+		if ssh-add -L 2>/dev/null | awk 'NF>=2 && $1 ~ /^ssh-/ {print $2}' | grep -Fxq \"$signing_key_blob\"; then \
+			exec git commit \"$@\"; \
+		fi; \
+		echo 'warning: ssh signing key missing in ssh-agent; creating unsigned commit' >&2; \
+		if command -v notify-send >/dev/null 2>&1; then \
+			notify-send 'Git signing fallback' 'SSH signing key missing in ssh-agent; commit created unsigned.' >/dev/null 2>&1 || true; \
+		fi; \
+		exec git commit --no-gpg-sign \"$@\"; \
+	}; f"
 	st = status
 [core]
 	editor = nvim
