@@ -219,6 +219,11 @@ update-dotfiles() {
 # --- Dotfiles Profile Management Functions ---
 
 # Internal function to switch stow profiles
+_skip_dotfiles_profile() {
+  local dir="$1"
+  [[ "$dir" == "common" || "$dir" == "root" || "$dir" == "bootstrap" ]]
+}
+
 _switch_dotfiles_profile() {
   local target_profile="$1"
   local dotfiles_dir="$HOME/dotfiles"
@@ -235,7 +240,7 @@ _switch_dotfiles_profile() {
   echo "(Unstowing existing profiles...)"
   for dir in */; do
     dir="${dir%/}"
-    [[ "$dir" == "common" ]] && continue
+    _skip_dotfiles_profile "$dir" && continue
     stow -D -t ~ "$dir" 2>/dev/null
   done
 
@@ -302,7 +307,7 @@ _list_dotfiles_profiles() {
   for dir in "$dotfiles_dir"/*/; do
     dir="${dir%/}"
     dir="${dir##*/}"
-    [[ "$dir" == "common" ]] && continue
+    _skip_dotfiles_profile "$dir" && continue
     profiles+=("$dir")
   done
 

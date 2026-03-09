@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Personal bootstrap for Luke's current Framework AMD + Thunderbolt dock +
+# NVIDIA eGPU setup. This is intentionally hardware-specific.
+
 require_root() {
   if [[ ${EUID} -ne 0 ]]; then
     printf 'Run as root: sudo %s\n' "$0" >&2
@@ -23,6 +26,25 @@ backup_file() {
   fi
 }
 
+materialize_file() {
+  local source_path=$1
+  local target_path=$2
+  local mode=${3:-644}
+
+  if [[ ! -f ${source_path} ]]; then
+    printf 'Missing source file: %s\n' "${source_path}" >&2
+    exit 1
+  fi
+
+  if [[ -e ${target_path} || -L ${target_path} ]]; then
+    backup_file "${target_path}"
+    rm -f "${target_path}"
+  fi
+
+  install -D -m "${mode}" "${source_path}" "${target_path}"
+  chown root:root "${target_path}"
+}
+
 main() {
   require_root
 
@@ -35,17 +57,21 @@ main() {
   require_cmd lsblk
   require_cmd python3
   require_cmd systemd-tmpfiles
+  require_cmd udevadm
 
-  local root_source root_parent partuuid resume_offset
+  local bootstrap_dir root_source root_partition partuuid resume_offset
+
+  bootstrap_dir=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
 
   root_source=$(findmnt -no SOURCE /)
-  root_parent=$(lsblk -no PKNAME "${root_source}")
-  if [[ -z ${root_parent} ]]; then
-    printf 'Could not determine encrypted root parent for %s\n' "${root_source}" >&2
+  root_source=${root_source%%\[*}
+  root_partition=$(lsblk -srno PATH "${root_source}" | sed -n '2p')
+  if [[ -z ${root_partition} ]]; then
+    printf 'Could not determine encrypted root partition for %s\n' "${root_source}" >&2
     exit 1
   fi
 
-  partuuid=$(blkid -s PARTUUID -o value "/dev/${root_parent}")
+  partuuid=$(blkid -s PARTUUID -o value "${root_partition}")
   resume_offset=$(btrfs inspect-internal map-swapfile -r /swap/swapfile)
 
   backup_file /etc/default/limine
@@ -85,12 +111,27 @@ PY
   ln -sfn /dev/null /etc/modprobe.d/nvidia-sleep.conf
   ln -sfn /dev/null /etc/modprobe.d/gsr-nvidia.conf
 
+  materialize_file "${bootstrap_dir}/etc/modprobe.d/99-nvidia-suspend-workaround.conf" "/etc/modprobe.d/99-nvidia-suspend-workaround.conf"
+  materialize_file "${bootstrap_dir}/etc/tmpfiles.d/no-dock-wakeup.conf" "/etc/tmpfiles.d/no-dock-wakeup.conf"
+  materialize_file "${bootstrap_dir}/etc/tmpfiles.d/hibernate-image-size.conf" "/etc/tmpfiles.d/hibernate-image-size.conf"
+  materialize_file "${bootstrap_dir}/etc/udev/rules.d/43-framework-dock-wakeup.rules" "/etc/udev/rules.d/43-framework-dock-wakeup.rules"
+  materialize_file "${bootstrap_dir}/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf" "/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf"
+  materialize_file "${bootstrap_dir}/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf" "/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf"
+  materialize_file "${bootstrap_dir}/etc/systemd/zram-generator.conf" "/etc/systemd/zram-generator.conf"
+  materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf"
+  materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf"
+  materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf"
+
   if [[ -f /boot/EFI/limine/limine_x64.efi ]]; then
     cp -f /boot/EFI/limine/limine_x64.efi /boot/EFI/BOOT/BOOTX64.EFI
     cp -f /boot/EFI/limine/limine_x64.efi /boot/EFI/arch-limine/BOOTX64.EFI
   fi
 
+  udevadm control --reload
+  udevadm trigger --subsystem-match=pci || true
   systemd-tmpfiles --create /etc/tmpfiles.d/no-dock-wakeup.conf /etc/tmpfiles.d/hibernate-image-size.conf
+  systemctl daemon-reload
+  systemctl reload systemd-logind || true
 
   swapoff /dev/zram0 2>/dev/null || true
   systemctl stop systemd-zram-setup@zram0.service 2>/dev/null || true
@@ -121,7 +162,7 @@ Detected values:
 
 Next steps:
   1. Reboot.
-  2. Verify hibernate with: systemctl hibernate
+  2. Verify lid handling and hibernate with: systemctl hibernate
   3. If TPM auto-unlock prompts again, regenerate the Clevis TPM binding after boot artifacts settle.
 EOF
 }

@@ -111,14 +111,15 @@ The above is a bit of a departure from the instructional video for GNU stow. It'
 For my personal Framework AMD + Thunderbolt dock + NVIDIA eGPU setup, the power-management changes are split between:
 
 - `personal/` for user-session behavior
-- `root/` for machine policy under `/etc` and `/usr/local/bin`
+- `root/` for stow-safe machine policy under `/etc`
+- `bootstrap/framework-power/` for the root-owned files that should be copied into `/etc`, not left as symlinks into `/home`
 
 Scope note:
 
 - the `personal/` changes here are still primarily aimed at this AMD Framework laptop, but the `uwsm` GPU pin is now conditional instead of hardcoded
 - `personal/.config/uwsm/env` only exports `AQ_DRM_DEVICES` when both an AMD DRM card and an NVIDIA DRM card are present, and then picks the first AMD card it finds
 - that makes the `personal/` side safer across other machines, but it is still not meant as a fully generic power profile for every AMD laptop
-- `root/` is even more hardware-specific because it includes Framework, Thunderbolt dock, eGPU, and boot-chain assumptions
+- `bootstrap/framework-power/` is fully personal to this specific Framework + Thunderbolt dock + NVIDIA eGPU setup and should be treated as host-specific
 
 Overview of what had to be fixed to make this setup reliable:
 
@@ -137,19 +138,17 @@ Files involved in this setup:
 
 - `personal/.config/uwsm/env` - conditionally pins Hyprland to the AMD DRM card when both AMD and NVIDIA GPUs are present
 - `personal/.config/hypr/hypridle.conf` - keeps the safer lock/suspend behavior without the old DPMS-off listener
-- `root/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
-- `root/etc/modprobe.d/nvidia-sleep.conf` - should be linked to `/dev/null` by the bootstrap script to disable the vendor sleep override
-- `root/etc/modprobe.d/gsr-nvidia.conf` - should be linked to `/dev/null` by the bootstrap script to disable the conflicting vendor override
-- `root/etc/tmpfiles.d/no-dock-wakeup.conf` - disables the Thunderbolt dock PCI wake sources on boot
-- `root/etc/udev/rules.d/43-framework-dock-wakeup.rules` - disables wake on the same PCI devices when the dock/eGPU chain appears later via hotplug or resume
-- `root/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for suspend
-- `root/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for hibernate
-- `root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for delayed hibernate
-- `root/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
-- `root/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
-- `root/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the hibernate delay to 30 minutes
-- `root/etc/systemd/zram-generator.conf` - disables zram so the swapfile is the only hibernate backing store
-- `root/usr/local/bin/dotfiles-power-bootstrap` - fills in install-specific boot values, refreshes Limine, applies wake settings, disables zram live, and cleans up EFI boot order
+- `bootstrap/framework-power/apply.sh` - personal bootstrap for this machine that fills in install-specific boot values, copies real root-owned files into `/etc`, refreshes Limine, and applies wake settings
+- `bootstrap/framework-power/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
+- `bootstrap/framework-power/etc/tmpfiles.d/no-dock-wakeup.conf` - disables the Thunderbolt dock PCI wake sources on boot
+- `bootstrap/framework-power/etc/udev/rules.d/43-framework-dock-wakeup.rules` - disables wake on the same PCI devices when the dock/eGPU chain appears later via hotplug or resume
+- `bootstrap/framework-power/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for suspend
+- `bootstrap/framework-power/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for hibernate
+- `bootstrap/framework-power/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for delayed hibernate
+- `bootstrap/framework-power/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
+- `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
+- `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the hibernate delay (currently `1min` while testing)
+- `bootstrap/framework-power/etc/systemd/zram-generator.conf` - disables zram so the swapfile is the only hibernate backing store
 
 Apply them like this:
 
@@ -157,7 +156,7 @@ Apply them like this:
 stow -t ~ common
 stow -t ~ personal
 sudo stow -t / root
-sudo /usr/local/bin/dotfiles-power-bootstrap
+sudo ./bootstrap/framework-power/apply.sh
 ```
 
 If you are moving an already-tuned machine under Stow management instead of setting up a fresh install, use `--adopt` once for the profiles that already exist on disk:
@@ -175,7 +174,7 @@ What this covers:
 - disable Thunderbolt dock wakeups
 - restore systemd's default user-session freezing during sleep operations
 - force hibernate to use the swapfile instead of zram
-- set lid-close to `suspend-then-hibernate` after 30 minutes
+- set lid-close to `suspend-then-hibernate` after the configured delay
 - regenerate Limine boot artifacts and refresh fallback EFI binaries
 
 What is still intentionally machine-specific and generated by the bootstrap script:
@@ -195,6 +194,13 @@ cat /proc/cmdline
 swapon --show
 systemctl hibernate
 ```
+
+Important note for `root/` files:
+
+- `root/` is now reserved for files that are safe to manage directly with Stow
+- the power-management files for this specific Framework setup live under `bootstrap/framework-power/` instead
+- those files are copied into `/etc` as real root-owned files because symlinks into `/home` are not reliable for early boot, udev, modprobe, and `systemd-logind`
+- treat `sudo ./bootstrap/framework-power/apply.sh` as the required final step for this machine, not just an optional helper
 
 ## Instructional Video
 This is a useful video if you get lost:
