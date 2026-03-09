@@ -4,8 +4,28 @@
 export OMARCHY_PATH=$HOME/.local/share/omarchy
 export PATH=$OMARCHY_PATH/bin:$PATH
 
-# Keep Hyprland on the AMD iGPU. The NVIDIA eGPU stays available for opt-in apps.
-export AQ_DRM_DEVICES=/dev/dri/card1
+# Keep Hyprland on the AMD GPU when an NVIDIA GPU is also present.
+# This avoids tying the desktop session to an eGPU while leaving NVIDIA
+# available for opt-in apps.
+amd_card=""
+has_nvidia=0
+
+for drm_card in /sys/class/drm/card[0-9]*; do
+  [ -e "$drm_card/device/vendor" ] || continue
+
+  case "$(cat "$drm_card/device/vendor")" in
+    0x1002)
+      [ -n "$amd_card" ] || amd_card="/dev/dri/$(basename "$drm_card")"
+      ;;
+    0x10de)
+      has_nvidia=1
+      ;;
+  esac
+done
+
+if [ "$has_nvidia" -eq 1 ] && [ -n "$amd_card" ]; then
+  export AQ_DRM_DEVICES="$amd_card"
+fi
 
 # Set default terminal and editor
 source ~/.config/uwsm/default
