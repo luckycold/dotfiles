@@ -1,0 +1,13 @@
+[Unit]
+Description=Recover docked monitors after resume
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/hypr-resume-monitor-recover
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

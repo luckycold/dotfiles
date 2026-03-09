@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RECOVERY_DELAY_SECONDS="${HYPR_MONITOR_RECOVERY_DELAY_SECONDS:-8}"
+REINIT_SLEEP_SECONDS="${HYPR_MONITOR_REINIT_SLEEP_SECONDS:-2}"
+
+recover_monitors() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+  pgrep -x Hyprland >/dev/null 2>&1 || return 0
+
+  if [[ ! -r /sys/class/drm/card1-DP-7/status || ! -r /sys/class/drm/card1-DP-8/status ]]; then
+    return 0
+  fi
+
+  if [[ $(< /sys/class/drm/card1-DP-7/status) != "connected" && $(< /sys/class/drm/card1-DP-8/status) != "connected" ]]; then
+    return 0
+  fi
+
+  sleep "${RECOVERY_DELAY_SECONDS}"
+
+  hyprctl keyword monitor "DP-8,disable" >/dev/null 2>&1 || true
+  hyprctl keyword monitor "DP-7,disable" >/dev/null 2>&1 || true
+  sleep "${REINIT_SLEEP_SECONDS}"
+
+  hyprctl keyword monitor "DP-8,3840x2160@120,-1920x0,2" >/dev/null 2>&1 || true
+  hyprctl keyword monitor "DP-7,3840x2160@120,0x0,2" >/dev/null 2>&1 || true
+  hyprctl keyword monitor "eDP-1,2880x1920@120,1920x0,2" >/dev/null 2>&1 || true
+
+  omarchy-restart-waybar >/dev/null 2>&1 || true
+}
+
+run_resume_recovery() {
+  echo "Resume detected, reinitializing docked monitors..."
+  recover_monitors
+  last_recovery=$(date +%s)
+}
+
+last_recovery=$(date +%s)
+last_tick=$last_recovery
+resume_signal_pending=0
+
+gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 2>/dev/null |
+while true; do
+  did_resume_recovery=0
+
+  if read -t 60 -r line; then
+    if [[ $line == *PrepareForSleep*false* ]] || [[ $line == *PreparingForSleep*false* ]]; then
+      run_resume_recovery
+      resume_signal_pending=0
+      did_resume_recovery=1
+    elif [[ $line == *PrepareForSleep*true* ]] || [[ $line == *PreparingForSleep*true* ]] || [[ $line == *PrepareForSleep* ]] || [[ $line == *PreparingForSleep* ]]; then
+      resume_signal_pending=1
+    elif [[ $line == *boolean*false* ]] && (( resume_signal_pending == 1 )); then
+      run_resume_recovery
+      resume_signal_pending=0
+      did_resume_recovery=1
+    fi
+  fi
+
+  now=$(date +%s)
+  if (( did_resume_recovery == 0 )) && (( now - last_tick >= 90 )); then
+    echo "Detected suspend or hibernate time jump, reinitializing docked monitors..."
+    run_resume_recovery
+    now=$(date +%s)
+  fi
+
+  last_tick=$now
+done
