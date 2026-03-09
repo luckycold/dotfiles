@@ -17,6 +17,16 @@
         "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
       ]
     },
+    "nomad": {
+      "env": {
+        "NOMAD_ADDR": "https://nomad.prod.hydra.host"
+      },
+      "command": [
+        "sh",
+        "-lc",
+        "exec \"$HOME/.local/bin/nomad-mcp-server\""
+      ]
+    },
     "gravwell-prod": {
       "env": {
         "GRAVWELL_URL": "https://gravwell.prod.hydra.host",
