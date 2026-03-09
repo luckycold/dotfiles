@@ -24,7 +24,7 @@
       "command": [
         "sh",
         "-lc",
-        "exec \"$HOME/.local/bin/nomad-mcp-server\""
+        "exec \"$HOME/Applications/nomad-mcp-server\""
       ]
     },
     "gravwell-prod": {

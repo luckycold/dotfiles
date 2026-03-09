@@ -56,7 +56,7 @@
       "command": [
         "sh",
         "-lc",
-        "exec \"$HOME/.local/bin/nomad-mcp-server\""
+        "exec \"$HOME/Applications/nomad-mcp-server\""
       ],
       "environment": {
         "NOMAD_ADDR": "https://nomad.prod.hydra.host"
