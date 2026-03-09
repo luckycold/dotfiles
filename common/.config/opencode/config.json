@@ -5,27 +5,5 @@
     "opencode-gemini-auth@1.3.6",
     "opencode-scheduler",
     "opencode-smart-voice-notify@latest"
-  ],
-  "mcp": {
-    "kagi-ken": {
-      "type": "local",
-      "command": ["npx", "-y", "czottmann/kagi-ken-mcp"],
-      "enabled": true
-    },
-    "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
-      "enabled": true
-    },
-    "gh_grep": {
-      "type": "remote",
-      "url": "https://mcp.grep.app",
-      "enabled": true
-    },
-    "gitlab": {
-      "type": "remote",
-      "url": "https://gitlab.com/api/v4/mcp",
-      "enabled": true
-    }
-  }
+  ]
 }
