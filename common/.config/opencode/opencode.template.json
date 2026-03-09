@@ -1,5 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "minimax": {
+      "name": "MiniMax (local)",
+      "options": {
+        "baseURL": "https://aviation-pcs-river-ellis.trycloudflare.com/v1",
+        "apiKey": "{{pass://Main/Minimax/Local API Key}}"
+      }
+    }
+  },
   "mcp": {
     "kagi-ken": {
       "type": "local",
@@ -61,7 +70,7 @@
       "environment": {
         "NOMAD_ADDR": "https://nomad.prod.hydra.host"
       },
-      "enabled": true
+      "enabled": false
     },
     "gravwell-prod": {
       "type": "local",

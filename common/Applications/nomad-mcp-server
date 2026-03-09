@@ -4,6 +4,7 @@ set -euo pipefail
 version="${NOMAD_MCP_VERSION:-0.2.8}"
 cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/nomad-mcp/$version"
 token_helper="${NOMAD_MCP_TOKEN_HELPER:-$HOME/Applications/nomad-mcp-token}"
+stdio_proxy="${NOMAD_MCP_STDIO_PROXY:-$HOME/Applications/nomad-mcp-stdio-proxy}"
 
 require_bin() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -57,9 +58,15 @@ install_server() {
 }
 
 require_bin npm
+require_bin python3
 
 if [ ! -x "$token_helper" ]; then
   printf 'Missing Nomad token helper: %s\n' "$token_helper" >&2
+  exit 127
+fi
+
+if [ ! -x "$stdio_proxy" ]; then
+  printf 'Missing Nomad MCP stdio proxy: %s\n' "$stdio_proxy" >&2
   exit 127
 fi
 
@@ -81,4 +88,4 @@ if [ -z "$token" ]; then
 fi
 
 export NOMAD_TOKEN="$token"
-exec "$binary" -transport=stdio "$@"
+exec "$stdio_proxy" "$binary" "$@"
