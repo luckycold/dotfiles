@@ -113,6 +113,31 @@ For my personal Framework AMD + Thunderbolt dock + NVIDIA eGPU setup, the power-
 - `personal/` for user-session behavior
 - `root/` for machine policy under `/etc` and `/usr/local/bin`
 
+Overview of what had to be fixed to make this setup reliable:
+
+- keep Hyprland on the AMD iGPU so the desktop session is not tied to the NVIDIA eGPU on boot, suspend, or wake
+- remove the old `hypridle` DPMS-off behavior that could leave wakeup in a broken state
+- disable NVIDIA's suspend video-memory preservation path, which was breaking suspend and hibernate with the eGPU attached
+- disable Thunderbolt dock wake sources so suspend does not immediately wake back up
+- wire hibernate to the real swapfile with the correct `resume=` and `resume_offset=` values
+- disable zram so hibernate does not fail from memory pressure while building the image
+- refresh Limine EFI binaries and boot order so fallback boot and hibernate resume use the same working path
+- leave TPM/Clevis as a final machine-specific step, since measured-boot changes can require regenerating the unlock binding
+
+Files involved in this setup:
+
+- `personal/.config/uwsm/env` - pins Hyprland to the AMD iGPU with `AQ_DRM_DEVICES`
+- `personal/.config/hypr/hypridle.conf` - keeps the safer lock/suspend behavior without the old DPMS-off listener
+- `root/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
+- `root/etc/modprobe.d/nvidia-sleep.conf` - should be linked to `/dev/null` by the bootstrap script to disable the vendor sleep override
+- `root/etc/modprobe.d/gsr-nvidia.conf` - should be linked to `/dev/null` by the bootstrap script to disable the conflicting vendor override
+- `root/etc/tmpfiles.d/no-dock-wakeup.conf` - disables the Thunderbolt dock PCI wake sources on boot
+- `root/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
+- `root/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
+- `root/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the hibernate delay to 30 minutes
+- `root/etc/systemd/zram-generator.conf` - disables zram so the swapfile is the only hibernate backing store
+- `root/usr/local/bin/dotfiles-power-bootstrap` - fills in install-specific boot values, refreshes Limine, applies wake settings, disables zram live, and cleans up EFI boot order
+
 Apply them like this:
 
 ```bash
