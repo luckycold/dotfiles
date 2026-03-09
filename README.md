@@ -138,8 +138,6 @@ Files involved in this setup:
 
 - `personal/.config/uwsm/env` - conditionally pins Hyprland to the AMD DRM card when both AMD and NVIDIA GPUs are present
 - `personal/.config/hypr/hypridle.conf` - keeps the safer lock/suspend behavior without the old DPMS-off listener
-- `personal/.local/bin/hypr-resume-monitor-recover` - watches for resume events and reinitializes the dock-facing displays on this machine
-- `personal/.config/systemd/user/hypr-resume-monitor-recover.service` - keeps the resume monitor-recovery hook running in the user session
 - `bootstrap/framework-power/apply.sh` - personal bootstrap for this machine that fills in install-specific boot values, copies real root-owned files into `/etc`, refreshes Limine, and applies wake settings
 - `bootstrap/framework-power/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
 - `bootstrap/framework-power/etc/tmpfiles.d/no-dock-wakeup.conf` - disables the Thunderbolt dock PCI wake sources on boot
@@ -172,7 +170,6 @@ What this covers:
 
 - pin Hyprland to the AMD iGPU in `personal/.config/uwsm/env`
 - keep `hypridle` from using the old DPMS-off path in `personal/.config/hypr/hypridle.conf`
-- run a user-level monitor recovery hook after resume so the docked displays are reinitialized when the display chain comes back in a bad state
 - disable NVIDIA suspend integration that breaks suspend/hibernate with the eGPU
 - disable Thunderbolt dock wakeups
 - restore systemd's default user-session freezing during sleep operations
