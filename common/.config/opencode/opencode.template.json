@@ -79,6 +79,32 @@
       },
       "enabled": false
     },
+    "netbox-dev": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+      ],
+      "environment": {
+        "NETBOX_URL": "https://netbox.dev.hydra.host/",
+        "NETBOX_TOKEN": "{{pass://Main/NetBox/Dev API Token}}"
+      },
+      "enabled": false
+    },
+    "netbox-stg": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+      ],
+      "environment": {
+        "NETBOX_URL": "https://netbox.stg.hydra.host/",
+        "NETBOX_TOKEN": "{{pass://Main/NetBox/Stg API Token}}"
+      },
+      "enabled": false
+    },
     "nomad": {
       "type": "local",
       "command": [
