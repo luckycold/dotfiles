@@ -9,6 +9,9 @@
     "clickup": {
       "baseUrl": "https://mcp.clickup.com/mcp"
     },
+    "linear": {
+      "baseUrl": "https://mcp.linear.app/mcp"
+    },
     "netbox": {
       "env": {
         "NETBOX_URL": "https://netbox.prod.hydra.host/",
