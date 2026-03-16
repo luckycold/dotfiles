@@ -13,6 +13,24 @@ notify_user() {
     fi
 }
 
+is_local_db_error() {
+    printf '%s\n' "$1" | grep -Eq 'sqlcipher_page_cipher|hmac check failed|Error creating client features|Failed to initialize database'
+}
+
+reset_local_session() {
+    local data_dir="$HOME/.local/share/proton-pass-cli"
+    local session_dir="$data_dir/.session"
+    local backup_dir="$data_dir/.session-corrupt-$(date +%Y%m%d-%H%M%S)"
+
+    echo "Resetting local Proton Pass session data..."
+    pass-cli logout --force >/dev/null 2>&1 || true
+
+    if [ -e "$session_dir" ]; then
+        mv "$session_dir" "$backup_dir"
+        echo "Backed up old session data to $backup_dir"
+    fi
+}
+
 # Check for required dependencies
 for cmd in pass-cli secret-tool oathtool; do
     if ! command -v "$cmd" &>/dev/null; then
@@ -24,9 +42,16 @@ for cmd in pass-cli secret-tool oathtool; do
 done
 
 # 1. Check if we are already logged in
-if pass-cli test >/dev/null 2>&1; then
+PASS_TEST_OUTPUT="$(pass-cli test 2>&1)"
+PASS_TEST_STATUS=$?
+
+if [ "$PASS_TEST_STATUS" -eq 0 ]; then
     echo "✅ Already logged into Proton Pass."
     exit 0
+fi
+
+if is_local_db_error "$PASS_TEST_OUTPUT"; then
+    reset_local_session
 fi
 
 echo "🔄 Session expired or missing. Logging in..."
@@ -55,8 +80,18 @@ fi
 export PROTON_PASS_TOTP="$(oathtool --totp -b "$TOTP_SECRET")"
 
 # 4. Log in
-# Replace 'your_email@proton.me' with your actual email
-if pass-cli login --interactive hello@lukewilliams.org; then
+LOGIN_OUTPUT="$(pass-cli login --interactive hello@lukewilliams.org 2>&1)"
+LOGIN_STATUS=$?
+printf '%s\n' "$LOGIN_OUTPUT"
+
+if [ "$LOGIN_STATUS" -ne 0 ] && is_local_db_error "$LOGIN_OUTPUT"; then
+    reset_local_session
+    LOGIN_OUTPUT="$(pass-cli login --interactive hello@lukewilliams.org 2>&1)"
+    LOGIN_STATUS=$?
+    printf '%s\n' "$LOGIN_OUTPUT"
+fi
+
+if [ "$LOGIN_STATUS" -eq 0 ]; then
     echo "✅ Login successful."
 else
     msg="Login failed. Check connection or credentials."
