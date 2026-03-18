@@ -6,160 +6,16 @@ After=network-online.target
 [Service]
 Type=simple
 KillMode=control-group
+TimeoutStopSec=5
 Environment=SSH_AGENT_SOCKET=%h/.ssh/proton-pass-agent.sock
-Environment=SSH_AGENT_WAIT_SECONDS=30
+Environment=SSH_AGENT_WAIT_SECONDS=120
 Environment=MAX_WIFI_WAIT_SECONDS=45
 Environment=MAX_NETWORK_WAIT_SECONDS=30
 Environment=NETWORK_CHECK_HOST=1.1.1.1
+Environment=LOGIN_VERIFY_WAIT_SECONDS=20
 Environment=HEALTHCHECK_INTERVAL=300
-
-ExecStart=/bin/bash -lc '\
-notify() { \
-  local title="$1" msg="$2" urg="${3:-low}"; \
-  echo "$title: $msg"; \
-  command -v notify-send >/dev/null && notify-send --urgency="$urg" "$title" "$msg" 2>/dev/null || true; \
-}; \
-is_agent_active() { \
-  [ -S "$SSH_AGENT_SOCKET" ] || return 1; \
-  SSH_AUTH_SOCK="$SSH_AGENT_SOCKET" ssh-add -l >/dev/null 2>&1; \
-  [ $? -le 1 ]; \
-}; \
-is_wifi_connected() { \
-  command -v nmcli >/dev/null 2>&1 || return 1; \
-  nmcli -t -f TYPE,STATE device 2>/dev/null | grep -q "^wifi:connected$"; \
-}; \
-wait_for_wifi() { \
-  command -v nmcli >/dev/null 2>&1 || { echo "nmcli not found, skipping Wi-Fi wait"; return 0; }; \
-  nmcli -t -f TYPE device 2>/dev/null | grep -q "^wifi$" || { echo "No Wi-Fi device detected, skipping Wi-Fi wait"; return 0; }; \
-  echo "Waiting for Wi-Fi..."; \
-  notify "Proton Pass" "Waiting for Wi-Fi (up to ${MAX_WIFI_WAIT_SECONDS}s)..."; \
-  for i in $(seq 1 $MAX_WIFI_WAIT_SECONDS); do \
-    if is_wifi_connected; then \
-      echo "Wi-Fi connected"; \
-      return 0; \
-    fi; \
-    if [ "$i" -eq "$MAX_WIFI_WAIT_SECONDS" ]; then \
-      echo "Wi-Fi wait timed out, continuing..."; \
-      notify "Proton Pass Warning" "Wi-Fi not connected after ${MAX_WIFI_WAIT_SECONDS}s, continuing..."; \
-    fi; \
-    sleep 1; \
-  done; \
-  return 0; \
-}; \
-stop_stale_agents() { \
-  command -v pgrep >/dev/null || return 0; \
-  local pids; pids=$(pgrep -x pass-cli || true); \
-  [ -n "$pids" ] && { echo "Killing stale SSH agent PIDs: $pids"; echo "$pids" | xargs kill -9 2>/dev/null || true; }; \
-}; \
-start_ssh_agent() { \
-  echo "Ensuring Proton Pass SSH agent is running..."; \
-  if is_agent_active; then \
-    echo "SSH agent already active"; \
-    return 0; \
-  fi; \
-  echo "Agent not responding. Cleaning up..."; \
-  stop_stale_agents; \
-  rm -f "$SSH_AGENT_SOCKET"; \
-  mkdir -p "$(dirname "$SSH_AGENT_SOCKET")"; \
-  chmod 700 "$(dirname "$SSH_AGENT_SOCKET")"; \
-  echo "Starting SSH agent in background..."; \
-  nohup pass-cli ssh-agent start --socket-path "$SSH_AGENT_SOCKET" --vault-name Main >/dev/null 2>&1 & \
-  local pid=$!; \
-  echo "Waiting up to ${SSH_AGENT_WAIT_SECONDS}s for socket (PID $pid)..."; \
-  for i in $(seq 1 $SSH_AGENT_WAIT_SECONDS); do \
-    sleep 1; \
-    if is_agent_active; then \
-      notify "SSH Agent" "Ready at $SSH_AGENT_SOCKET"; \
-      return 0; \
-    fi; \
-  done; \
-  notify "SSH Agent Error" "Failed to start after ${SSH_AGENT_WAIT_SECONDS}s" critical; \
-  return 1; \
-}; \
-do_login() { \
-  wait_for_wifi; \
-  echo "Waiting for network..."; \
-  notify "Proton Pass" "Waiting for network (up to ${MAX_NETWORK_WAIT_SECONDS}s)..."; \
-  for i in $(seq 1 $MAX_NETWORK_WAIT_SECONDS); do \
-    ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && break; \
-    if [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ]; then \
-      echo "Network wait timed out, continuing..."; \
-      notify "Proton Pass Warning" "Network wait timed out after ${MAX_NETWORK_WAIT_SECONDS}s, continuing..."; \
-    fi; \
-    sleep 1; \
-  done; \
-  PROTON_LOGIN="$HOME/Applications/proton-login"; \
-  if [ ! -x "$PROTON_LOGIN" ]; then \
-    notify "Proton Pass Error" "proton-login script not found" critical; \
-    return 1; \
-  fi; \
-  echo "Running proton-login..."; \
-  "$PROTON_LOGIN"; \
-  local rc=$?; \
-  if [ $rc -eq 0 ] && pass-cli test >/dev/null 2>&1; then \
-    notify "Proton Pass" "Login verified. Ready."; \
-    start_ssh_agent; \
-    return 0; \
-  else \
-    notify "Proton Pass Warning" "Login failed" critical; \
-    return 1; \
-  fi; \
-}; \
-healthcheck() { \
-  echo "Running health check..."; \
-  if ! pass-cli test >/dev/null 2>&1; then \
-    echo "Login check failed, re-authenticating..."; \
-    do_login; \
-    return; \
-  fi; \
-  if ! is_agent_active; then \
-    echo "SSH agent not responding, restarting..."; \
-    start_ssh_agent; \
-    return; \
-  fi; \
-  echo "Health check passed."; \
-}; \
-run_resume_healthcheck() { \
-  echo "System resumed, running health check in 5s..."; \
-  sleep 5; \
-  healthcheck; \
-  last_check=$(date +%%s); \
-}; \
-notify "Proton Pass" "Starting login verification..."; \
-do_login; \
-echo "Starting monitor loop (healthcheck every ${HEALTHCHECK_INTERVAL}s, plus resume events)..."; \
-last_check=$(date +%%s); \
-last_tick=$last_check; \
-resume_signal_pending=0; \
-gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 2>/dev/null | \
-while true; do \
-  did_resume_check=0; \
-  if read -t 60 -r line; then \
-    if [[ "$line" == *PrepareForSleep*false* ]] || [[ "$line" == *PreparingForSleep*false* ]]; then \
-      run_resume_healthcheck; \
-      resume_signal_pending=0; \
-      did_resume_check=1; \
-    elif [[ "$line" == *PrepareForSleep*true* ]] || [[ "$line" == *PreparingForSleep*true* ]] || [[ "$line" == *PrepareForSleep* ]] || [[ "$line" == *PreparingForSleep* ]]; then \
-      resume_signal_pending=1; \
-    elif [[ "$line" == *boolean*false* ]] && [ "$resume_signal_pending" -eq 1 ]; then \
-      run_resume_healthcheck; \
-      resume_signal_pending=0; \
-      did_resume_check=1; \
-    fi; \
-  fi; \
-  now=$(date +%%s); \
-  if [ "$did_resume_check" -eq 0 ] && [ $((now - last_tick)) -ge 90 ]; then \
-    echo "Detected suspend/hibernate time jump, running health check..."; \
-    run_resume_healthcheck; \
-    now=$(date +%%s); \
-  fi; \
-  if [ $((now - last_check)) -ge $HEALTHCHECK_INTERVAL ]; then \
-    healthcheck; \
-    last_check=$now; \
-  fi; \
-  last_tick=$now; \
-done \
-'
+Environment=PROTON_LOGIN=%h/Applications/proton-login
+ExecStart=%h/.local/bin/proton-pass-cli-autologin-monitor
 Restart=on-failure
 RestartSec=10
 

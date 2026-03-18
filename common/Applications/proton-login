@@ -13,6 +13,8 @@ notify_user() {
     fi
 }
 
+LOGIN_VERIFY_WAIT_SECONDS="${LOGIN_VERIFY_WAIT_SECONDS:-20}"
+
 is_local_db_error() {
     printf '%s\n' "$1" | grep -Eq 'sqlcipher_page_cipher|hmac check failed|Error creating client features|Failed to initialize database'
 }
@@ -29,6 +31,19 @@ reset_local_session() {
         mv "$session_dir" "$backup_dir"
         echo "Backed up old session data to $backup_dir"
     fi
+}
+
+verify_login_ready() {
+    local i
+
+    for i in $(seq 1 "$LOGIN_VERIFY_WAIT_SECONDS"); do
+        if pass-cli test >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+    done
+
+    return 1
 }
 
 # Check for required dependencies
@@ -91,7 +106,11 @@ if [ "$LOGIN_STATUS" -ne 0 ] && is_local_db_error "$LOGIN_OUTPUT"; then
     printf '%s\n' "$LOGIN_OUTPUT"
 fi
 
-if [ "$LOGIN_STATUS" -eq 0 ]; then
+if [ "$LOGIN_STATUS" -ne 0 ]; then
+    echo "proton-login exited with status $LOGIN_STATUS"
+fi
+
+if verify_login_ready; then
     echo "✅ Login successful."
 else
     msg="Login failed. Check connection or credentials."
