@@ -1,5 +1,8 @@
 #!/bin/bash
 
+PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
+export PATH
+
 # Function to send native notifications
 notify_user() {
     local title="$1"

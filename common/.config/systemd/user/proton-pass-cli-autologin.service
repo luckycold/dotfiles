@@ -15,6 +15,7 @@ Environment=NETWORK_CHECK_HOST=1.1.1.1
 Environment=LOGIN_VERIFY_WAIT_SECONDS=20
 Environment=HEALTHCHECK_INTERVAL=300
 Environment=PROTON_LOGIN=%h/Applications/proton-login
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=%h/.local/bin/proton-pass-cli-autologin-monitor
 Restart=on-failure
 RestartSec=10
