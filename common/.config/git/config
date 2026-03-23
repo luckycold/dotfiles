@@ -21,6 +21,7 @@
 		exec git commit --no-gpg-sign \"$@\"; \
 	}; f"
 	st = status
+	deploy = !git commit --allow-empty -m \"Dev deploy.\" && git push origin +HEAD:dev && git reset HEAD^
 [core]
 	editor = nvim
 [init]
