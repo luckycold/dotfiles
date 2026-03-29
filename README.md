@@ -102,6 +102,7 @@ View logs with:
 
 ```bash
 journalctl --user -u proton-pass-cli-autologin.service -f
+journalctl --user -u proton-pass-cli-ssh-agent.service -f
 ```
 
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.

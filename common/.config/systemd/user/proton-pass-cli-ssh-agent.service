@@ -1,0 +1,16 @@
+[Unit]
+Description=Proton Pass CLI SSH agent
+PartOf=proton-pass-cli-autologin.service
+
+[Service]
+Type=simple
+KillMode=control-group
+TimeoutStopSec=5
+Environment=SSH_AGENT_SOCKET=%h/.ssh/proton-pass-agent.sock
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStartPre=/usr/bin/mkdir -p %h/.ssh
+ExecStartPre=/usr/bin/chmod 700 %h/.ssh
+ExecStartPre=/usr/bin/rm -f %h/.ssh/proton-pass-agent.sock
+ExecStart=%h/.local/bin/pass-cli ssh-agent start --socket-path %h/.ssh/proton-pass-agent.sock --vault-name Main
+Restart=on-failure
+RestartSec=10
