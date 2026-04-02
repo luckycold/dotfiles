@@ -17,6 +17,7 @@ notify_user() {
 }
 
 LOGIN_VERIFY_WAIT_SECONDS="${LOGIN_VERIFY_WAIT_SECONDS:-20}"
+KEYRING_WAIT_SECONDS="${KEYRING_WAIT_SECONDS:-90}"
 
 is_local_db_error() {
     printf '%s\n' "$1" | grep -Eq 'sqlcipher_page_cipher|hmac check failed|Error creating client features|Failed to initialize database'
@@ -49,6 +50,27 @@ verify_login_ready() {
     return 1
 }
 
+lookup_keyring_secret() {
+    local secret_type="$1"
+    local i value
+
+    for i in $(seq 1 "$KEYRING_WAIT_SECONDS"); do
+        value="$(secret-tool lookup service proton-pass type "$secret_type" 2>/dev/null)"
+        if [ -n "$value" ]; then
+            printf '%s' "$value"
+            return 0
+        fi
+
+        if [ "$i" -eq 1 ]; then
+            echo "Waiting for keyring secret '$secret_type' (up to ${KEYRING_WAIT_SECONDS}s)..."
+        fi
+
+        sleep 1
+    done
+
+    return 1
+}
+
 # Check for required dependencies
 for cmd in pass-cli secret-tool oathtool; do
     if ! command -v "$cmd" &>/dev/null; then
@@ -75,7 +97,7 @@ fi
 echo "🔄 Session expired or missing. Logging in..."
 
 # 2. Fetch Password from keyring
-export PROTON_PASS_PASSWORD="$(secret-tool lookup service proton-pass type password)"
+export PROTON_PASS_PASSWORD="$(lookup_keyring_secret password)"
 
 if [ -z "$PROTON_PASS_PASSWORD" ]; then
     msg="Password missing in keyring. Run: secret-tool store --label='Proton Pass Password' service proton-pass type password"
@@ -85,7 +107,7 @@ if [ -z "$PROTON_PASS_PASSWORD" ]; then
 fi
 
 # 3. Fetch TOTP Secret and generate code
-TOTP_SECRET="$(secret-tool lookup service proton-pass type totp)"
+TOTP_SECRET="$(lookup_keyring_secret totp)"
 
 if [ -z "$TOTP_SECRET" ]; then
     msg="TOTP secret missing in keyring. Run: secret-tool store --label='Proton Pass TOTP' service proton-pass type totp"

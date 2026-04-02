@@ -13,6 +13,8 @@ Environment=MAX_WIFI_WAIT_SECONDS=45
 Environment=MAX_NETWORK_WAIT_SECONDS=30
 Environment=NETWORK_CHECK_HOST=1.1.1.1
 Environment=LOGIN_VERIFY_WAIT_SECONDS=20
+Environment=LOGIN_RETRY_INTERVAL=30
+Environment=KEYRING_WAIT_SECONDS=90
 Environment=HEALTHCHECK_INTERVAL=300
 Environment=PROTON_LOGIN=%h/Applications/proton-login
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
