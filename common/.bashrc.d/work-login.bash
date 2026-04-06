@@ -7,7 +7,7 @@ netbird-login() {
   fi
 
   cwd=`pwd`
-  cd ~/hydra/operations/support-environment && source ./login.sh $1
+  cd ~/hydra/operations/support-environment && source ./login-support.sh $1
   ## these commands print to confirm netbird is on the right connection
   netbird status | grep FQDN
   netbird status | grep IP
