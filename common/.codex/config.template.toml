@@ -4,28 +4,36 @@ model_reasoning_effort = "high"
 [mcp_servers.kagi-ken]
 command = "npx"
 args = ["-y", "czottmann/kagi-ken-mcp"]
+enabled = true
 
 [mcp_servers.clickup]
 url = "https://mcp.clickup.com/mcp"
+enabled = false
 
 [mcp_servers.linear]
 url = "https://mcp.linear.app/mcp"
+enabled = false
 
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
+enabled = true
 
 [mcp_servers.gh_grep]
 url = "https://mcp.grep.app"
+enabled = true
 
 [mcp_servers.gitlab]
 url = "https://gitlab.com/api/v4/mcp"
+enabled = true
 
 [mcp_servers.pylon]
 url = "https://mcp.usepylon.com"
+enabled = false
 
 [mcp_servers.home-assistant]
 url = "https://home.1al.cc/api/mcp"
 http_headers = { Authorization = "Bearer {{pass://Main/Home Assistant/MCP API Key}}" }
+enabled = false
 
 [mcp_servers.netbox]
 command = "sh"
@@ -36,6 +44,7 @@ args = [
 env = { NETBOX_URL = "https://netbox.prod.hydra.host/", NETBOX_TOKEN = "{{pass://Main/NetBox/API Token}}" }
 startup_timeout_sec = 300
 tool_timeout_sec = 300
+enabled = false
 
 [mcp_servers.netbox-dev]
 command = "sh"
@@ -46,6 +55,7 @@ args = [
 env = { NETBOX_URL = "https://netbox.dev.hydra.host/", NETBOX_TOKEN = "{{pass://Main/NetBox/Dev API Token}}" }
 startup_timeout_sec = 300
 tool_timeout_sec = 300
+enabled = false
 
 [mcp_servers.netbox-stg]
 command = "sh"
@@ -56,11 +66,7 @@ args = [
 env = { NETBOX_URL = "https://netbox.stg.hydra.host/", NETBOX_TOKEN = "{{pass://Main/NetBox/Stg API Token}}" }
 startup_timeout_sec = 300
 tool_timeout_sec = 300
-
-[mcp_servers.nomad]
-command = "sh"
-args = ["-lc", "exec \"$HOME/Applications/nomad-mcp-server\""]
-env = { NOMAD_ADDR = "https://nomad.prod.hydra.host" }
+enabled = false
 
 [mcp_servers.gravwell-prod]
 command = "sh"
@@ -71,6 +77,7 @@ args = [
 env = { GRAVWELL_URL = "https://gravwell.prod.hydra.host", GRAVWELL_API_TOKEN = "{{pass://Main/Gravwell/Prod API Token}}", NODE_TLS_REJECT_UNAUTHORIZED = "0" }
 startup_timeout_sec = 300
 tool_timeout_sec = 300
+enabled = false
 
 [mcp_servers.gravwell-dev]
 command = "sh"
@@ -81,6 +88,7 @@ args = [
 env = { GRAVWELL_URL = "https://gravwell.dev.hydra.host", GRAVWELL_API_TOKEN = "{{pass://Main/Gravwell/Dev API Token}}", NODE_TLS_REJECT_UNAUTHORIZED = "0" }
 startup_timeout_sec = 300
 tool_timeout_sec = 300
+enabled = false
 
 [mcp_servers.gravwell-stg]
 command = "sh"
@@ -91,8 +99,10 @@ args = [
 env = { GRAVWELL_URL = "https://gravwell.stg.hydra.host", GRAVWELL_API_TOKEN = "{{pass://Main/Gravwell/Stg API Token}}", NODE_TLS_REJECT_UNAUTHORIZED = "0" }
 startup_timeout_sec = 300
 tool_timeout_sec = 300
+enabled = false
 
 [features]
-collab = true
+multi_agent = true
 apps = true
 steer = true
+rmcp_client = true

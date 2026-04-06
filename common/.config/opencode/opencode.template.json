@@ -105,18 +105,6 @@
       },
       "enabled": false
     },
-    "nomad": {
-      "type": "local",
-      "command": [
-        "sh",
-        "-lc",
-        "exec \"$HOME/Applications/nomad-mcp-server\""
-      ],
-      "environment": {
-        "NOMAD_ADDR": "https://nomad.prod.hydra.host"
-      },
-      "enabled": false
-    },
     "gravwell-prod": {
       "type": "local",
       "command": [
