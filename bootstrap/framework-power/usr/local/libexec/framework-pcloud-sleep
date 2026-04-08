@@ -1,0 +1,82 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly state_dir=/run/framework-power/pcloud-sleep
+readonly pcloud_unit=app-pcloud@autostart.service
+
+log() {
+  logger -t framework-pcloud-sleep "$*"
+}
+
+user_systemctl() {
+  local uid=$1
+  local name=$2
+  shift 2
+
+  local runtime_dir=/run/user/"${uid}"
+  runuser -u "${name}" -- env \
+    XDG_RUNTIME_DIR="${runtime_dir}" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=${runtime_dir}/bus" \
+    systemctl --user "$@"
+}
+
+list_users() {
+  loginctl list-users --no-legend | awk '{print $1 ":" $2}'
+}
+
+stop_pcloud_pre_sleep() {
+  local uid name marker
+
+  mkdir -p "${state_dir}"
+
+  while IFS=: read -r uid name; do
+    [[ -n ${uid} && -n ${name} ]] || continue
+    [[ -S /run/user/${uid}/bus ]] || continue
+
+    if user_systemctl "${uid}" "${name}" is-active --quiet "${pcloud_unit}"; then
+      marker="${state_dir}/${uid}.${name}.active"
+      : > "${marker}"
+      log "stopping ${pcloud_unit} for ${name} before sleep"
+      if ! user_systemctl "${uid}" "${name}" stop "${pcloud_unit}"; then
+        log "failed to stop ${pcloud_unit} for ${name}"
+      fi
+    fi
+  done < <(list_users)
+}
+
+start_pcloud_post_resume() {
+  local marker base uid name
+
+  shopt -s nullglob
+  for marker in "${state_dir}"/*.active; do
+    base=$(basename "${marker}")
+    uid=${base%%.*}
+    name=${base#*.}
+    name=${name%.active}
+
+    if [[ -S /run/user/${uid}/bus ]]; then
+      log "starting ${pcloud_unit} for ${name} after resume"
+      if ! user_systemctl "${uid}" "${name}" start "${pcloud_unit}"; then
+        log "failed to start ${pcloud_unit} for ${name}"
+      fi
+    fi
+
+    rm -f "${marker}"
+  done
+
+  rmdir "${state_dir}" 2>/dev/null || true
+}
+
+case "${1:-}" in
+  pre)
+    stop_pcloud_pre_sleep
+    ;;
+  post)
+    start_pcloud_post_resume
+    ;;
+  *)
+    printf 'usage: %s {pre|post}\n' "$0" >&2
+    exit 64
+    ;;
+esac

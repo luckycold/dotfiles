@@ -132,6 +132,7 @@ Overview of what had to be fixed to make this setup reliable:
 - disable Thunderbolt dock wake sources so suspend does not immediately wake back up
 - use both `tmpfiles.d` and a udev rule so wakeup gets disabled both at boot and when dock/eGPU PCI devices hotplug later
 - override NVIDIA's sleep-unit drop-ins so systemd freezes user sessions again during suspend, hibernate, and suspend-then-hibernate
+- stop pCloud before sleep and start it again after resume so its FUSE mount does not strand user processes in unfreezable I/O
 - wire hibernate to the real swapfile with the correct `resume=` and `resume_offset=` values
 - disable zram so hibernate does not fail from memory pressure while building the image
 - refresh Limine EFI binaries and boot order so fallback boot and hibernate resume use the same working path
@@ -148,6 +149,8 @@ Files involved in this setup:
 - `bootstrap/framework-power/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for suspend
 - `bootstrap/framework-power/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for hibernate
 - `bootstrap/framework-power/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for delayed hibernate
+- `bootstrap/framework-power/etc/systemd/system/framework-pcloud-sleep.service` - stops pCloud before sleep and restarts it after resume
+- `bootstrap/framework-power/usr/local/libexec/framework-pcloud-sleep` - helper invoked by the sleep service to control the user pCloud unit
 - `bootstrap/framework-power/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
 - `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
 - `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the lid-close hibernate delay back to `30min`
@@ -177,6 +180,7 @@ What this covers:
 - disable NVIDIA suspend integration that breaks suspend/hibernate with the eGPU
 - disable Thunderbolt dock wakeups
 - restore systemd's default user-session freezing during sleep operations
+- quiesce pCloud so its FUSE mount does not block user-slice freezing
 - force hibernate to use the swapfile instead of zram
 - set lid-close to `suspend-then-hibernate` after the configured delay
 - regenerate Limine boot artifacts and refresh fallback EFI binaries

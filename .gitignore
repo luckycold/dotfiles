@@ -19,3 +19,5 @@ common/.config/opencode/smart-voice-notify.jsonc
 common/.config/mcporter/mcporter.json
 __pycache__/
 *.pyc
+*.bak
+*.bak.*

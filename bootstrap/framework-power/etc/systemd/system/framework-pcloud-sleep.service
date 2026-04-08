@@ -1,0 +1,13 @@
+[Unit]
+Description=Quiesce pCloud before system sleep
+Before=sleep.target
+StopWhenUnneeded=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/libexec/framework-pcloud-sleep pre
+ExecStop=/usr/local/libexec/framework-pcloud-sleep post
+
+[Install]
+WantedBy=sleep.target

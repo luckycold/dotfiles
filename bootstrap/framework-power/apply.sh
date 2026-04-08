@@ -26,6 +26,25 @@ backup_file() {
   fi
 }
 
+backup_path() {
+  local path=$1
+  if [[ -e ${path} || -L ${path} ]]; then
+    mv "${path}" "${path}.bak.$(date +%Y%m%d%H%M%S)"
+  fi
+}
+
+ensure_real_directory() {
+  local path=$1
+  local mode=${2:-755}
+
+  if [[ -L ${path} ]]; then
+    backup_path "${path}"
+  fi
+
+  install -d -m "${mode}" "${path}"
+  chown root:root "${path}"
+}
+
 materialize_file() {
   local source_path=$1
   local target_path=$2
@@ -95,15 +114,16 @@ extra_line = (
     'rtc_cmos.use_acpi_alarm=1 systemd.zram=0"'
 )
 
-if re.search(r'^KERNEL_CMDLINE\[default\]=.*$', text, flags=re.M):
-    text = re.sub(r'^KERNEL_CMDLINE\[default\]=.*$', base_line, text, count=1, flags=re.M)
-else:
-    text += '\n' + base_line + '\n'
+text = re.sub(r'(?m)^KERNEL_CMDLINE\[default\]\+?=.*(?:\n|$)', '', text)
 
-if re.search(r'^KERNEL_CMDLINE\[default\]\+=.*$', text, flags=re.M):
-    text = re.sub(r'^KERNEL_CMDLINE\[default\]\+=.*$', extra_line, text, count=1, flags=re.M)
+anchor = re.search(r'(?m)^ESP_PATH=.*$', text)
+block = f'\n\n{base_line}\n{extra_line}'
+if anchor:
+    text = text[:anchor.end()] + block + text[anchor.end():]
 else:
-    text = text.rstrip() + '\n' + extra_line + '\n'
+    text = block.lstrip('\n') + '\n' + text
+
+text = re.sub(r'\n{3,}', '\n\n', text).rstrip() + '\n'
 
 path.write_text(text)
 PY
@@ -118,9 +138,14 @@ PY
   materialize_file "${bootstrap_dir}/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf" "/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf" "/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/zram-generator.conf" "/etc/systemd/zram-generator.conf"
+  ensure_real_directory "/etc/systemd/system/systemd-suspend.service.d"
+  ensure_real_directory "/etc/systemd/system/systemd-hibernate.service.d"
+  ensure_real_directory "/etc/systemd/system/systemd-suspend-then-hibernate.service.d"
   materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf"
+  materialize_file "${bootstrap_dir}/etc/systemd/system/framework-pcloud-sleep.service" "/etc/systemd/system/framework-pcloud-sleep.service"
+  materialize_file "${bootstrap_dir}/usr/local/libexec/framework-pcloud-sleep" "/usr/local/libexec/framework-pcloud-sleep" 755
 
   if [[ -f /boot/EFI/limine/limine_x64.efi ]]; then
     cp -f /boot/EFI/limine/limine_x64.efi /boot/EFI/BOOT/BOOTX64.EFI
@@ -131,6 +156,7 @@ PY
   udevadm trigger --subsystem-match=pci || true
   systemd-tmpfiles --create /etc/tmpfiles.d/no-dock-wakeup.conf /etc/tmpfiles.d/hibernate-image-size.conf
   systemctl daemon-reload
+  systemctl enable framework-pcloud-sleep.service
   systemctl reload systemd-logind || true
 
   swapoff /dev/zram0 2>/dev/null || true
