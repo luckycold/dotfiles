@@ -1,0 +1,12 @@
+[Unit]
+Description=OpenCode web UI server
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+ExecStart=/bin/bash -lc 'exec opencode serve --hostname 127.0.0.1 --port 4090'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
