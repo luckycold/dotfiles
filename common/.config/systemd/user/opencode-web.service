@@ -4,7 +4,7 @@ Description=OpenCode web UI server
 [Service]
 Type=simple
 WorkingDirectory=%h
-ExecStart=/bin/bash -lc 'exec opencode serve --hostname 127.0.0.1 --port 4090'
+ExecStart=/bin/bash -lc 'exec opencode serve --hostname 0.0.0.0 --port 4090'
 Restart=always
 RestartSec=5
 
