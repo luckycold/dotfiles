@@ -18,6 +18,13 @@
   - `stow -n ...` for link simulation
   - reload affected shell/config session as needed.
 
+## Bash execution
+- Some repo workflows rely on shell functions defined by Luke's dotfiles, such as `init-env-secrets`.
+- Non-interactive tool shells will not have those functions loaded by default.
+- When OpenCode needs to run one of these functions, explicitly load Luke's shell environment first in that command invocation, then run the function.
+- Do not assume the function exists in the tool shell without loading the shell config.
+- If loading the shell config still does not make the function available, report that clearly and do not present the step as completed.
+
 ## Security
 - Do not commit real secrets or host-specific credentials.
 - Keep secrets in template placeholders and local-only overlays.
