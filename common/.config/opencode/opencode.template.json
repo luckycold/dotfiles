@@ -25,6 +25,42 @@
       "url": "https://gitlab.com/api/v4/mcp",
       "enabled": true
     },
+    "bridge-dev": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"bridge-dev launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/opencode/bridge-api-mcp\"; url=\"https://gitlab.com/hydrahost-developers/brokkr-bridge/bridge-api-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ] || [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ],
+      "environment": {
+        "BRIDGE_CONFIG": "/tmp/opencode/bridge-api-mcp/configs/dev.yaml"
+      },
+      "enabled": false
+    },
+    "bridge-stg": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"bridge-stg launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/opencode/bridge-api-mcp\"; url=\"https://gitlab.com/hydrahost-developers/brokkr-bridge/bridge-api-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ] || [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ],
+      "environment": {
+        "BRIDGE_CONFIG": "/tmp/opencode/bridge-api-mcp/configs/stg.yaml"
+      },
+      "enabled": false
+    },
+    "bridge-prod": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"bridge-prod launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/opencode/bridge-api-mcp\"; url=\"https://gitlab.com/hydrahost-developers/brokkr-bridge/bridge-api-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ] || [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ],
+      "environment": {
+        "BRIDGE_CONFIG": "/tmp/opencode/bridge-api-mcp/configs/prod.yaml"
+      },
+      "enabled": false
+    },
     "pylon": {
       "type": "remote",
       "url": "https://mcp.usepylon.com",
