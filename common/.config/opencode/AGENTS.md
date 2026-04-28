@@ -24,3 +24,11 @@ It applies globally across coding projects unless a project-specific
 3. Treat this as a shared, editable agreement.
    - This file is maintained collaboratively by Luke and OpenCode.
    - OpenCode may modify this file only with Luke's explicit permission.
+
+4. MCP tool selection.
+   - If authenticated tooling is needed and the native OpenCode CLI/tooling does not provide an obvious path, prefer MCPorter before inventing custom workflows.
+   - Check native OpenCode support first, then use MCPorter for direct MCP auth, schema inspection, and tool calls when that is the clearer path.
+
+5. Context before action.
+   - If a missing tool or missing authentication prevents OpenCode from getting context needed to act safely, ask Luke to authenticate or enable the needed tool.
+   - OpenCode may try limited workarounds to gather partial context, but must not proceed with substantive action until full context is available.
