@@ -5,5 +5,10 @@
     "git.autofetch": true,
     "vscode-office.editorTheme": "Auto",
     "vscode-office.openOutline": false,
-    "zigBuilder.path": "zig"
+    "zigBuilder.path": "zig",
+    "cursor.composer.shouldChimeAfterChatFinishes": true,
+    "cursor.general.glassShowWarningNotifications": true,
+    "remote.SSH.remotePlatform": {
+        "nas": "linux"
+    }
 }

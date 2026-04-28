@@ -1,5 +1,5 @@
 # Ignore systemd enablement directories managed by systemctl
-/common/.config/systemd/user/*.wants/ 
+/common/.config/systemd/user/*.wants/
 
 # Ignore local Codex integration assets
 personal/Applications/codex-acp
@@ -21,3 +21,38 @@ __pycache__/
 *.pyc
 *.bak
 *.bak.*
+/common/.config/Cursor/.org.chromium.Chromium.P186S7
+/common/.config/Cursor/CachedConfigurations/folder
+/common/.config/Cursor/CachedData
+/common/.config/Cursor/CachedProfilesData/__default__profile__
+/common/.config/Cursor/Code Cache
+/common/.config/Cursor/Crashpad
+/common/.config/Cursor/Cookies
+/common/.config/Cursor/Cookies-journal
+/common/.config/Cursor/DIPS
+/common/.config/Cursor/DIPS-wal
+/common/.config/Cursor/DawnGraphiteCache
+/common/.config/Cursor/DawnWebGPUCache
+/common/.config/Cursor/Dictionaries
+/common/.config/Cursor/GPUCache
+/common/.config/Cursor/IndexedDB/vscode-file_vscode-app_0.indexeddb.leveldb
+/common/.config/Cursor/Local Storage/leveldb
+/common/.config/Cursor/Network Persistent State
+/common/.config/Cursor/Preferences
+/common/.config/Cursor/Session Storage
+/common/.config/Cursor/Shared Dictionary
+/common/.config/Cursor/SharedStorage
+/common/.config/Cursor/SharedStorage-wal
+/common/.config/Cursor/TransportSecurity
+/common/.config/Cursor/Trust Tokens
+/common/.config/Cursor/Trust Tokens-journal
+/common/.config/Cursor/User/History
+/common/.config/Cursor/User/globalStorage
+/common/.config/Cursor/User/workspaceStorage
+/common/.config/Cursor/WebStorage
+/common/.config/Cursor/code.lock
+/common/.config/Cursor/languagepacks.json
+/common/.config/Cursor/logs
+/common/.config/Cursor/machineid
+/common/.config/Cursor/process-monitor
+/common/.config/Cursor/sentry
