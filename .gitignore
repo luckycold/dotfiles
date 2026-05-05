@@ -56,3 +56,21 @@ __pycache__/
 /common/.config/Cursor/machineid
 /common/.config/Cursor/process-monitor
 /common/.config/Cursor/sentry
+/common/.config/Cursor/Partitions/cursor-browser/Cache/Cache_Data
+/common/.config/Cursor/Partitions/cursor-browser/Cache/No_Vary_Search
+/common/.config/Cursor/Partitions/cursor-browser/Code Cache
+/common/.config/Cursor/Partitions/cursor-browser/Cookies
+/common/.config/Cursor/Partitions/cursor-browser/Cookies-journal
+/common/.config/Cursor/Partitions/cursor-browser/DIPS
+/common/.config/Cursor/Partitions/cursor-browser/DIPS-wal
+/common/.config/Cursor/Partitions/cursor-browser/DawnGraphiteCache
+/common/.config/Cursor/Partitions/cursor-browser/DawnWebGPUCache
+/common/.config/Cursor/Partitions/cursor-browser/GPUCache
+/common/.config/Cursor/Partitions/cursor-browser/Local Storage/leveldb
+/common/.config/Cursor/Partitions/cursor-browser/Network Persistent State
+/common/.config/Cursor/Partitions/cursor-browser/Session Storage
+/common/.config/Cursor/Partitions/cursor-browser/Shared Dictionary
+/common/.config/Cursor/Partitions/cursor-browser/SharedStorage
+/common/.config/Cursor/Partitions/cursor-browser/SharedStorage-wal
+/common/.config/Cursor/Partitions/cursor-browser/Trust Tokens
+/common/.config/Cursor/Partitions/cursor-browser/Trust Tokens-journal
