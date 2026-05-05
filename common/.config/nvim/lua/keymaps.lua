@@ -6,7 +6,8 @@ vim.keymap.set('v', '<leader>yy', '"*y', { desc = 'Yank to system clipboard' })
 vim.keymap.set('n', '<leader>pp', '"*p', { desc = 'Paste from system clipboard' })
 vim.keymap.set('i', 'jj', '<Esc>')
 
-vim.keymap.set('n', '<leader>pv', '<cmd>Neotree reveal<CR>', { desc = '[P]roject [V]iew (Neo-tree)' })
+vim.keymap.set('n', '<leader>pv', '<cmd>Explore<CR>', { desc = '[P]roject [V]iew (netrw)' })
+vim.keymap.set('n', '<leader>pe', '<cmd>Neotree reveal<CR>', { desc = '[P]roject [E]xplorer (Neo-tree)' })
 
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true
