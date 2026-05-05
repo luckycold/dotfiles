@@ -23,8 +23,8 @@ send_dotfiles_notification() {
     case "$action" in
       default)
         # Spawn update terminal in background
-        if command -v omarchy-launch-floating-terminal-with-presentation 2>/dev/null; then
-          omarchy-launch-floating-terminal-with-presentation "source $HOME/dotfiles/common/.bashrc.d/dotfiles_management.bash && update-dotfiles" &
+        if command -v omarchy 2>/dev/null; then
+          omarchy launch floating terminal with presentation "source $HOME/dotfiles/common/.bashrc.d/dotfiles_management.bash && update-dotfiles" &
         else
           xdg-terminal-exec --title="Dotfiles Update" -e bash -c "source $HOME/dotfiles/common/.bashrc.d/dotfiles_management.bash && update-dotfiles" &
         fi
