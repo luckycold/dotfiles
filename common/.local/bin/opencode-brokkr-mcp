@@ -73,5 +73,5 @@ config.activeEnv = envName;
 fs.writeFileSync(configFile, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
 NODE
 
-cd "$repo"
-exec pnpm --filter @repo/cli dev:mcp
+cd "$repo/apps/cli"
+exec pnpm exec tsx src/mcp/index.ts

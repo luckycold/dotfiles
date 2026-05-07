@@ -25,17 +25,32 @@
       "url": "https://gitlab.com/api/v4/mcp",
       "enabled": true
     },
+    "brokkr-dev": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "BROKKR_ENV_FILE=\"$HOME/.config/hydra/dev\" BROKKR_MCP_ENV_NAME=dev BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" dev"
+      ],
+      "enabled": false
+    },
     "brokkr-stg": {
       "type": "local",
       "command": [
         "sh",
         "-lc",
-        "BROKKR_MCP_ENV_NAME=stg BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" stg"
+        "BROKKR_ENV_FILE=\"$HOME/.config/hydra/stg\" BROKKR_MCP_ENV_NAME=stg BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" stg"
       ],
-      "environment": {
-        "BROKKR_ENV_FILE": "$HOME/.config/hydra/stg"
-      },
-      "enabled": true
+      "enabled": false
+    },
+    "brokkr-prod": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-lc",
+        "BROKKR_ENV_FILE=\"$HOME/.config/hydra/prod\" BROKKR_MCP_ENV_NAME=prod BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" prod"
+      ],
+      "enabled": false
     },
     "bridge-dev": {
       "type": "local",

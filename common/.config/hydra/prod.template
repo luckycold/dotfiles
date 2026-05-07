@@ -1,0 +1,2 @@
+BROKKR_API_KEY={{pass://Main/Brokkr/Prod API Token}}
+HH_NETBIRD_DNS_RESOLVER_ADDRESS=127.0.0.1:53
