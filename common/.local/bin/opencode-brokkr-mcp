@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+env_name="${1:-stg}"
+repo="${BROKKR_APP_REPO:-$HOME/Documents/Work/brokkr-app}"
+hydra_env_file="$HOME/.config/hydra/$env_name"
+brokkr_config_dir="$HOME/.config/brokkr"
+brokkr_config_file="$brokkr_config_dir/config.json"
+
+export BROKKR_MCP_ENV_NAME="${BROKKR_MCP_ENV_NAME:-$env_name}"
+export BROKKR_MCP_CONFIG_FILE="${BROKKR_MCP_CONFIG_FILE:-$brokkr_config_file}"
+
+case "$env_name" in
+  dev|stg|prod) ;;
+  *)
+    echo "Unsupported Brokkr environment: $env_name" >&2
+    exit 2
+    ;;
+esac
+
+if [ -f "$hydra_env_file" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$hydra_env_file"
+  set +a
+fi
+
+if [ -z "${BROKKR_API_KEY:-}" ]; then
+  echo "BROKKR_API_KEY is not set. Add it to $hydra_env_file or launch OpenCode from a Hydra login shell." >&2
+  exit 1
+fi
+
+if [ ! -d "$repo" ]; then
+  echo "Brokkr app repo not found: $repo" >&2
+  exit 1
+fi
+
+mkdir -p "$brokkr_config_dir"
+chmod 700 "$brokkr_config_dir"
+
+node <<'NODE'
+const fs = require('fs');
+
+const envName = process.env.BROKKR_MCP_ENV_NAME;
+const configFile = process.env.BROKKR_MCP_CONFIG_FILE;
+const apiUrl = envName === 'prod' ? 'https://brokkr.hydrahost.com' : `https://brokkr.${envName}.hydra.host`;
+
+const fallback = {
+  activeEnv: envName,
+  environments: {
+    local: { apiUrl: 'http://localhost:3000' },
+    brokkr: { apiUrl: 'https://brokkr.hydrahost.com' },
+    vm: { apiUrl: '', connectionMode: 'bridge' },
+  },
+};
+
+let config = fallback;
+try {
+  if (fs.existsSync(configFile)) {
+    config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+  }
+} catch {
+  config = fallback;
+}
+
+config.environments = config.environments || {};
+config.environments[envName] = {
+  ...(config.environments[envName] || {}),
+  apiUrl,
+};
+config.activeEnv = envName;
+
+fs.writeFileSync(configFile, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
+NODE
+
+cd "$repo"
+exec pnpm --filter @repo/cli dev:mcp
