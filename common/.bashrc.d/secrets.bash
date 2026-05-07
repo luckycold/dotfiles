@@ -28,7 +28,7 @@ _secret_discover_active_mappings() {
   fi
 
   while IFS= read -r -d '' rel; do
-    [[ "$rel" =~ \.template\.[^.]+$ ]] || continue
+    [[ "$rel" =~ \.template(\.[^.]+)?$ ]] || continue
     [[ "$rel" == */* ]] || continue
 
     rel_in_package="${rel#*/}"
@@ -38,7 +38,11 @@ _secret_discover_active_mappings() {
     # Only include templates that exist in HOME (stowed or local override).
     [ -e "$home_template" ] || continue
 
-    output_rel="${rel_in_package/.template./.}"
+    if [[ "$rel_in_package" == *.template ]]; then
+      output_rel="${rel_in_package%.template}"
+    else
+      output_rel="${rel_in_package/.template./.}"
+    fi
     output="$HOME/$output_rel"
 
     template_source="$home_template"

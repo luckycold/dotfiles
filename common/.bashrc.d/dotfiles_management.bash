@@ -194,6 +194,11 @@ update-dotfiles() {
 
     _switch_dotfiles_profile "$target_profile"
 
+    if command -v init-env-secrets &>/dev/null; then
+        echo "Refreshing template-generated secrets..."
+        init-env-secrets --all || echo "Warning: secret refresh failed; run init-env-secrets --all"
+    fi
+
     # Ask to reload bashrc
     echo -n "Reload shell configuration? (y/n): "
     read -r reload
