@@ -2,6 +2,8 @@
 
 These are the dotfiles for my system
 
+Repository discussion and review happens on Codeberg only. Comments and pull requests opened elsewhere are not reviewed.
+
 ## Requirements
 
 ### Recommended
