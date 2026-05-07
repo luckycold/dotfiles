@@ -74,3 +74,4 @@ __pycache__/
 /common/.config/Cursor/Partitions/cursor-browser/SharedStorage-wal
 /common/.config/Cursor/Partitions/cursor-browser/Trust Tokens
 /common/.config/Cursor/Partitions/cursor-browser/Trust Tokens-journal
+/common/.config/Cursor/Local State
