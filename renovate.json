@@ -3,6 +3,7 @@
   "extends": [
     "config:recommended"
   ],
+  "dependencyDashboard": true,
   "enabledManagers": [
     "custom.regex"
   ],
@@ -55,6 +56,18 @@
       ],
       "datasourceTemplate": "npm",
       "depNameTemplate": "@iflow-mcp/kagi-ken-mcp",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.forgejo/workflows/renovate\\.yml$/"
+      ],
+      "matchStrings": [
+        "image: renovate/renovate:(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "renovate/renovate",
       "versioningTemplate": "semver"
     }
   ]

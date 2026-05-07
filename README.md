@@ -70,7 +70,7 @@ brew install stow git
 First, "check out" (the meaning you use in git not "take a look at") the dotfiles repo in your $HOME directory using git.
 
 ```bash
-git clone https://github.com/luckycold/dotfiles.git
+git clone https://codeberg.org/luckycold/dotfiles.git
 cd dotfiles
 ```
 

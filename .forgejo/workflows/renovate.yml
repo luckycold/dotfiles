@@ -1,0 +1,26 @@
+name: renovate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: docker
+    container:
+      image: renovate/renovate:43.150.0
+    env:
+      LOG_LEVEL: info
+      RENOVATE_ENDPOINT: https://codeberg.org/api/v1
+      RENOVATE_GIT_AUTHOR: Renovate Bot <renovate@codeberg.org>
+      RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.RENOVATE_GITHUB_COM_TOKEN }}
+      RENOVATE_PLATFORM: forgejo
+      RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+    steps:
+      - name: Run Renovate
+        run: renovate luckycold/dotfiles
