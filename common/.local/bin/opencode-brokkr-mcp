@@ -3,7 +3,7 @@ set -euo pipefail
 
 env_name="${1:-stg}"
 repo="${BROKKR_APP_REPO:-$HOME/Documents/Work/brokkr-app}"
-hydra_env_file="$HOME/.config/hydra/$env_name"
+hydra_env_file="${BROKKR_ENV_FILE:-$HOME/.config/hydra/$env_name}"
 brokkr_config_dir="$HOME/.config/brokkr"
 brokkr_config_file="$brokkr_config_dir/config.json"
 

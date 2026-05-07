@@ -33,7 +33,7 @@
         "BROKKR_MCP_ENV_NAME=stg BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" stg"
       ],
       "environment": {
-        "BROKKR_API_KEY": "{{pass://Main/Brokkr/Stg API Token}}"
+        "BROKKR_ENV_FILE": "$HOME/.config/hydra/stg"
       },
       "enabled": true
     },
