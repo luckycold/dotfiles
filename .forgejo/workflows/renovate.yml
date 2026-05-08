@@ -5,7 +5,7 @@ on:
   issues:
     types: [edited]
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/15 * * * *'
 
 concurrency:
   group: renovate
@@ -13,7 +13,6 @@ concurrency:
 
 jobs:
   renovate:
-    if: forgejo.event_name != 'issues' || forgejo.event.issue.title == 'Dependency Dashboard'
     runs-on: docker
     container:
       image: renovate/renovate:43.150.0
