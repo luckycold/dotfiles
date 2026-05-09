@@ -11,6 +11,7 @@ common/.local/bin
 !common/.local/bin/
 common/.local/bin/*
 !common/.local/bin/opencode-brokkr-mcp
+!common/.local/bin/proton-pass-cli-autologin-monitor
 common/.local/share/nvim
 common/.local/share
 common/.local/state
@@ -78,3 +79,4 @@ __pycache__/
 /common/.config/Cursor/Partitions/cursor-browser/Trust Tokens
 /common/.config/Cursor/Partitions/cursor-browser/Trust Tokens-journal
 /common/.config/Cursor/Local State
+/.codex

@@ -107,6 +107,17 @@ journalctl --user -u proton-pass-cli-autologin.service -f
 journalctl --user -u proton-pass-cli-ssh-agent.service -f
 ```
 
+The systemd login uses a Proton Pass personal access token stored in the local keyring. Create one from an authenticated `pass-cli` session, store it, then restart the service.
+
+The desktop notification includes an action to update the relevant keyring secret. Manual fallback:
+
+```bash
+~/Applications/proton-pass-web-login
+pass-cli personal-access-token create --name "$(hostname)-systemd" --expiration 1y
+secret-tool store --label='Proton Pass Personal Access Token' service proton-pass type pat
+systemctl --user restart proton-pass-cli-autologin.service
+```
+
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
 
 ## Omarchy Framework Power Setup

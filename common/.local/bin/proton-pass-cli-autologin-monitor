@@ -1,0 +1,374 @@
+#!/bin/bash
+
+PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
+export PATH
+
+SSH_AGENT_SOCKET="${SSH_AGENT_SOCKET:-$HOME/.ssh/proton-pass-agent.sock}"
+SSH_AGENT_WAIT_SECONDS="${SSH_AGENT_WAIT_SECONDS:-120}"
+SSH_AGENT_SERVICE="${SSH_AGENT_SERVICE:-proton-pass-cli-ssh-agent.service}"
+MAX_WIFI_WAIT_SECONDS="${MAX_WIFI_WAIT_SECONDS:-45}"
+MAX_NETWORK_WAIT_SECONDS="${MAX_NETWORK_WAIT_SECONDS:-30}"
+NETWORK_CHECK_HOST="${NETWORK_CHECK_HOST:-1.1.1.1}"
+LOGIN_VERIFY_WAIT_SECONDS="${LOGIN_VERIFY_WAIT_SECONDS:-20}"
+LOGIN_RETRY_INTERVAL="${LOGIN_RETRY_INTERVAL:-30}"
+AUTH_FAILURE_BACKOFF_SECONDS="${AUTH_FAILURE_BACKOFF_SECONDS:-3600}"
+HEALTHCHECK_INTERVAL="${HEALTHCHECK_INTERVAL:-300}"
+PROTON_LOGIN="${PROTON_LOGIN:-$HOME/Applications/proton-login}"
+SECRET_UPDATE_HELPER="${SECRET_UPDATE_HELPER:-$HOME/Applications/proton-pass-update-secret}"
+WEB_LOGIN_HELPER="${WEB_LOGIN_HELPER:-$HOME/Applications/proton-pass-web-login}"
+
+resume_monitor_fd=
+resume_monitor_pid=
+resume_signal_pending=0
+last_check=
+last_tick=
+
+notify() {
+  local title="$1" msg="$2" urg="${3:-low}"
+  echo "$title: $msg"
+  command -v notify-send >/dev/null && notify-send --urgency="$urg" "$title" "$msg" 2>/dev/null || true
+}
+
+notify_secret_action() {
+  local secret_type="$1" title="$2" msg="$3" action_label="$4"
+  echo "$title: $msg"
+
+  if [ ! -x "$SECRET_UPDATE_HELPER" ] || ! command -v notify-send >/dev/null 2>&1; then
+    notify "$title" "$msg" critical
+    return
+  fi
+
+  {
+    local action
+    action="$(notify-send --urgency=critical --app-name="Proton Pass" --action="default=$action_label" --wait "$title" "$msg" 2>/dev/null)"
+    [ "$action" = default ] && "$SECRET_UPDATE_HELPER" "$secret_type" >/dev/null 2>&1 &
+  } &
+}
+
+notify_interactive_auth_action() {
+  local title="Proton Pass Login Rejected"
+  local msg="PAT login failed. Store a new Proton Pass personal access token."
+  echo "$title: $msg"
+
+  if ! command -v notify-send >/dev/null 2>&1; then
+    notify "$title" "$msg" critical
+    return
+  fi
+
+  {
+    local action
+    action="$(notify-send --urgency=critical --app-name="Proton Pass" --action="pat=Store PAT" --action="web=Run web login" --wait "$title" "$msg" 2>/dev/null)"
+    case "$action" in
+    pat) [ -x "$SECRET_UPDATE_HELPER" ] && "$SECRET_UPDATE_HELPER" pat >/dev/null 2>&1 & ;;
+    web) [ -x "$WEB_LOGIN_HELPER" ] && "$WEB_LOGIN_HELPER" >/dev/null 2>&1 & ;;
+    esac
+  } &
+}
+
+is_agent_active() {
+  [ -S "$SSH_AGENT_SOCKET" ] || return 1
+  SSH_AUTH_SOCK="$SSH_AGENT_SOCKET" ssh-add -l >/dev/null 2>&1
+  [ $? -le 1 ]
+}
+
+is_wifi_connected() {
+  command -v nmcli >/dev/null 2>&1 || return 1
+  nmcli -t -f TYPE,STATE device 2>/dev/null | grep -q '^wifi:connected$'
+}
+
+wait_for_wifi() {
+  command -v nmcli >/dev/null 2>&1 || {
+    echo "nmcli not found, skipping Wi-Fi wait"
+    return 0
+  }
+
+  nmcli -t -f TYPE device 2>/dev/null | grep -q '^wifi$' || {
+    echo "No Wi-Fi device detected, skipping Wi-Fi wait"
+    return 0
+  }
+
+  echo "Waiting for Wi-Fi..."
+  notify "Proton Pass" "Waiting for Wi-Fi (up to ${MAX_WIFI_WAIT_SECONDS}s)..."
+
+  local i
+  for i in $(seq 1 "$MAX_WIFI_WAIT_SECONDS"); do
+    if is_wifi_connected; then
+      echo "Wi-Fi connected"
+      return 0
+    fi
+
+    if [ "$i" -eq "$MAX_WIFI_WAIT_SECONDS" ]; then
+      echo "Wi-Fi wait timed out, continuing..."
+      notify "Proton Pass Warning" "Wi-Fi not connected after ${MAX_WIFI_WAIT_SECONDS}s, continuing..."
+    fi
+
+    sleep 1
+  done
+
+  return 0
+}
+
+verify_login_ready() {
+  local i
+
+  for i in $(seq 1 "$LOGIN_VERIFY_WAIT_SECONDS"); do
+    pass-cli test >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+
+  return 1
+}
+
+start_ssh_agent() {
+  echo "Ensuring Proton Pass SSH agent service is running..."
+  if is_agent_active; then
+    echo "SSH agent already active"
+    return 0
+  fi
+
+  if ! command -v systemctl >/dev/null 2>&1; then
+    notify "SSH Agent Error" "systemctl not available" critical
+    return 1
+  fi
+
+  echo "Agent not responding. Restarting ${SSH_AGENT_SERVICE}..."
+  systemctl --user reset-failed "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || true
+  systemctl --user restart "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || {
+    notify "SSH Agent Error" "Failed to restart ${SSH_AGENT_SERVICE}" critical
+    return 1
+  }
+
+  echo "Waiting up to ${SSH_AGENT_WAIT_SECONDS}s for socket..."
+  local i
+  for i in $(seq 1 "$SSH_AGENT_WAIT_SECONDS"); do
+    sleep 1
+    if is_agent_active; then
+      notify "SSH Agent" "Ready at $SSH_AGENT_SOCKET"
+      return 0
+    fi
+  done
+
+  systemctl --user stop "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || true
+  rm -f "$SSH_AGENT_SOCKET"
+  notify "SSH Agent Error" "Failed to start after ${SSH_AGENT_WAIT_SECONDS}s" critical
+  return 1
+}
+
+do_login() {
+  wait_for_wifi
+
+  echo "Waiting for network..."
+  notify "Proton Pass" "Waiting for network (up to ${MAX_NETWORK_WAIT_SECONDS}s)..."
+
+  local i
+  for i in $(seq 1 "$MAX_NETWORK_WAIT_SECONDS"); do
+    ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && break
+
+    if [ "$i" -eq "$MAX_NETWORK_WAIT_SECONDS" ]; then
+      echo "Network wait timed out, continuing..."
+      notify "Proton Pass Warning" "Network wait timed out after ${MAX_NETWORK_WAIT_SECONDS}s, continuing..."
+    fi
+
+    sleep 1
+  done
+
+  if [ ! -x "$PROTON_LOGIN" ]; then
+    notify "Proton Pass Error" "proton-login script not found" critical
+    return 1
+  fi
+
+  echo "Running proton-login..."
+  "$PROTON_LOGIN"
+  local rc=$?
+  [ "$rc" -ne 0 ] && echo "proton-login exited with status $rc"
+
+  if [ "$rc" -eq 2 ]; then
+    notify_secret_action password "Proton Pass Password Rejected" "Click to update the stored password." "Update password"
+    return 2
+  fi
+
+  if [ "$rc" -eq 3 ]; then
+    notify_secret_action totp "Proton Pass 2FA Rejected" "Click to update the stored TOTP seed." "Update 2FA"
+    return 3
+  fi
+
+  if [ "$rc" -eq 4 ]; then
+    notify_interactive_auth_action
+    return 4
+  fi
+
+  if [ "$rc" -eq 5 ]; then
+    notify_secret_action pat "Proton Pass PAT Required" "Click to store the Proton Pass personal access token." "Store PAT"
+    return 5
+  fi
+
+  if verify_login_ready; then
+    notify "Proton Pass" "Login verified. Ready."
+    start_ssh_agent || return 1
+    return 0
+  fi
+
+  notify "Proton Pass Warning" "Login failed" critical
+  return 1
+}
+
+healthcheck() {
+  echo "Running health check..."
+
+  if ! pass-cli test >/dev/null 2>&1; then
+    echo "Login check failed, re-authenticating..."
+    do_login
+    return
+  fi
+
+  if ! is_agent_active; then
+    echo "SSH agent not responding, restarting..."
+    start_ssh_agent
+    return
+  fi
+
+  echo "Health check passed."
+}
+
+stop_resume_monitor() {
+  if [ -n "$resume_monitor_fd" ]; then
+    exec {resume_monitor_fd}<&- 2>/dev/null || true
+    resume_monitor_fd=
+  fi
+
+  if [ -n "$resume_monitor_pid" ]; then
+    kill "$resume_monitor_pid" 2>/dev/null || true
+    wait "$resume_monitor_pid" 2>/dev/null || true
+    resume_monitor_pid=
+  fi
+}
+
+start_resume_monitor() {
+  stop_resume_monitor
+  echo "Starting login1 resume monitor..."
+
+  coproc RESUME_MONITOR {
+    exec gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 2>/dev/null
+  }
+
+  local coproc_write_fd
+  resume_monitor_fd=${RESUME_MONITOR[0]}
+  resume_monitor_pid=$RESUME_MONITOR_PID
+  coproc_write_fd=${RESUME_MONITOR[1]}
+  exec {coproc_write_fd}>&- 2>/dev/null || true
+}
+
+cleanup() {
+  stop_resume_monitor
+}
+
+terminate() {
+  cleanup
+  exit 0
+}
+
+run_resume_healthcheck() {
+  echo "System resumed, running health check in 5s..."
+  sleep 5
+  local now
+  now=$(date +%s)
+
+  healthcheck
+  local rc=$?
+  if [ "$rc" -eq 0 ]; then
+    last_check=$now
+  elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
+    last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_BACKOFF_SECONDS))
+  else
+    last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
+  fi
+}
+
+main() {
+  trap cleanup EXIT
+  trap terminate INT TERM
+
+  notify "Proton Pass" "Starting login verification..."
+  local now
+  now=$(date +%s)
+
+  do_login
+  local rc=$?
+  if [ "$rc" -eq 0 ]; then
+    last_check=$now
+  elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
+    echo "Authentication failed, backing off for ${AUTH_FAILURE_BACKOFF_SECONDS}s..."
+    last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_BACKOFF_SECONDS))
+  else
+    echo "Initial login failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
+    last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
+  fi
+
+  echo "Starting monitor loop (healthcheck every ${HEALTHCHECK_INTERVAL}s, plus resume events)..."
+  last_tick=$now
+  start_resume_monitor
+
+  while true; do
+    local line=
+    local read_rc=1
+    local did_resume_check=0
+
+    if [ -n "$resume_monitor_pid" ] && ! kill -0 "$resume_monitor_pid" 2>/dev/null; then
+      echo "login1 monitor exited, restarting..."
+      start_resume_monitor
+    fi
+
+    if [ -n "$resume_monitor_fd" ]; then
+      read -t 5 -u "$resume_monitor_fd" -r line
+      read_rc=$?
+    fi
+
+    if [ "$read_rc" -eq 0 ]; then
+      if [[ "$line" == *PrepareForSleep*"(true"* ]] || [[ "$line" == *PreparingForSleep*"(true"* ]]; then
+        resume_signal_pending=1
+      elif [ "$resume_signal_pending" -eq 1 ] && {
+        [[ "$line" == *PrepareForSleep*"(false"* ]] ||
+          [[ "$line" == *PreparingForSleep*"(false"* ]] ||
+          [[ "$line" == *boolean*false* ]];
+      }; then
+        run_resume_healthcheck
+        resume_signal_pending=0
+        did_resume_check=1
+      fi
+    elif [ "$read_rc" -eq 1 ]; then
+      echo "login1 monitor ended, restarting..."
+      start_resume_monitor
+    fi
+
+    local now
+    now=$(date +%s)
+
+    if [ "$did_resume_check" -eq 0 ] && [ "$resume_signal_pending" -eq 1 ] && [ $((now - last_tick)) -ge 90 ]; then
+      echo "Detected resume after sleep signal, running health check..."
+      run_resume_healthcheck
+      resume_signal_pending=0
+      now=$(date +%s)
+    elif [ "$did_resume_check" -eq 0 ] && [ $((now - last_tick)) -ge 90 ]; then
+      echo "Detected suspend/hibernate time jump, running health check..."
+      run_resume_healthcheck
+      now=$(date +%s)
+    fi
+
+    if [ $((now - last_check)) -ge "$HEALTHCHECK_INTERVAL" ]; then
+      healthcheck
+      local rc=$?
+      if [ "$rc" -eq 0 ]; then
+        last_check=$now
+      elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
+        echo "Authentication failed, backing off for ${AUTH_FAILURE_BACKOFF_SECONDS}s..."
+        last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_BACKOFF_SECONDS))
+      else
+        last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
+      fi
+    fi
+
+    last_tick=$now
+  done
+}
+
+main "$@"

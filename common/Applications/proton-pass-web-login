@@ -1,0 +1,17 @@
+#!/bin/bash
+
+PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
+export PATH
+
+run_web_login='pass-cli logout --force >/dev/null 2>&1 || true; pass-cli login; pass-cli test && systemctl --user restart proton-pass-cli-autologin.service; read -rp "Press Enter to close..."'
+
+if command -v xdg-terminal-exec >/dev/null 2>&1; then
+  xdg-terminal-exec bash -lc "$run_web_login"
+elif command -v alacritty >/dev/null 2>&1; then
+  alacritty -e bash -lc "$run_web_login"
+elif command -v ghostty >/dev/null 2>&1; then
+  ghostty -e bash -lc "$run_web_login"
+else
+  notify-send --urgency=critical "Proton Pass" "No terminal launcher available for web login." 2>/dev/null || true
+  exit 1
+fi
