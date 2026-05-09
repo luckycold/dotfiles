@@ -20,7 +20,7 @@ LOGIN_VERIFY_WAIT_SECONDS="${LOGIN_VERIFY_WAIT_SECONDS:-20}"
 KEYRING_WAIT_SECONDS="${KEYRING_WAIT_SECONDS:-90}"
 
 is_local_db_error() {
-    printf '%s\n' "$1" | grep -Eq 'sqlcipher_page_cipher|hmac check failed|Error creating client features|Failed to initialize database'
+    printf '%s\n' "$1" | grep -Eq 'sqlcipher_page_cipher|hmac check failed|Error creating client features|Failed to initialize database|Error decrypting local session|aead::Error|changed your key provider|removed your local key|session has been invalidated'
 }
 
 reset_local_session() {

@@ -11,7 +11,6 @@ MAX_NETWORK_WAIT_SECONDS="${MAX_NETWORK_WAIT_SECONDS:-30}"
 NETWORK_CHECK_HOST="${NETWORK_CHECK_HOST:-1.1.1.1}"
 LOGIN_VERIFY_WAIT_SECONDS="${LOGIN_VERIFY_WAIT_SECONDS:-20}"
 LOGIN_RETRY_INTERVAL="${LOGIN_RETRY_INTERVAL:-30}"
-AUTH_FAILURE_BACKOFF_SECONDS="${AUTH_FAILURE_BACKOFF_SECONDS:-3600}"
 HEALTHCHECK_INTERVAL="${HEALTHCHECK_INTERVAL:-300}"
 PROTON_LOGIN="${PROTON_LOGIN:-$HOME/Applications/proton-login}"
 SECRET_UPDATE_HELPER="${SECRET_UPDATE_HELPER:-$HOME/Applications/proton-pass-update-secret}"
@@ -278,7 +277,7 @@ run_resume_healthcheck() {
   if [ "$rc" -eq 0 ]; then
     last_check=$now
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
-    last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_BACKOFF_SECONDS))
+    last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   else
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   fi
@@ -297,8 +296,8 @@ main() {
   if [ "$rc" -eq 0 ]; then
     last_check=$now
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
-    echo "Authentication failed, backing off for ${AUTH_FAILURE_BACKOFF_SECONDS}s..."
-    last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_BACKOFF_SECONDS))
+    echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
+    last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   else
     echo "Initial login failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
@@ -360,8 +359,8 @@ main() {
       if [ "$rc" -eq 0 ]; then
         last_check=$now
       elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
-        echo "Authentication failed, backing off for ${AUTH_FAILURE_BACKOFF_SECONDS}s..."
-        last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_BACKOFF_SECONDS))
+        echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
+        last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
       else
         last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
       fi
