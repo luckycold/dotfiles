@@ -6,7 +6,6 @@
     "opencode-gemini-auth@1.3.6",
     "opencode-memsearch",
     "opencode-scheduler",
-    "opencode-smart-voice-notify@latest",
-    "cursor-acp"
+    "opencode-smart-voice-notify@latest"
   ]
 }
