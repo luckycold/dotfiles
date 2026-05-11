@@ -23,6 +23,14 @@ is_local_db_error() {
     printf '%s\n' "$1" | grep -Eq 'sqlcipher_page_cipher|hmac check failed|Error creating client features|Failed to initialize database|Error decrypting local session|aead::Error|changed your key provider|removed your local key|session has been invalidated'
 }
 
+is_already_authenticated() {
+    printf '%s\n' "$1" | grep -Eiq 'already authenticated'
+}
+
+is_network_error() {
+    printf '%s\n' "$1" | grep -Eiq 'timed out|timeout|failed to connect|error resolving|network|connection refused|connection reset|connection aborted|host unreachable|temporarily unavailable'
+}
+
 reset_local_session() {
     local data_dir="$HOME/.local/share/proton-pass-cli"
     local session_dir="$data_dir/.session"
@@ -123,6 +131,17 @@ fi
 
 if [ "$LOGIN_STATUS" -ne 0 ]; then
     echo "proton-login exited with status $LOGIN_STATUS"
+
+    if is_already_authenticated "$LOGIN_OUTPUT"; then
+        echo "Client is already authenticated but verification failed. Treating as transient connectivity/session verification failure."
+        exit 1
+    fi
+
+    if is_network_error "$LOGIN_OUTPUT"; then
+        echo "Proton Pass login failed due to a transient network/API error. Will retry."
+        exit 1
+    fi
+
     echo "Stored Proton Pass personal access token was rejected. Update the keyring PAT before retrying."
     exit 5
 fi
@@ -130,7 +149,7 @@ fi
 if verify_login_ready; then
     echo "✅ Login successful."
 else
-    msg="Login failed. Check connection or credentials."
+    msg="Login verification failed. Check connection."
     echo "❌ $msg"
     notify_user "Proton Login Failed" "$msg" "critical"
     exit 1
