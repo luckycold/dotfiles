@@ -80,3 +80,4 @@ __pycache__/
 /common/.config/Cursor/Partitions/cursor-browser/Trust Tokens-journal
 /common/.config/Cursor/Local State
 /.codex
+/common/.config/Cursor/User/settings.json
