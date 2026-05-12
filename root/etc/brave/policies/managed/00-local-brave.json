@@ -2,6 +2,7 @@
   "BraveVPNDisabled": 1,
   "BraveRewardsDisabled": true,
   "BraveWalletDisabled": true,
+  "PasswordManagerEnabled": false,
   "DefaultSearchProviderEnabled": true,
   "DefaultSearchProviderSearchURL": "https://kagi.com/search?q={searchTerms}"
 }
