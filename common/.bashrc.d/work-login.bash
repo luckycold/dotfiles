@@ -6,10 +6,6 @@ netbird-login() {
   fi
 
   local login_dir="$HOME/hydra/operations/local-env"
-  if [[ ! -d "$login_dir" ]]; then
-    login_dir="$HOME/hydra/operations/support-environment"
-  fi
-
   if [[ ! -f "$login_dir/login-support.sh" ]]; then
     echo "ERROR: login-support.sh not found in $login_dir"
     return 1
