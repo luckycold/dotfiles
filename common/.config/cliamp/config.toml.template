@@ -1,4 +1,4 @@
 theme = ""
 [spotify]
-client_id = "{{pass://Spotify/Spotify Dev Client ID}}"
+client_id = "{{pass://Main/Spotify/Spotify Dev Client ID}}"
 bitrate = 320
