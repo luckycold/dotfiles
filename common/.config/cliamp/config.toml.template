@@ -1,0 +1,4 @@
+theme = ""
+[spotify]
+client_id = "{{pass://Spotify/Spotify Dev Client ID}}"
+bitrate = 320
