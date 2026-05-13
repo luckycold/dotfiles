@@ -81,3 +81,4 @@ __pycache__/
 /common/.config/Cursor/Local State
 /.codex
 /common/.config/Cursor/User/settings.json
+/common/.config/Cursor/CachedExtensionVSIXs/.trash
