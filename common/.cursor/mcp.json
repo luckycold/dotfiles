@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "kagi-ken": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "czottmann/kagi-ken-mcp"
+      ]
+    },
+    "gitlab": {
+      "url": "https://gitlab.com/api/v4/mcp"
+    },
+    "pylon": {
+      "url": "https://mcp.usepylon.com"
+    }
+  }
+}
