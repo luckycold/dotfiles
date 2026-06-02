@@ -4,6 +4,8 @@ set -euo pipefail
 HOME_SSID="Super_Chad"
 PROTON_TUNNEL="protonwg"
 HOME_TUNNEL="homewg"
+LEGACY_TUNNEL="proton-home"
+DISABLE_FILE="/etc/wireguard/wg-home-auto.disabled"
 
 current_ssid() {
   iw dev wlan0 link 2>/dev/null | awk -F': ' '/SSID:/ { print $2; exit }'
@@ -13,21 +15,69 @@ tunnel_active() {
   wg show interfaces 2>/dev/null | tr ' ' '\n' | grep -Fxq "$1"
 }
 
-ssid="$(current_ssid || true)"
+down_tunnel() {
+  if tunnel_active "$1"; then
+    wg-quick down "$1"
+  fi
+}
 
-if [[ "$ssid" == "$HOME_SSID" ]]; then
-  if tunnel_active "$HOME_TUNNEL"; then
-    wg-quick down "$HOME_TUNNEL"
+disable_vpn() {
+  touch "$DISABLE_FILE"
+  down_tunnel "$HOME_TUNNEL"
+  down_tunnel "$PROTON_TUNNEL"
+  down_tunnel "$LEGACY_TUNNEL"
+}
+
+enable_vpn() {
+  rm -f "$DISABLE_FILE"
+}
+
+print_status() {
+  if [[ -e "$DISABLE_FILE" ]]; then
+    echo "disabled"
+  else
+    echo "enabled"
   fi
-  if tunnel_active "$PROTON_TUNNEL"; then
-    wg-quick down "$PROTON_TUNNEL"
-  fi
+
+  wg show interfaces 2>/dev/null | tr ' ' '\n' | sed 's/^/active: /' || true
+}
+
+case "${1:-auto}" in
+  auto)
+    ;;
+  disable)
+    disable_vpn
+    exit 0
+    ;;
+  enable)
+    enable_vpn
+    ;;
+  status)
+    print_status
+    exit 0
+    ;;
+  *)
+    echo "Usage: $0 [auto|disable|enable|status]" >&2
+    exit 2
+    ;;
+esac
+
+if [[ -e "$DISABLE_FILE" ]]; then
+  down_tunnel "$HOME_TUNNEL"
+  down_tunnel "$PROTON_TUNNEL"
+  down_tunnel "$LEGACY_TUNNEL"
   exit 0
 fi
 
-if tunnel_active proton-home; then
-  wg-quick down proton-home
+ssid="$(current_ssid || true)"
+
+if [[ "$ssid" == "$HOME_SSID" ]]; then
+  down_tunnel "$HOME_TUNNEL"
+  down_tunnel "$PROTON_TUNNEL"
+  exit 0
 fi
+
+down_tunnel "$LEGACY_TUNNEL"
 
 if ! tunnel_active "$PROTON_TUNNEL"; then
   wg-quick up "$PROTON_TUNNEL"
