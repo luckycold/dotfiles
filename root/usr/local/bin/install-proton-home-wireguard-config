@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-template="/etc/wireguard/proton-home.template.conf"
-output="/etc/wireguard/proton-home.conf"
+template_dir="/etc/wireguard"
 
-if [[ ! -f "$template" ]]; then
-  echo "Template not found: $template" >&2
+shopt -s nullglob
+templates=("$template_dir"/*.template.conf)
+if [[ ${#templates[@]} -eq 0 ]]; then
+  echo "No WireGuard templates found in $template_dir" >&2
   exit 1
 fi
 
@@ -22,17 +23,25 @@ if [[ ! -x "$pass_cli" ]]; then
 fi
 
 if [[ -z "$pass_cli" || ! -x "$pass_cli" ]]; then
-  echo "pass-cli is required for user $secret_user to render $output" >&2
+  echo "pass-cli is required for user $secret_user to render WireGuard configs" >&2
   exit 1
 fi
 
-tmp_template="$(mktemp)"
-tmp_output="$(mktemp)"
-trap 'rm -f "$tmp_template" "$tmp_output"' EXIT
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+chown "$secret_user:$(id -gn "$secret_user")" "$tmp_dir"
+chmod 0700 "$tmp_dir"
 
-install -m 0644 -o "$secret_user" -g "$(id -gn "$secret_user")" "$template" "$tmp_template"
-install -m 0600 -o "$secret_user" -g "$(id -gn "$secret_user")" /dev/null "$tmp_output"
+for template in "${templates[@]}"; do
+  base="$(basename "$template")"
+  output="$template_dir/${base/.template.conf/.conf}"
+  tmp_template="$tmp_dir/$base"
+  tmp_output="$tmp_dir/${base/.template.conf/.conf}"
 
-runuser -u "$secret_user" -- "$pass_cli" inject -f -i "$tmp_template" -o "$tmp_output"
-install -m 0600 -o root -g root "$tmp_output" "$output"
-echo "Installed $output"
+  install -m 0644 -o "$secret_user" -g "$(id -gn "$secret_user")" "$template" "$tmp_template"
+  install -m 0600 -o "$secret_user" -g "$(id -gn "$secret_user")" /dev/null "$tmp_output"
+
+  runuser -u "$secret_user" -- "$pass_cli" inject -f -i "$tmp_template" -o "$tmp_output"
+  install -m 0600 -o root -g root "$tmp_output" "$output"
+  echo "Installed $output"
+done

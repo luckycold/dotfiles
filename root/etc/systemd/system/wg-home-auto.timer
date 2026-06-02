@@ -1,5 +1,5 @@
 [Unit]
-Description=Run combined Proton+Home WireGuard auto-switcher periodically
+Description=Run separate Proton and home WireGuard auto-switcher periodically
 
 [Timer]
 OnBootSec=15s

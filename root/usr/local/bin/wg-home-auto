@@ -2,7 +2,8 @@
 set -euo pipefail
 
 HOME_SSID="Super_Chad"
-AWAY_TUNNEL="proton-home"
+PROTON_TUNNEL="protonwg"
+HOME_TUNNEL="homewg"
 
 current_ssid() {
   iw dev wlan0 link 2>/dev/null | awk -F': ' '/SSID:/ { print $2; exit }'
@@ -15,18 +16,23 @@ tunnel_active() {
 ssid="$(current_ssid || true)"
 
 if [[ "$ssid" == "$HOME_SSID" ]]; then
-  if tunnel_active "$AWAY_TUNNEL"; then
-    wg-quick down "$AWAY_TUNNEL"
+  if tunnel_active "$HOME_TUNNEL"; then
+    wg-quick down "$HOME_TUNNEL"
+  fi
+  if tunnel_active "$PROTON_TUNNEL"; then
+    wg-quick down "$PROTON_TUNNEL"
   fi
   exit 0
 fi
 
-if tunnel_active "$AWAY_TUNNEL"; then
-  exit 0
+if tunnel_active proton-home; then
+  wg-quick down proton-home
 fi
 
-if tunnel_active protonwg; then
-  wg-quick down protonwg
+if ! tunnel_active "$PROTON_TUNNEL"; then
+  wg-quick up "$PROTON_TUNNEL"
 fi
 
-wg-quick up "$AWAY_TUNNEL"
+if ! tunnel_active "$HOME_TUNNEL"; then
+  wg-quick up "$HOME_TUNNEL"
+fi
