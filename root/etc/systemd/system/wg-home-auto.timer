@@ -1,0 +1,11 @@
+[Unit]
+Description=Run combined Proton+Home WireGuard auto-switcher periodically
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Unit=wg-home-auto.service
+
+[Install]
+WantedBy=timers.target

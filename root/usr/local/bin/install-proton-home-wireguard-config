@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+template="/etc/wireguard/proton-home.template.conf"
+output="/etc/wireguard/proton-home.conf"
+
+if [[ ! -f "$template" ]]; then
+  echo "Template not found: $template" >&2
+  exit 1
+fi
+
+secret_user="${SUDO_USER:-${USER:-}}"
+if [[ -z "$secret_user" || "$secret_user" == "root" ]]; then
+  echo "Run this with sudo from the user that has Proton Pass CLI access." >&2
+  exit 1
+fi
+
+secret_home="$(getent passwd "$secret_user" | cut -d: -f6)"
+pass_cli="$secret_home/.local/bin/pass-cli"
+if [[ ! -x "$pass_cli" ]]; then
+  pass_cli="$(runuser -u "$secret_user" -- bash -lc 'command -v pass-cli' 2>/dev/null || true)"
+fi
+
+if [[ -z "$pass_cli" || ! -x "$pass_cli" ]]; then
+  echo "pass-cli is required for user $secret_user to render $output" >&2
+  exit 1
+fi
+
+tmp_template="$(mktemp)"
+tmp_output="$(mktemp)"
+trap 'rm -f "$tmp_template" "$tmp_output"' EXIT
+
+install -m 0644 -o "$secret_user" -g "$(id -gn "$secret_user")" "$template" "$tmp_template"
+install -m 0600 -o "$secret_user" -g "$(id -gn "$secret_user")" /dev/null "$tmp_output"
+
+runuser -u "$secret_user" -- "$pass_cli" inject -f -i "$tmp_template" -o "$tmp_output"
+install -m 0600 -o root -g root "$tmp_output" "$output"
+echo "Installed $output"

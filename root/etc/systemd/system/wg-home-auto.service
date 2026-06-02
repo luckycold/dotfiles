@@ -1,0 +1,8 @@
+[Unit]
+Description=Auto-switch combined Proton+Home WireGuard away from home Wi-Fi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wg-home-auto
