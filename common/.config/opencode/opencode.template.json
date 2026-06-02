@@ -92,6 +92,14 @@
       "type": "remote",
       "url": "https://mcp.usepylon.com",
       "enabled": false
+    },
+    "mem0": {
+      "type": "remote",
+      "url": "https://mcp.mem0.ai/mcp/",
+      "headers": {
+        "Authorization": "Token {env:MEM0_API_KEY}"
+      },
+      "oauth": false
     }
   }
 }
