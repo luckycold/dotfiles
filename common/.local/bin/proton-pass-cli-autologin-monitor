@@ -21,6 +21,7 @@ resume_monitor_pid=
 resume_signal_pending=0
 last_check=
 last_tick=
+transient_login_failures=0
 
 notify() {
   local title="$1" msg="$2" urg="${3:-low}"
@@ -76,6 +77,8 @@ is_wifi_connected() {
 }
 
 wait_for_wifi() {
+  local notify_wait="${1:-1}"
+
   command -v nmcli >/dev/null 2>&1 || {
     echo "nmcli not found, skipping Wi-Fi wait"
     return 0
@@ -87,7 +90,7 @@ wait_for_wifi() {
   }
 
   echo "Waiting for Wi-Fi..."
-  notify "Proton Pass" "Waiting for Wi-Fi (up to ${MAX_WIFI_WAIT_SECONDS}s)..."
+  [ "$notify_wait" -eq 1 ] && notify "Proton Pass" "Waiting for Wi-Fi (up to ${MAX_WIFI_WAIT_SECONDS}s)..."
 
   local i
   for i in $(seq 1 "$MAX_WIFI_WAIT_SECONDS"); do
@@ -98,7 +101,7 @@ wait_for_wifi() {
 
     if [ "$i" -eq "$MAX_WIFI_WAIT_SECONDS" ]; then
       echo "Wi-Fi wait timed out, continuing..."
-      notify "Proton Pass Warning" "Wi-Fi not connected after ${MAX_WIFI_WAIT_SECONDS}s, continuing..."
+      [ "$notify_wait" -eq 1 ] && notify "Proton Pass Warning" "Wi-Fi not connected after ${MAX_WIFI_WAIT_SECONDS}s, continuing..."
     fi
 
     sleep 1
@@ -108,8 +111,10 @@ wait_for_wifi() {
 }
 
 wait_for_network() {
+  local notify_wait="${1:-1}"
+
   echo "Waiting for network..."
-  notify "Proton Pass" "Waiting for network (up to ${MAX_NETWORK_WAIT_SECONDS}s)..."
+  [ "$notify_wait" -eq 1 ] && notify "Proton Pass" "Waiting for network (up to ${MAX_NETWORK_WAIT_SECONDS}s)..."
 
   local i
   for i in $(seq 1 "$MAX_NETWORK_WAIT_SECONDS"); do
@@ -118,7 +123,6 @@ wait_for_network() {
   done
 
   echo "Network wait timed out, retrying later..."
-  notify "Proton Pass Warning" "Network unavailable; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
   return 1
 }
 
@@ -134,6 +138,8 @@ verify_login_ready() {
 }
 
 start_ssh_agent() {
+  local notify_success="${1:-1}"
+
   echo "Ensuring Proton Pass SSH agent service is running..."
   if is_agent_active; then
     echo "SSH agent already active"
@@ -157,7 +163,7 @@ start_ssh_agent() {
   for i in $(seq 1 "$SSH_AGENT_WAIT_SECONDS"); do
     sleep 1
     if is_agent_active; then
-      notify "SSH Agent" "Ready at $SSH_AGENT_SOCKET"
+      [ "$notify_success" -eq 1 ] && notify "SSH Agent" "Ready at $SSH_AGENT_SOCKET"
       return 0
     fi
   done
@@ -169,8 +175,10 @@ start_ssh_agent() {
 }
 
 do_login() {
-  wait_for_wifi
-  wait_for_network || return 1
+  local notify_transient="${1:-1}"
+
+  wait_for_wifi "$notify_transient"
+  wait_for_network "$notify_transient" || return 1
 
   if [ ! -x "$PROTON_LOGIN" ]; then
     notify "Proton Pass Error" "proton-login script not found" critical
@@ -178,7 +186,7 @@ do_login() {
   fi
 
   echo "Running proton-login..."
-  "$PROTON_LOGIN"
+  PROTON_LOGIN_NOTIFY_TRANSIENT="$notify_transient" "$PROTON_LOGIN"
   local rc=$?
   [ "$rc" -ne 0 ] && echo "proton-login exited with status $rc"
 
@@ -203,21 +211,23 @@ do_login() {
   fi
 
   if verify_login_ready; then
-    notify "Proton Pass" "Login verified. Ready."
-    start_ssh_agent || return 1
+    [ "$notify_transient" -eq 1 ] && notify "Proton Pass" "Login verified. Ready."
+    start_ssh_agent "$notify_transient" || return 1
     return 0
   fi
 
-  notify "Proton Pass Warning" "Login failed" critical
+  echo "Login failed"
   return 1
 }
 
 healthcheck() {
+  local notify_transient="${1:-1}"
+
   echo "Running health check..."
 
   if ! pass-cli test >/dev/null 2>&1; then
     echo "Login check failed, re-authenticating..."
-    do_login
+    do_login "$notify_transient"
     return
   fi
 
@@ -270,16 +280,20 @@ terminate() {
 run_resume_healthcheck() {
   echo "System resumed, running health check in 5s..."
   sleep 5
-  local now
+  local now notify_transient=0
   now=$(date +%s)
 
-  healthcheck
+  [ "$transient_login_failures" -gt 0 ] && notify_transient=1
+  healthcheck "$notify_transient"
   local rc=$?
   if [ "$rc" -eq 0 ]; then
+    transient_login_failures=0
     last_check=$now
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   else
+    [ "$transient_login_failures" -gt 0 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
+    transient_login_failures=$((transient_login_failures + 1))
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   fi
 }
@@ -288,19 +302,22 @@ main() {
   trap cleanup EXIT
   trap terminate INT TERM
 
-  notify "Proton Pass" "Starting login verification..."
+  echo "Starting login verification..."
   local now
   now=$(date +%s)
 
-  do_login
+  do_login 0
   local rc=$?
   if [ "$rc" -eq 0 ]; then
+    transient_login_failures=0
     last_check=$now
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
     echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   else
     echo "Initial login failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
+    transient_login_failures=$((transient_login_failures + 1))
+    notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   fi
 
@@ -355,14 +372,20 @@ main() {
     fi
 
     if [ $((now - last_check)) -ge "$HEALTHCHECK_INTERVAL" ]; then
-      healthcheck
+      local notify_transient=0
+      [ "$transient_login_failures" -gt 0 ] && notify_transient=1
+
+      healthcheck "$notify_transient"
       local rc=$?
       if [ "$rc" -eq 0 ]; then
+        transient_login_failures=0
         last_check=$now
       elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
         echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
         last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
       else
+        [ "$transient_login_failures" -gt 0 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
+        transient_login_failures=$((transient_login_failures + 1))
         last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
       fi
     fi
