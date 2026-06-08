@@ -80,6 +80,7 @@ __pycache__/
 /common/.config/Cursor/Partitions/cursor-browser/Trust Tokens-journal
 /common/.config/Cursor/Local State
 /.codex
+/.opencode/
 /common/.config/Cursor/User/settings.json
 /common/.config/Cursor/CachedExtensionVSIXs/.trash
 /common/.config/Cursor/Partitions/cursor-browser/TransportSecurity

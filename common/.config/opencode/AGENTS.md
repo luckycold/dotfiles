@@ -32,3 +32,7 @@ It applies globally across coding projects unless a project-specific
 5. Context before action.
    - If a missing tool or missing authentication prevents OpenCode from getting context needed to act safely, ask Luke to authenticate or enable the needed tool.
    - OpenCode may try limited workarounds to gather partial context, but must not proceed with substantive action until full context is available.
+
+6. No bespoke workaround binaries.
+   - Never create custom helper binaries, wrapper scripts, launchers, or other bespoke glue code just to make a personal workflow work unless Luke explicitly asks for that implementation.
+   - Prefer clean first-class configuration. If the requested behavior cannot be done cleanly with supported configuration, say so directly instead of creating code Luke has to maintain.
