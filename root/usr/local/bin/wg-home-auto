@@ -2,13 +2,32 @@
 set -euo pipefail
 
 HOME_SSID="Super_Chad"
+HOME_DNS="192.168.1.157"
 PROTON_TUNNEL="protonwg"
 HOME_TUNNEL="homewg"
 LEGACY_TUNNEL="proton-home"
 DISABLE_FILE="/etc/wireguard/wg-home-auto.disabled"
+NETWORK_INTERFACES=(eth0 wlan0)
 
 current_ssid() {
   iw dev wlan0 link 2>/dev/null | awk -F': ' '/SSID:/ { print $2; exit }'
+}
+
+ethernet_connected() {
+  if command -v nmcli >/dev/null 2>&1; then
+    nmcli -t -f TYPE,STATE device 2>/dev/null | grep -Fxq 'ethernet:connected'
+    return
+  fi
+
+  for carrier in /sys/class/net/*/carrier; do
+    iface="${carrier%/carrier}"
+    iface="${iface##*/}"
+    [[ "$iface" == lo || -d "/sys/class/net/$iface/wireless" ]] && continue
+    [[ "$(readlink -f "/sys/class/net/$iface")" == /sys/devices/virtual/* ]] && continue
+    [[ "$(cat "$carrier" 2>/dev/null || true)" == 1 ]] && return 0
+  done
+
+  return 1
 }
 
 tunnel_active() {
@@ -19,6 +38,30 @@ down_tunnel() {
   if tunnel_active "$1"; then
     wg-quick down "$1"
   fi
+}
+
+interface_exists() {
+  [[ -d "/sys/class/net/$1" ]]
+}
+
+use_home_dns() {
+  command -v resolvectl >/dev/null 2>&1 || return 0
+
+  for iface in "${NETWORK_INTERFACES[@]}"; do
+    interface_exists "$iface" || continue
+    resolvectl dns "$iface" "$HOME_DNS" || true
+    resolvectl domain "$iface" '~.' || true
+    resolvectl default-route "$iface" yes || true
+  done
+}
+
+restore_network_dns() {
+  command -v resolvectl >/dev/null 2>&1 || return 0
+
+  for iface in "${NETWORK_INTERFACES[@]}"; do
+    interface_exists "$iface" || continue
+    resolvectl revert "$iface" || true
+  done
 }
 
 disable_vpn() {
@@ -71,12 +114,14 @@ fi
 
 ssid="$(current_ssid || true)"
 
-if [[ "$ssid" == "$HOME_SSID" ]]; then
+if [[ "$ssid" == "$HOME_SSID" ]] || ethernet_connected; then
   down_tunnel "$HOME_TUNNEL"
   down_tunnel "$PROTON_TUNNEL"
+  use_home_dns
   exit 0
 fi
 
+restore_network_dns
 down_tunnel "$LEGACY_TUNNEL"
 
 if ! tunnel_active "$PROTON_TUNNEL"; then
