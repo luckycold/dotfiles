@@ -1,0 +1,171 @@
+{
+  "agent": {
+    "always_allow_tool_actions": true,
+    "tool_permissions": {
+      "default": "allow",
+      "tools": {
+        "terminal": {
+          "default": "allow",
+          "always_allow": [{ "pattern": ".*" }]
+        }
+      }
+    },
+    "favorite_models": [],
+    "commit_message_model": {
+      "provider": "opencode",
+      "model": "opencode/grok-build-0.1"
+    },
+    "default_profile": "build",
+    "profiles": {
+      "build": {
+        "name": "Build",
+        "tools": {
+          "read_file": true,
+          "grep": true,
+          "terminal": true,
+          "edit_file": true,
+          "write_file": true,
+          "delete_path": false,
+          "move_path": false,
+          "copy_path": true,
+          "create_directory": true,
+          "fetch": true,
+          "search_web": true
+        },
+        "enable_all_context_servers": true,
+        "context_servers": {}
+      },
+      "yolo": {
+        "name": "YOLO",
+        "tools": {
+          "read_file": true,
+          "grep": true,
+          "terminal": true,
+          "edit_file": true,
+          "write_file": true,
+          "delete_path": true,
+          "move_path": true,
+          "copy_path": true,
+          "create_directory": true,
+          "fetch": true,
+          "search_web": true
+        },
+        "enable_all_context_servers": true,
+        "context_servers": {}
+      }
+    },
+    "model_parameters": []
+  },
+  "proxy": "",
+  "edit_predictions": {
+    "allow_data_collection": "no"
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "agent_servers": {
+    "grok-build": {
+      "type": "registry"
+    },
+    "opencode": {
+      "type": "registry"
+    },
+    "cursor": {
+      "type": "registry"
+    },
+    "claude-acp": {
+      "type": "registry"
+    },
+    "codex-acp": {
+      "type": "registry"
+    }
+  },
+  "vim_mode": true,
+  "base_keymap": "Cursor",
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "theme": {
+    "mode": "system",
+    "light": "GitHub Light",
+    "dark": "GitHub Dark"
+  },
+  "context_servers": {
+    "kagi-ken": {
+      "command": "npx",
+      "args": ["-y", "czottmann/kagi-ken-mcp"],
+      "env": {}
+    },
+    "clickup": {
+      "url": "https://mcp.clickup.com/mcp"
+    },
+    "linear": {
+      "url": "https://mcp.linear.app/mcp"
+    },
+    "gitlab": {
+      "url": "https://gitlab.com/api/v4/mcp"
+    },
+    "brokkr-dev": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "BROKKR_ENV_FILE=\"$HOME/.config/hydra/dev\" BROKKR_MCP_ENV_NAME=dev BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" dev"
+      ],
+      "env": {}
+    },
+    "brokkr-stg": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "BROKKR_ENV_FILE=\"$HOME/.config/hydra/stg\" BROKKR_MCP_ENV_NAME=stg BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" stg"
+      ],
+      "env": {}
+    },
+    "brokkr-prod": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "BROKKR_ENV_FILE=\"$HOME/.config/hydra/prod\" BROKKR_MCP_ENV_NAME=prod BROKKR_MCP_CONFIG_FILE=\"$HOME/.config/brokkr/config.json\" exec \"$HOME/.local/bin/opencode-brokkr-mcp\" prod"
+      ],
+      "env": {}
+    },
+    "bridge-dev": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"bridge-dev launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/opencode/bridge-api-mcp\"; url=\"https://gitlab.com/hydrahost-developers/brokkr-bridge/bridge-api-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ] || [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ],
+      "env": {
+        "BRIDGE_CONFIG": "/tmp/opencode/bridge-api-mcp/configs/dev.yaml"
+      }
+    },
+    "bridge-stg": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"bridge-stg launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/opencode/bridge-api-mcp\"; url=\"https://gitlab.com/hydrahost-developers/brokkr-bridge/bridge-api-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ] || [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ],
+      "env": {
+        "BRIDGE_CONFIG": "/tmp/opencode/bridge-api-mcp/configs/stg.yaml"
+      }
+    },
+    "bridge-prod": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "missing=\"\"; for bin in git npm node; do command -v \"$bin\" >/dev/null 2>&1 || missing=\"${missing:+$missing }$bin\"; done; if [ -n \"$missing\" ]; then msg=\"bridge-prod launcher missing dependencies: $missing\"; printf \"%s\\n\" \"$msg\" >&2; exit 127; fi; repo=\"/tmp/opencode/bridge-api-mcp\"; url=\"https://gitlab.com/hydrahost-developers/brokkr-bridge/bridge-api-mcp.git\"; runtime_rev=\"$repo/.mcp-runtime-rev\"; mkdir -p \"$(dirname \"$repo\")\"; if [ ! -d \"$repo/.git\" ]; then git clone --depth 1 --single-branch --filter=blob:none \"$url\" \"$repo\" >/dev/null 2>&1; else git -C \"$repo\" pull --ff-only --quiet >/dev/null 2>&1 || true; fi; head=\"$(git -C \"$repo\" rev-parse HEAD)\"; installed=\"\"; [ -f \"$runtime_rev\" ] && installed=\"$(cat \"$runtime_rev\")\"; if [ ! -f \"$repo/build/index.js\" ] || [ ! -d \"$repo/node_modules\" ] || [ \"$head\" != \"$installed\" ]; then npm --prefix \"$repo\" ci --no-audit --no-fund --quiet >/dev/null 2>&1; npm --prefix \"$repo\" run build >/dev/null 2>&1; printf \"%s\" \"$head\" > \"$runtime_rev\"; fi; exec node \"$repo/build/index.js\""
+      ],
+      "env": {
+        "BRIDGE_CONFIG": "/tmp/opencode/bridge-api-mcp/configs/prod.yaml"
+      }
+    },
+    "pylon": {
+      "url": "https://mcp.usepylon.com"
+    },
+    "mem0": {
+      "url": "https://mcp.mem0.ai/mcp/",
+      "headers": {
+        "Authorization": "Token {env:MEM0_API_KEY}"
+      }
+    }
+  }
+}
