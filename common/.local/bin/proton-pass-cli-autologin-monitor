@@ -151,7 +151,28 @@ start_ssh_agent() {
     return 1
   fi
 
-  echo "Agent not responding. Restarting ${SSH_AGENT_SERVICE}..."
+  if systemctl --user is-active --quiet "$SSH_AGENT_SERVICE"; then
+    echo "Agent service is running; waiting for socket..."
+  else
+    echo "Agent not responding. Restarting ${SSH_AGENT_SERVICE}..."
+    systemctl --user reset-failed "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || true
+    systemctl --user restart "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || {
+      notify "SSH Agent Error" "Failed to restart ${SSH_AGENT_SERVICE}" critical
+      return 1
+    }
+  fi
+
+  echo "Waiting up to ${SSH_AGENT_WAIT_SECONDS}s for socket..."
+  local i
+  for i in $(seq 1 "$SSH_AGENT_WAIT_SECONDS"); do
+    sleep 1
+    if is_agent_active; then
+      [ "$notify_success" -eq 1 ] && notify "SSH Agent" "Ready at $SSH_AGENT_SOCKET"
+      return 0
+    fi
+  done
+
+  echo "Agent service did not become ready. Restarting ${SSH_AGENT_SERVICE}..."
   systemctl --user reset-failed "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || true
   systemctl --user restart "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || {
     notify "SSH Agent Error" "Failed to restart ${SSH_AGENT_SERVICE}" critical
@@ -159,7 +180,6 @@ start_ssh_agent() {
   }
 
   echo "Waiting up to ${SSH_AGENT_WAIT_SECONDS}s for socket..."
-  local i
   for i in $(seq 1 "$SSH_AGENT_WAIT_SECONDS"); do
     sleep 1
     if is_agent_active; then
