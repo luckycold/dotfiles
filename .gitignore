@@ -91,3 +91,6 @@ __pycache__/
 /common/.config/hydra/stg
 /common/.config/hydra/prod
 /common/.config/cliamp/config.toml
+/common/.cursor/skills-cursor
+common/.cursor/projects/home-lucky-Documents-Work-brokkr-app/mcp-auth.json
+common/.cursor/agent-cli-state.json
