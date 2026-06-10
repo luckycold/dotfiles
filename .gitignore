@@ -82,5 +82,6 @@ __pycache__/
 /.codex
 /.opencode/
 /common/.config/Cursor/User/settings.json
+/common/.config/zed/settings.json
 /common/.config/Cursor/CachedExtensionVSIXs/.trash
 /common/.config/Cursor/Partitions/cursor-browser/TransportSecurity
