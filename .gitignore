@@ -87,3 +87,7 @@ __pycache__/
 /common/.config/Cursor/Partitions/cursor-browser/TransportSecurity
 /common/.cursor/extensions/**
 !/common/.cursor/extensions/extensions.json
+/common/.config/hydra/dev
+/common/.config/hydra/stg
+/common/.config/hydra/prod
+/common/.config/cliamp/config.toml
