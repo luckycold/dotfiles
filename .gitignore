@@ -85,3 +85,5 @@ __pycache__/
 /common/.config/zed/settings.json
 /common/.config/Cursor/CachedExtensionVSIXs/.trash
 /common/.config/Cursor/Partitions/cursor-browser/TransportSecurity
+/common/.cursor/extensions/**
+!/common/.cursor/extensions/extensions.json
