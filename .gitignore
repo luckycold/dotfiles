@@ -92,5 +92,14 @@ __pycache__/
 /common/.config/hydra/prod
 /common/.config/cliamp/config.toml
 /common/.cursor/skills-cursor
-common/.cursor/projects/home-lucky-Documents-Work-brokkr-app/mcp-auth.json
 common/.cursor/agent-cli-state.json
+
+# Cursor CLI runtime state/noise (not settings)
+/common/.cursor/projects/
+/common/.cursor/ai-tracking/
+/common/.cursor/plugins/
+/common/.cursor/managed/
+/common/.cursor/plans/
+
+# Cursor CLI config dir holds local model selection, auth, and cache state.
+/common/.config/cursor/*
