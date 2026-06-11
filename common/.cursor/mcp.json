@@ -7,6 +7,9 @@
         "czottmann/kagi-ken-mcp"
       ]
     },
+    "linear": {
+      "url": "https://mcp.linear.app/mcp"
+    },
     "gitlab": {
       "url": "https://gitlab.com/api/v4/mcp"
     },
