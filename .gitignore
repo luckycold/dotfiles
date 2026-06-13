@@ -103,3 +103,8 @@ common/.cursor/agent-cli-state.json
 
 # Cursor CLI config dir holds local model selection, auth, and cache state.
 /common/.config/cursor/*
+/common/.config/Cursor/Cache/Cache_Data
+/common/.config/Cursor/Cache/No_Vary_Search
+/common/.cursor/plans
+/common/.cursor/extensions/extensions.json
+/common/.cursor/plugins/cache
