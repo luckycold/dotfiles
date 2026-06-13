@@ -85,8 +85,7 @@ __pycache__/
 /common/.config/zed/settings.json
 /common/.config/Cursor/CachedExtensionVSIXs/.trash
 /common/.config/Cursor/Partitions/cursor-browser/TransportSecurity
-/common/.cursor/extensions/**
-!/common/.cursor/extensions/extensions.json
+/common/.cursor/extensions
 /common/.config/hydra/dev
 /common/.config/hydra/stg
 /common/.config/hydra/prod
@@ -108,3 +107,5 @@ common/.cursor/agent-cli-state.json
 /common/.cursor/plans
 /common/.cursor/extensions/extensions.json
 /common/.cursor/plugins/cache
+/common/.cursor/projects
+/common/.cursor/skills-cursor
