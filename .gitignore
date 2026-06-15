@@ -109,3 +109,5 @@ common/.cursor/agent-cli-state.json
 /common/.cursor/plugins/cache
 /common/.cursor/projects
 /common/.cursor/skills-cursor
+common/.config/cliamp/cliamp.log
+common/.config/cliamp/cliamp.sock.pid
