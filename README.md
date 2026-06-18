@@ -127,6 +127,7 @@ For my personal Framework AMD + Thunderbolt dock + NVIDIA eGPU setup, the power-
 - `personal/` for user-session behavior
 - `root/` for stow-safe machine policy under `/etc`
 - `bootstrap/framework-power/` for the root-owned files that should be copied into `/etc`, not left as symlinks into `/home`
+- `bootstrap/dual-omarchy-boot/` for coordinating the personal/internal and work/external Omarchy boot menus
 - `bootstrap/sddm-gnome-keyring/` for the root-owned SDDM PAM config that unlocks the GNOME keyring on login
 
 Scope note:
@@ -177,9 +178,38 @@ stow -t ~ common
 stow -t ~ personal
 sudo stow -t / root
 sudo ./bootstrap/framework-power/apply.sh
+sudo ./bootstrap/dual-omarchy-boot/apply.sh --role personal
 sudo ./bootstrap/sddm-gnome-keyring/apply.sh
 ./bootstrap/philosophia-audio/apply.sh
 ```
+
+For the external Work OS clone of this repo, apply the reciprocal boot role instead:
+
+```bash
+sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
+```
+
+The personal role keeps the internal Limine install as the firmware default, creates a persistent `Work OS` UEFI entry when the external ESP is present, and adds a `Work OS (external drive)` Limine menu entry that hands off to that firmware entry. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
+
+After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. PCR `1,7` bindings are intentionally strict and can be invalidated by boot-path changes. Once booted into the OS whose root disk should auto-unlock, check the slot and regenerate it if the binding was created on this same laptop TPM:
+
+```bash
+sudo clevis luks list -d <LUKS_DEVICE>
+sudo clevis luks regen -q -d <LUKS_DEVICE> -s <CLEVIS_SLOT>
+```
+
+Use `/dev/nvme0n1p2` for the internal personal OS on this Framework install. On the external Work OS, identify the root LUKS partition from inside Work OS with `lsblk -f` first, then run the same commands there.
+
+If a Clevis slot came from another laptop, do not expect `regen` to work because the old TPM cannot unseal it on this machine. Boot that OS once with the normal LUKS passphrase, then replace the foreign TPM binding from inside that OS:
+
+```bash
+sudo clevis luks list -d <LUKS_DEVICE>
+sudo clevis luks unbind -d <LUKS_DEVICE> -s <OLD_CLEVIS_SLOT> -f
+sudo clevis luks bind -d <LUKS_DEVICE> tpm2 '{"pcr_bank":"sha256","pcr_ids":"1,7"}'
+sudo clevis luks list -d <LUKS_DEVICE>
+```
+
+Keep the normal passphrase slot. The Clevis slot should be an additional unlock path, not the only way back in.
 
 If you are moving an already-tuned machine under Stow management instead of setting up a fresh install, use `--adopt` once for the profiles that already exist on disk:
 
