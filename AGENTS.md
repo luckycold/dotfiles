@@ -8,6 +8,7 @@
 
 ## Secret templates
 - Secret-backed configs use `*.template.*` filenames (for example `foo.template.json` -> `foo.json`).
+- Secrets that show the template {{pass://...}} refer to proton pass's cli `pass-cli` not the `pass` command.
 - After editing template files or switching profiles, refresh generated outputs with:
   - `init-env-secrets --all` (non-interactive), or
   - `init-env-secrets -r` (interactive retry/selection).
