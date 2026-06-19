@@ -98,7 +98,7 @@
       "type": "remote",
       "url": "https://mcp.mem0.ai/mcp/",
       "headers": {
-        "Authorization": "Token {env:MEM0_API_KEY}"
+        "Authorization": "Token {file:~/.config/opencode/mem0-token}"
       },
       "oauth": false
     }
