@@ -32,6 +32,10 @@
     "linear": {
       "type": "remote",
       "url": "https://mcp.linear.app/mcp",
+      "headers": {
+        "Authorization": "Bearer {file:~/.config/opencode/linear}"
+      },
+      "oauth": false,
       "enabled": false
     },
     "gitlab": {
