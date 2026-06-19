@@ -120,6 +120,84 @@ systemctl --user restart proton-pass-cli-autologin.service
 
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
 
+## Repository layout
+
+The repo is organised as Stow packages plus a few things Stow cannot manage cleanly:
+
+- `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
+- `personal/` and `work/` - mutually exclusive persona profiles. Stow exactly one alongside `common`.
+- `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
+- `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
+- `bootstrap/` - host-specific setup that must be *copied* into place (not symlinked) and is applied by `apply.sh` scripts. See the Framework Power section below.
+- `.github/` and `.forgejo/` - CI for the GitHub mirror and the Codeberg/Forgejo canonical repo (see Automation).
+
+## Secret templates (`init-env-secrets`)
+
+Configs that embed secrets are committed as `*.template.*` files with `{{pass://...}}` placeholders and are rendered into their real counterparts locally. The renderer is the `init-env-secrets` shell function (defined in `common/.bashrc.d/secrets.bash`).
+
+- A template named `foo.template.json` renders to `foo.json`; `bar.template` renders to `bar`.
+- `{{pass://...}}` placeholders are resolved with Proton Pass's `pass-cli` (not the unrelated `pass` command).
+- Rendered outputs are gitignored and never committed.
+- An interactive shell refreshes stale secrets automatically on startup and raises a mako notification when something needs attention; `update-dotfiles` and `stow-profile` also offer to re-render.
+
+Common commands:
+
+```bash
+init-env-secrets --all      # render everything non-interactively
+init-env-secrets -l         # list templated secrets and their status
+init-env-secrets -r         # interactively retry/select and re-render
+```
+
+Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
+
+## Shell tooling
+
+`common/.bashrc.d/` is split into focused modules. The main user-facing commands:
+
+- `update-dotfiles` - pull the repo, re-render secrets, reload units; a background check also notifies (via mako) when the repo is behind.
+- `stow-profile` - switch between `personal`/`work` profiles, restow, reload Hyprland/systemd, and re-render secrets.
+- `proton-pass-login` / `netbird-login` - convenience auth helpers.
+
+## AI coding tooling
+
+This repo carries a fair amount of agent/LLM configuration:
+
+- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, MCP servers (Kagi, GitLab, mem0, and several disabled-by-default work servers), and the `cursor-acp` provider.
+- `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler). The version pins here are bumped automatically by Renovate.
+- `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates).
+- `common/.mcporter/mcporter.json` - [MCPorter](https://github.com/steipete/mcporter) config for direct MCP auth/inspection (templated).
+
+### Cursor models via open-cursor (`cursor-acp`)
+
+The `cursor-acp` provider routes OpenCode through a Cursor subscription using the [`open-cursor`](https://github.com/Nomadcxx/opencode-cursor) plugin (an `@ai-sdk/openai-compatible` provider pointed at the local proxy on `127.0.0.1:32124`). Authenticate once with `cursor-agent login`.
+
+The committed `opencode.json` only defines the provider scaffold (`name`/`npm`/`baseURL`) with an empty `models` map - the model list is owned entirely by the sync, not version-controlled. A systemd user timer regenerates the full Cursor catalog (with up-to-date pricing/variants for TokenSpeed) into `~/.config/opencode/open-cursor.generated.json`, which is gitignored and loaded by OpenCode via `OPENCODE_CONFIG` (set in `common/.config/environment.d/opencode.conf`). A missing file is tolerated; OpenCode simply lists no `cursor-acp` models until the first sync runs.
+
+Refresh is `open-cursor sync-models --variants --compact`, run by `opencode-cursor-sync.timer` (shortly after login, then daily). On a fresh machine, trigger it once so the models appear immediately:
+
+```bash
+systemctl --user start opencode-cursor-sync.service   # refresh now
+opencode models | grep cursor-acp                     # should list cursor-acp/* models
+```
+
+## Other systemd user services
+
+Beyond the Proton Pass service documented above, `common` ships several user units (enable only the ones you want):
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now opencode-cursor-sync.timer   # refresh Cursor model catalog (see above)
+systemctl --user enable --now kokoro-fastapi.service       # local Kokoro TTS server (Docker)
+systemctl --user enable --now agent-tts.service            # agent TTS frontend (needs kokoro-fastapi)
+```
+
+`kokoro-fastapi-gpu-switch.timer` is an optional helper that flips the Kokoro container between CPU/GPU images based on host state.
+
+## Automation
+
+- **Renovate** (`.forgejo/workflows/renovate.yml`, `renovate.json`) runs on Codeberg and keeps the OpenCode plugin version pins in `common/.config/opencode/config.json` up to date via custom regex managers, surfacing updates through the dependency dashboard.
+- **OpenCode bot** (`.github/workflows/opencode.yml`) responds to `/oc` or `/opencode` comments on issues/PRs in the GitHub mirror, running OpenCode against the repo.
+
 ## Omarchy Framework Power Setup
 
 For my personal Framework AMD + Thunderbolt dock + NVIDIA eGPU setup, the power-management changes are split between:

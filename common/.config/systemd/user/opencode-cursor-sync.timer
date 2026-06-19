@@ -1,0 +1,15 @@
+[Unit]
+Description=Periodically refresh the open-cursor (cursor-acp) model catalog for OpenCode
+Requires=opencode-cursor-sync.service
+
+[Timer]
+# Refresh shortly after login, then daily. Persistent catches up missed runs after
+# the machine has been off; the randomized delay avoids a thundering-herd on boot.
+OnStartupSec=5min
+OnUnitActiveSec=1d
+Persistent=true
+RandomizedDelaySec=30min
+AccuracySec=10min
+
+[Install]
+WantedBy=timers.target

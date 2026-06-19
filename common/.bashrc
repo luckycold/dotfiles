@@ -82,3 +82,8 @@ export WGPU_BACKEND=gl
 if [ -d "/home/lucky/.openclaw/completions" ]; then
   [ -f "/home/lucky/.openclaw/completions/openclaw.bash" ] && source "/home/lucky/.openclaw/completions/openclaw.bash"
 fi
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+[[ -r "$HOME/.grok/completions/bash/grok.bash" ]] && source "$HOME/.grok/completions/bash/grok.bash"
+# <<< grok installer <<<
