@@ -16,10 +16,7 @@
     "xai": {
       "models": {
         "grok-composer-2.5-fast": {
-          "name": "Composer 2.5 Fast",
-          "limit": {
-            "context": 200000,
-            "output": 200000
+          "name": "Composer 2.5 Fast"
           }
         }
       }
