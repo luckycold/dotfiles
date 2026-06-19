@@ -180,23 +180,16 @@ This repo carries a fair amount of agent/LLM configuration:
 
 The `cursor-acp` provider routes OpenCode through a Cursor subscription using the [`open-cursor`](https://github.com/Nomadcxx/opencode-cursor) plugin (an `@ai-sdk/openai-compatible` provider pointed at the local proxy on `127.0.0.1:32124`). Authenticate once with `cursor-agent login`.
 
-The committed `opencode.json` only defines the provider scaffold (`name`/`npm`/`baseURL`) with an empty `models` map - the model list is owned entirely by the sync, not version-controlled. A systemd user timer regenerates the full Cursor catalog (with up-to-date pricing/variants for TokenSpeed) into `~/.config/opencode/open-cursor.generated.json`, which is gitignored and loaded by OpenCode via `OPENCODE_CONFIG` (set in `common/.config/environment.d/opencode.conf`). A missing file is tolerated; OpenCode simply lists no `cursor-acp` models until the first sync runs.
+The `cursor-acp` model catalog is committed directly in `opencode.json`. This keeps the Stow-managed config self-contained and avoids runtime-generated OpenCode config overlays.
 
-Refresh is `open-cursor sync-models --variants --compact`, run by `opencode-cursor-sync.timer` (shortly after login, then daily). On a fresh machine, trigger it once so the models appear immediately:
+To refresh the committed model list, use `open-cursor sync-models --variants --compact` as a source of truth, review the diff, then commit the updated `opencode.json`:
 
 ```bash
-systemctl --user start opencode-cursor-sync.service   # refresh now
-opencode models | grep cursor-acp                     # should list cursor-acp/* models
+npx -y @rama_nigg/open-cursor@latest sync-models --variants --compact --config ~/.config/opencode/opencode.json --no-backup
+opencode models | grep cursor-acp
 ```
 
 ## Other systemd user services
-
-Beyond the Proton Pass service documented above, `common` ships the OpenCode Cursor model sync timer:
-
-```bash
-systemctl --user daemon-reload
-systemctl --user enable --now opencode-cursor-sync.timer   # refresh Cursor model catalog (see above)
-```
 
 `common/.config/autostart/clevis-luks-udisks2.desktop` intentionally disables the distro `clevis-luks-udisks2` desktop autostart. Root disk auto-unlock is handled by the initramfs Clevis hook; the desktop helper is not needed here and fails on this setup because there is no `clevis` user.
 
@@ -286,7 +279,6 @@ On Work OS, verify the user services that should stay enabled after stowing `com
 ```bash
 systemctl --user is-active proton-pass-cli-autologin.service
 systemctl --user is-active proton-pass-cli-ssh-agent.service
-systemctl --user is-active opencode-cursor-sync.timer
 ```
 
 `agent-tts` and Kokoro units are intentionally not part of this repo anymore.

@@ -21,10 +21,6 @@ common/.config/opencode/smart-voice-notify.jsonc
 # Rendered raw secret token consumed by opencode.json via {file:...}
 /common/.config/opencode/mem0-token
 /common/.config/opencode/linear
-# Generated open-cursor (cursor-acp) model catalog, refreshed by the
-# opencode-cursor-sync.timer and loaded via OPENCODE_CONFIG (machine-local).
-/common/.config/opencode/open-cursor.generated.json
-/common/.config/opencode/open-cursor.generated.json.backup
 /common/.mcporter/mcporter.json
 common/.config/mcporter/mcporter.json
 __pycache__/
