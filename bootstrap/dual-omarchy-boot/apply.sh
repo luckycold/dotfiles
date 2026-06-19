@@ -46,20 +46,35 @@ part_device_for_guid() {
   printf '%s\n' "$path"
 }
 
+# Remove all existing UEFI entries that match the given label.
+# This is defensive for removable drives where firmware or previous runs
+# can leave behind stale or duplicate named entries.
+remove_uefi_entries_by_label() {
+  local label=$1
+  local id
+
+  while IFS= read -r id; do
+    [[ -n $id ]] || continue
+    efibootmgr -b "$id" -B >/dev/null 2>&1 || true
+  done < <(efibootmgr | sed -n "s/^Boot\([0-9A-F]\{4\}\)[* ] ${label}\([[:space:]].*\)\?$/\1/p")
+}
+
 ensure_uefi_entry() {
   local label=$1 guid=$2 efi_path=$3 part disk partnum loader_path
 
-  if [[ -n $(entry_id_for_label "$label") ]]; then
-    return 0
-  fi
+  # Always remove any existing entries with this label first.
+  # This ensures we don't accumulate stale "Work OS" / "Personal OS" entries
+  # when the drive is plugged/unplugged or after firmware changes.
+  remove_uefi_entries_by_label "$label"
 
   part=$(part_device_for_guid "$guid") || return 0
+
   disk="/dev/$(lsblk -no PKNAME "$part")"
   partnum=$(lsblk -no PARTN "$part")
   loader_path=${efi_path//\//\\}
 
   [[ -b ${disk} && -n ${partnum} ]] || return 0
-  efibootmgr -c -d "$disk" -p "$partnum" -L "$label" -l "$loader_path" >/dev/null
+  efibootmgr -c -d "$disk" -p "$partnum" -L "$label" -l "$loader_path" >/dev/null || true
 }
 
 entry_id_for_label() {
@@ -199,10 +214,36 @@ main() {
   esac
 
   install_peer_hook "$title" "$protocol" "$value"
+
+  # Always ensure the local Limine menu has the peer entry and is enrolled.
   /etc/boot/hooks/post.d/88-omarchy-peer-os
 
   if command -v limine-enroll-config >/dev/null 2>&1; then
     limine-enroll-config
+  fi
+
+  # Defensive verification after ensure step.
+  if [[ "$role" == "personal" ]]; then
+    if part_device_for_guid "$EXTERNAL_ESP_GUID" >/dev/null 2>&1; then
+      if [[ -n $(entry_id_for_label 'Work OS') ]]; then
+        echo "Verified: 'Work OS' UEFI entry exists and drive is present."
+      else
+        echo "Warning: External drive detected but 'Work OS' UEFI entry is missing after ensure."
+      fi
+    else
+      echo "Note: External drive (PARTUUID $EXTERNAL_ESP_GUID) not currently visible."
+      echo "      'Work OS' entry will be created next time the script runs with the drive plugged in."
+    fi
+  fi
+
+  if [[ "$role" == "work" ]]; then
+    if part_device_for_guid "$INTERNAL_ESP_GUID" >/dev/null 2>&1; then
+      if [[ -n $(entry_id_for_label 'Personal OS') ]]; then
+        echo "Verified: 'Personal OS' UEFI entry exists and internal drive is visible."
+      else
+        echo "Warning: 'Personal OS' UEFI entry is missing."
+      fi
+    fi
   fi
 
   cat <<EOF
