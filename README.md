@@ -81,6 +81,9 @@ then use GNU stow to create symlinks
 ```bash
 stow -t ~ common
 stow -t ~ personal
+# or, on the external Work OS install:
+stow -t ~ common
+stow -t ~ work
 # For systems with my exclusive use
 # sudo stow -t / root
 ```
@@ -119,6 +122,12 @@ systemctl --user restart proton-pass-cli-autologin.service
 ```
 
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
+
+After switching profiles, refresh generated secret-backed configs:
+
+```bash
+init-env-secrets --all
+```
 
 ## Repository layout
 
@@ -182,16 +191,14 @@ opencode models | grep cursor-acp                     # should list cursor-acp/*
 
 ## Other systemd user services
 
-Beyond the Proton Pass service documented above, `common` ships several user units (enable only the ones you want):
+Beyond the Proton Pass service documented above, `common` ships the OpenCode Cursor model sync timer:
 
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now opencode-cursor-sync.timer   # refresh Cursor model catalog (see above)
-systemctl --user enable --now kokoro-fastapi.service       # local Kokoro TTS server (Docker)
-systemctl --user enable --now agent-tts.service            # agent TTS frontend (needs kokoro-fastapi)
 ```
 
-`kokoro-fastapi-gpu-switch.timer` is an optional helper that flips the Kokoro container between CPU/GPU images based on host state.
+`common/.config/autostart/clevis-luks-udisks2.desktop` intentionally disables the distro `clevis-luks-udisks2` desktop autostart. Root disk auto-unlock is handled by the initramfs Clevis hook; the desktop helper is not needed here and fails on this setup because there is no `clevis` user.
 
 ## Automation
 
@@ -212,6 +219,7 @@ Scope note:
 
 - the `personal/` changes here are still primarily aimed at this AMD Framework laptop, but the `uwsm` GPU pin is now conditional instead of hardcoded
 - `personal/.config/uwsm/env` only exports `AQ_DRM_DEVICES` when both an AMD DRM card and an NVIDIA DRM card are present, and then picks the first AMD card it finds
+- `work/.config/uwsm/env` carries the same Omarchy PATH, default terminal/editor, mise activation, and conditional AMD GPU preference for the external Work OS profile
 - that makes the `personal/` side safer across other machines, but it is still not meant as a fully generic power profile for every AMD laptop
 - `bootstrap/framework-power/` is fully personal to this specific Framework + Thunderbolt dock + NVIDIA eGPU setup and should be treated as host-specific
 - `bootstrap/sddm-gnome-keyring/` is personal auth/session setup and should also be treated as a root-applied bootstrap, not a stowed profile
@@ -234,6 +242,7 @@ Overview of what had to be fixed to make this setup reliable:
 Files involved in this setup:
 
 - `personal/.config/uwsm/env` - conditionally pins Hyprland to the AMD DRM card when both AMD and NVIDIA GPUs are present
+- `work/.config/uwsm/env` - Work OS equivalent of the UWSM session environment setup
 - `personal/.config/hypr/hypridle.conf` - keeps the safer lock/suspend behavior without the old DPMS-off listener
 - `bootstrap/framework-power/apply.sh` - personal bootstrap for this machine that fills in install-specific boot values, copies real root-owned files into `/etc`, refreshes Limine, and applies wake settings
 - `bootstrap/framework-power/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
@@ -264,10 +273,23 @@ sudo ./bootstrap/sddm-gnome-keyring/apply.sh
 For the external Work OS clone of this repo, apply the reciprocal boot role instead:
 
 ```bash
+stow -t ~ common
+stow -t ~ work
+init-env-secrets --all
 sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
 ```
 
 The personal role keeps the internal Limine install as the firmware default, creates a persistent `Work OS` UEFI entry when the external ESP is present, and adds a `Work OS (external drive)` Limine menu entry that hands off to that firmware entry. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
+
+On Work OS, verify the user services that should stay enabled after stowing `common`:
+
+```bash
+systemctl --user is-active proton-pass-cli-autologin.service
+systemctl --user is-active proton-pass-cli-ssh-agent.service
+systemctl --user is-active opencode-cursor-sync.timer
+```
+
+`agent-tts` and Kokoro units are intentionally not part of this repo anymore.
 
 After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. PCR `1,7` bindings are intentionally strict and can be invalidated by boot-path changes. Once booted into the OS whose root disk should auto-unlock, check the slot and regenerate it if the binding was created on this same laptop TPM:
 
