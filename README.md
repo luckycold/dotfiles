@@ -291,6 +291,27 @@ systemctl --user is-active opencode-cursor-sync.timer
 
 `agent-tts` and Kokoro units are intentionally not part of this repo anymore.
 
+After moving an existing Work OS install from another laptop, also check for stale TPM-bound system credentials:
+
+```bash
+systemctl --failed
+systemctl status systemd-tpm2-setup.service systemd-pcrproduct.service libvirtd.service
+```
+
+Failures from `systemd-tpm2-setup.service` or `systemd-pcrproduct.service` that mention TPM key integrity or `Failed to acquire anchor secret` are separate from the LUKS Clevis slot. They come from systemd measured-UKI/NvPCR state, not from dotfiles. The credential files live under `/var/lib/systemd/nvpcr/` and `/boot/loader/credentials/`, but the NvPCR indexes themselves are TPM-global (`0x1d10200`-`0x1d10202` for the stock systemd definitions). Do not undefine those TPM NV indexes casually on this dual-OS Framework because Personal OS sees the same TPM.
+
+If `libvirtd.service` fails with `status=243/CREDENTIALS`, check whether `/var/lib/libvirt/secrets/secrets-encryption-key` decrypts on this machine and whether any libvirt secrets need preserving before regenerating it. If there are no real libvirt secrets to preserve, back up the old key and let systemd create a new encrypted key for this host:
+
+```bash
+sudo cp -a /var/lib/libvirt/secrets/secrets-encryption-key \
+  /var/lib/libvirt/secrets/secrets-encryption-key.bak.$(date +%Y%m%d%H%M%S)
+dd if=/dev/random bs=32 count=1 status=none | \
+  sudo systemd-creds encrypt --name=secrets-encryption-key - \
+  /var/lib/libvirt/secrets/secrets-encryption-key
+sudo systemctl reset-failed libvirtd.service libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket
+sudo systemctl restart libvirtd.service
+```
+
 After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. PCR `1,7` bindings are intentionally strict and can be invalidated by boot-path changes. Once booted into the OS whose root disk should auto-unlock, check the slot and regenerate it if the binding was created on this same laptop TPM:
 
 ```bash
