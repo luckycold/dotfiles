@@ -12,6 +12,13 @@
         "baseURL": "http://127.0.0.1:32124/v1"
       },
       "models": {}
+    },
+    "xai": {
+      "models": {
+        "composer-2.5-fast": {
+          "name": "Composer 2.5 Fast"
+        }
+      }
     }
   },
   "mcp": {
