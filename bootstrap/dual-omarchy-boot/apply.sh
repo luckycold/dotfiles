@@ -76,6 +76,50 @@ ensure_uefi_entry() {
   efibootmgr -c -d "$disk" -p "$partnum" -L "$label" -l "$loader_path" >/dev/null || true
 }
 
+mounted_path_for_device() {
+  local device=$1 mount_path
+  mount_path=$(findmnt -nr -o TARGET --source "$device" | head -n1)
+  [[ -n ${mount_path} ]] || return 1
+  printf '%s\n' "$mount_path"
+}
+
+repair_limine_for_esp_guid() {
+  local guid=$1 part mount_path mounted_here=0 config_path limine_path fallback_path config_hash
+
+  part=$(part_device_for_guid "$guid") || return 0
+
+  if mount_path=$(mounted_path_for_device "$part"); then
+    mounted_here=0
+  else
+    mount_path=$(mktemp -d)
+    mount "$part" "$mount_path" || {
+      rmdir "$mount_path" 2>/dev/null || true
+      return 0
+    }
+    mounted_here=1
+  fi
+
+  config_path="$mount_path/limine.conf"
+  limine_path="$mount_path/EFI/limine/limine_x64.efi"
+  fallback_path="$mount_path/EFI/BOOT/BOOTX64.EFI"
+
+  if [[ -f "$config_path" && -f /usr/share/limine/BOOTX64.EFI ]]; then
+    install -D -m 0644 /usr/share/limine/BOOTX64.EFI "$limine_path"
+    config_hash=$(b2sum "$config_path" | awk '{print $1}')
+    limine enroll-config "$limine_path" "$config_hash"
+    sbctl remove-file "$limine_path" >/dev/null 2>&1 || true
+    sbctl sign -s "$limine_path"
+    install -D -m 0644 "$limine_path" "$fallback_path"
+    sbctl remove-file "$fallback_path" >/dev/null 2>&1 || true
+    sbctl sign -s "$fallback_path" || true
+  fi
+
+  if (( mounted_here == 1 )); then
+    umount "$mount_path"
+    rmdir "$mount_path" 2>/dev/null || true
+  fi
+}
+
 entry_id_for_label() {
   local label=$1
   efibootmgr | sed -n "s/^Boot\([0-9A-F]\{4\}\)[* ] ${label}\([[:space:]].*\)\?$/\1/p" | head -n1
@@ -193,21 +237,30 @@ main() {
   esac
 
   require_root
+  require_cmd awk
+  require_cmd b2sum
   require_cmd efibootmgr
   require_cmd grep
   require_cmd install
+  require_cmd findmnt
+  require_cmd limine
   require_cmd lsblk
   require_cmd mktemp
+  require_cmd mount
   require_cmd perl
   require_cmd readlink
+  require_cmd sbctl
+  require_cmd umount
 
   case "$role" in
     personal)
+      repair_limine_for_esp_guid "$EXTERNAL_ESP_GUID"
       ensure_uefi_entry 'Work OS' "$EXTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
       keep_limine_first
       ;;
     work)
       set_limine_default SKIP_UEFI yes
+      repair_limine_for_esp_guid "$INTERNAL_ESP_GUID"
       ensure_uefi_entry 'Personal OS' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
       ;;
   esac

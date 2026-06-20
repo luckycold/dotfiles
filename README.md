@@ -272,7 +272,7 @@ init-env-secrets --all
 sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
 ```
 
-The personal role keeps the internal Limine install as the firmware default, creates a persistent `Work OS` UEFI entry when the external ESP is present, and adds a `Work OS (external drive)` Limine menu entry that hands off to that firmware entry. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
+The personal role keeps the internal Limine install as the firmware default, creates a persistent `Work OS` UEFI entry when the external ESP is present, and adds a `Work OS (external drive)` Limine menu entry that hands off to that firmware entry. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. When the peer ESP is visible, either role also re-enrolls the peer `limine.conf` checksum into that peer Limine binary and signs the main/fallback Limine loaders, preventing Secure Boot config-checksum panics after menu changes. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
 
 On Work OS, verify the user services that should stay enabled after stowing `common`:
 
