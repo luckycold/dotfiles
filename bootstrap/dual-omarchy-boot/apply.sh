@@ -62,12 +62,11 @@ remove_uefi_entries_by_label() {
 ensure_uefi_entry() {
   local label=$1 guid=$2 efi_path=$3 part disk partnum loader_path
 
-  # Always remove any existing entries with this label first.
-  # This ensures we don't accumulate stale "Work OS" / "Personal OS" entries
-  # when the drive is plugged/unplugged or after firmware changes.
-  remove_uefi_entries_by_label "$label"
-
   part=$(part_device_for_guid "$guid") || return 0
+
+  # Only remove/recreate entries once the target partition is visible. This
+  # avoids deleting a usable removable-drive entry during an unplugged run.
+  remove_uefi_entries_by_label "$label"
 
   disk="/dev/$(lsblk -no PKNAME "$part")"
   partnum=$(lsblk -no PARTN "$part")
