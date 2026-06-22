@@ -184,7 +184,7 @@ perl -0pe 's{\n/(?:Work OS \(external drive\)|Personal OS \(internal drive\))\n.
 
 {
   printf '\n/%s\n' "\$title"
-  printf 'comment: Boots peer Omarchy install via persistent UEFI entry\n'
+  printf 'comment: Boots peer Omarchy install by ESP GUID\n'
   printf 'protocol: %s\n' "\$protocol"
   if [[ "\$protocol" == 'efi_boot_entry' ]]; then
     printf 'entry: %s\n' "\$value"
@@ -222,13 +222,13 @@ main() {
   case "$role" in
     personal)
       title='Work OS (external drive)'
-      protocol='efi_boot_entry'
-      value='Work OS'
+      protocol='efi'
+      value="guid(${EXTERNAL_ESP_GUID}):${LIMINE_EFI_PATH}"
       ;;
     work)
       title='Personal OS (internal drive)'
-      protocol='efi_boot_entry'
-      value='Personal OS'
+      protocol='efi'
+      value="guid(${INTERNAL_ESP_GUID}):${LIMINE_EFI_PATH}"
       ;;
     *)
       usage >&2
