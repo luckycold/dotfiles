@@ -199,6 +199,27 @@ EOF
   chmod 0755 "$hook"
 }
 
+install_fallback_sync_hook() {
+  local hook=/etc/boot/hooks/post.d/91-limine-sync-fallback
+
+  install -d -m 0755 /etc/boot/hooks/post.d
+
+
+  cat >"$hook" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+esp=/boot
+main="$esp/EFI/limine/limine_x64.efi"
+fallback="$esp/EFI/BOOT/BOOTX64.EFI"
+
+[[ -f "$main" ]] || exit 0
+install -D -m 0644 "$main" "$fallback"
+EOF
+
+  chmod 0755 "$hook"
+}
+
 main() {
   local role=
   while [[ $# -gt 0 ]]; do
@@ -252,20 +273,24 @@ main() {
   require_cmd sbctl
   require_cmd umount
 
+  set_limine_default FIND_BOOTLOADERS no
+
   case "$role" in
     personal)
       repair_limine_for_esp_guid "$EXTERNAL_ESP_GUID"
-      ensure_uefi_entry 'Work OS' "$EXTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
+      remove_uefi_entries_by_label 'Work OS'
+      ensure_uefi_entry 'Limine' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
       keep_limine_first
       ;;
     work)
       set_limine_default SKIP_UEFI yes
       repair_limine_for_esp_guid "$INTERNAL_ESP_GUID"
-      ensure_uefi_entry 'Personal OS' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
+      remove_uefi_entries_by_label 'Personal OS'
       ;;
   esac
 
   install_peer_hook "$title" "$protocol" "$value"
+  install_fallback_sync_hook
 
   # Always ensure the local Limine menu has the peer entry and is enrolled.
   /etc/boot/hooks/post.d/88-omarchy-peer-os
@@ -274,27 +299,21 @@ main() {
     limine-enroll-config
   fi
 
+  /etc/boot/hooks/post.d/91-limine-sync-fallback
+
   # Defensive verification after ensure step.
   if [[ "$role" == "personal" ]]; then
     if part_device_for_guid "$EXTERNAL_ESP_GUID" >/dev/null 2>&1; then
-      if [[ -n $(entry_id_for_label 'Work OS') ]]; then
-        echo "Verified: 'Work OS' UEFI entry exists and drive is present."
-      else
-        echo "Warning: External drive detected but 'Work OS' UEFI entry is missing after ensure."
-      fi
+      echo "Verified: external Work OS ESP is visible for GUID chainload."
     else
       echo "Note: External drive (PARTUUID $EXTERNAL_ESP_GUID) not currently visible."
-      echo "      'Work OS' entry will be created next time the script runs with the drive plugged in."
+      echo "      Work OS menu entry will remain present but will only boot when the drive is visible."
     fi
   fi
 
   if [[ "$role" == "work" ]]; then
     if part_device_for_guid "$INTERNAL_ESP_GUID" >/dev/null 2>&1; then
-      if [[ -n $(entry_id_for_label 'Personal OS') ]]; then
-        echo "Verified: 'Personal OS' UEFI entry exists and internal drive is visible."
-      else
-        echo "Warning: 'Personal OS' UEFI entry is missing."
-      fi
+      echo "Verified: internal Personal OS ESP is visible for GUID chainload."
     fi
   fi
 
