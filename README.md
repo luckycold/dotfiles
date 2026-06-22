@@ -157,7 +157,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
+Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
 
 ## Shell tooling
 
