@@ -20,13 +20,19 @@ sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 ```
 ##### Fedora
 ```bash
-sudo dnf install stow git gh neovim ghostty bitwarden bw lsof oathtool solaar opencode
+sudo dnf install stow git gh neovim ghostty bitwarden-cli lsof oathtool solaar
 ```
 
 ##### Universal Extras
 ```bash
 #Proton Pass CLI
 curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
+#OpenCode
+curl -fsSL https://opencode.ai/install | bash
+```
+
+##### Universal Flatpaks
+```bash
 flatpak install io.github.pwr_solaar.solaar
 ```
 
