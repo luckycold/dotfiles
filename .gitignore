@@ -10,7 +10,9 @@ common/.config/systemd/user/9router.service
 common/.local/bin
 !common/.local/bin/
 common/.local/bin/*
+!common/.local/bin/omarchy
 !common/.local/bin/opencode-brokkr-mcp
+!common/.local/bin/omarchy-setup-security-fingerprint
 !common/.local/bin/proton-pass-cli-autologin-monitor
 common/.local/share/nvim
 common/.local/share

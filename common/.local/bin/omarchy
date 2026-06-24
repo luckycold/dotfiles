@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+if [[ ${1:-} == "setup" && ${2:-} == "security" && ${3:-} == "fingerprint" ]]; then
+  shift 3
+  exec omarchy-setup-security-fingerprint "$@"
+fi
+
+exec "$HOME/.local/share/omarchy/bin/omarchy" "$@"
