@@ -116,3 +116,4 @@ common/.cursor/agent-cli-state.json
 common/.config/cliamp/cliamp.log
 common/.config/cliamp/cliamp.sock.pid
 /common/.config/environment.d/mem0.conf
+/common/.codex/config.toml
