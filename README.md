@@ -88,9 +88,13 @@ then use GNU stow to create symlinks
 ```bash
 stow -t ~ common
 stow -t ~ personal
+```
+```
 # or, on the external Work OS install:
 stow -t ~ common
 stow -t ~ work
+```
+```
 # For systems with my exclusive use
 # sudo stow -t / root
 ```
