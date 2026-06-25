@@ -226,7 +226,7 @@ update-dotfiles() {
 # Internal function to switch stow profiles
 _skip_dotfiles_profile() {
   local dir="$1"
-  [[ "$dir" == "common" || "$dir" == "root" || "$dir" == "bootstrap" ]]
+  [[ "$dir" == .* || "$dir" == "common" || "$dir" == "bootstrap" || "$dir" == "root" || "$dir" == *-root ]]
 }
 
 _switch_dotfiles_profile() {
@@ -240,6 +240,12 @@ _switch_dotfiles_profile() {
 
   echo "Switching profile in $dotfiles_dir..."
   pushd "$dotfiles_dir" >/dev/null || return 1
+
+  if [[ -n "$target_profile" && "$target_profile" != "none" && "$target_profile" != "common" ]] && _skip_dotfiles_profile "$target_profile"; then
+    echo "Error: '$target_profile' is not a home profile. Root-target packages must be applied explicitly with sudo stow -t /." >&2
+    popd >/dev/null
+    return 1
+  fi
 
   # Unstow all non-common profiles (any directory that isn't common or hidden)
   echo "(Unstowing existing profiles...)"

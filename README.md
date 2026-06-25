@@ -141,6 +141,8 @@ The helper prompts for the vault, agent token name, and expiration, then stores 
 
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
 
+`stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root`, `htpc-root`, and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
+
 After switching profiles, refresh generated secret-backed configs:
 
 ```bash
@@ -152,7 +154,7 @@ init-env-secrets --all
 The repo is organised as Stow packages plus a few things Stow cannot manage cleanly:
 
 - `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
-- `personal/`, `work/`, and `htpc/` - mutually exclusive machine/persona profiles. Stow exactly one alongside `common`.
+- `personal/`, `work/`, and `htpc/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
 - `htpc-root/` - HTPC-only system files managed with `sudo stow -t / htpc-root`.
