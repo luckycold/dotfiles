@@ -89,6 +89,10 @@ lookup_keyring_secret() {
     return 1
 }
 
+extract_pat() {
+    printf '%s' "$1" | tr -d '[:space:]' | grep -Eo 'pst_[A-Za-z0-9_-]+::[A-Za-z0-9_-]+' | head -n 1
+}
+
 # Check for required dependencies
 for cmd in pass-cli secret-tool; do
     if ! command -v "$cmd" &>/dev/null; then
@@ -120,7 +124,7 @@ fi
 echo "🔄 Session expired or missing. Logging in..."
 
 # 2. Fetch personal access token from keyring
-PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(lookup_keyring_secret pat)"
+PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(extract_pat "$(lookup_keyring_secret pat)")"
 
 if [ -z "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" ]; then
     msg="PAT missing in keyring. Run: secret-tool store --label='Proton Pass Personal Access Token' service proton-pass type pat"
@@ -137,7 +141,7 @@ printf '%s\n' "$LOGIN_OUTPUT"
 
 if [ "$LOGIN_STATUS" -ne 0 ] && is_local_db_error "$LOGIN_OUTPUT"; then
     reset_local_session
-    PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(lookup_keyring_secret pat)"
+    PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(extract_pat "$(lookup_keyring_secret pat)")"
     LOGIN_OUTPUT="$(pass-cli login --pat "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" 2>&1)"
     LOGIN_STATUS=$?
     unset PROTON_PASS_PERSONAL_ACCESS_TOKEN

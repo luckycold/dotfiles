@@ -47,7 +47,7 @@ notify_secret_action() {
 
 notify_interactive_auth_action() {
   local title="Proton Pass Login Rejected"
-  local msg="PAT login failed. Store a new Proton Pass personal access token."
+  local msg="PAT login failed. Click to refresh Proton Pass auth in the web UI."
   echo "$title: $msg"
 
   if ! command -v notify-send >/dev/null 2>&1; then
@@ -57,10 +57,29 @@ notify_interactive_auth_action() {
 
   {
     local action
-    action="$(notify-send --urgency=critical --app-name="Proton Pass" --action="pat=Store PAT" --action="web=Run web login" --wait "$title" "$msg" 2>/dev/null)"
+    action="$(notify-send --urgency=critical --app-name="Proton Pass" --action="default=Run web login" --action="pat=Store PAT" --wait "$title" "$msg" 2>/dev/null)"
     case "$action" in
+    default) [ -x "$WEB_LOGIN_HELPER" ] && "$WEB_LOGIN_HELPER" >/dev/null 2>&1 & ;;
     pat) [ -x "$SECRET_UPDATE_HELPER" ] && "$SECRET_UPDATE_HELPER" pat >/dev/null 2>&1 & ;;
-    web) [ -x "$WEB_LOGIN_HELPER" ] && "$WEB_LOGIN_HELPER" >/dev/null 2>&1 & ;;
+    esac
+  } &
+}
+
+notify_web_login_action() {
+  local title="$1" msg="$2"
+  echo "$title: $msg"
+
+  if [ ! -x "$WEB_LOGIN_HELPER" ] || ! command -v notify-send >/dev/null 2>&1; then
+    notify "$title" "$msg" critical
+    return
+  fi
+
+  {
+    local action
+    action="$(notify-send --urgency=critical --app-name="Proton Pass" --action="default=Run web login" --action="pat=Store PAT" --wait "$title" "$msg" 2>/dev/null)"
+    case "$action" in
+    default) "$WEB_LOGIN_HELPER" >/dev/null 2>&1 & ;;
+    pat) [ -x "$SECRET_UPDATE_HELPER" ] && "$SECRET_UPDATE_HELPER" pat >/dev/null 2>&1 & ;;
     esac
   } &
 }
@@ -226,7 +245,7 @@ do_login() {
   fi
 
   if [ "$rc" -eq 5 ]; then
-    notify_secret_action pat "Proton Pass PAT Required" "Click to store the Proton Pass personal access token." "Store PAT"
+    notify_web_login_action "Proton Pass Login Required" "Click to refresh Proton Pass auth in the web UI."
     return 5
   fi
 
