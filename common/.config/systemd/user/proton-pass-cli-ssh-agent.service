@@ -11,6 +11,8 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStartPre=/usr/bin/mkdir -p %h/.ssh
 ExecStartPre=/usr/bin/chmod 700 %h/.ssh
 ExecStartPre=/usr/bin/rm -f %h/.ssh/proton-pass-agent.sock
-ExecStart=%h/.local/bin/pass-cli ssh-agent start --socket-path %h/.ssh/proton-pass-agent.sock --vault-name Main
+ExecStart=%h/.local/bin/pass-cli ssh-agent start --socket-path %h/.ssh/proton-pass-agent.sock
+ExecStartPost=/usr/bin/systemctl --user set-environment SSH_AUTH_SOCK=%h/.ssh/proton-pass-agent.sock
+ExecStartPost=/usr/bin/env SSH_AUTH_SOCK=%h/.ssh/proton-pass-agent.sock /usr/bin/dbus-update-activation-environment SSH_AUTH_SOCK
 Restart=on-failure
 RestartSec=10

@@ -43,7 +43,7 @@ agent_output="$(pass-cli agent create --vault "$vault_name" --expiration "$expir
   exit 1
 }
 
-agent_token="$(printf "%s\n" "$agent_output" | grep -Eo "pst_[^[:space:]]+::[^[:space:]]+" | head -n 1)"
+agent_token="$(printf "%s\n" "$agent_output" | grep -Eo "pst_[A-Za-z0-9_-]+::[A-Za-z0-9_-]+" | head -n 1)"
 if [ -z "$agent_token" ]; then
   echo "Created the agent token, but could not parse the token value from pass-cli output."
   echo "The token was not printed to avoid leaking it. Store it manually, then restart proton-pass-cli-autologin.service."
@@ -63,7 +63,7 @@ systemctl --user restart proton-pass-cli-ssh-agent.service
 echo
 echo "Verifying SSH agent identities."
 for i in $(seq 1 60); do
-  if SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock" ssh-add -L; then
+  if [ -S "$HOME/.ssh/proton-pass-agent.sock" ] && SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock" ssh-add -L; then
     break
   fi
 
