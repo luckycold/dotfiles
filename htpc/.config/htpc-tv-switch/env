@@ -22,4 +22,6 @@ STEAM_CONTROLLER_PATTERN="Steam Controller|Valve Software Steam Controller|Valve
 
 # Delay after input hotplug before checking devices, giving udev time to settle.
 STEAM_CONTROLLER_TV_SWITCH_DEBOUNCE="3"
+STEAM_CONTROLLER_TV_SWITCH_RESUME_DELAY="0"
+STEAM_CONTROLLER_TV_SWITCH_RESUME_CEC_WAKE_DELAY="1"
 STEAM_CONTROLLER_TV_SWITCH_COOLDOWN="10"

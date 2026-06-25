@@ -1,0 +1,8 @@
+# Allow the Steam Controller wireless receiver to wake the HTPC from suspend.
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1304", ATTR{power/control}="on", ATTR{power/wakeup}="enabled"
+
+# Do not wake on the whole USB root hub; that causes immediate resume from
+# unrelated bus activity while the Steam receiver is idle/listening.
+ACTION=="add|change", SUBSYSTEM=="usb", KERNEL=="usb[0-9]*", ATTR{serial}=="0000:10:00.0", ATTR{power/wakeup}="disabled"
+
+# vim: ft=udevrules

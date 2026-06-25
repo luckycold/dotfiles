@@ -30,6 +30,14 @@ run_cec_ctl() {
   timeout "${HTPC_TV_CEC_TIMEOUT:-5}" cec-ctl "$@"
 }
 
+run_kscreen_doctor() {
+  if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    QT_QPA_PLATFORM=wayland kscreen-doctor "$@"
+  else
+    kscreen-doctor "$@"
+  fi
+}
+
 load_local_config() {
   local config_file="${SWITCH_TO_TV_CONFIG:-$HOME/.config/htpc-tv-switch/env}"
 
@@ -79,7 +87,7 @@ list_hyprland_workspaces() {
 }
 
 detect_kscreen_tv_output() {
-  kscreen-doctor -j | jq -r '
+  run_kscreen_doctor -j | jq -r '
     def tv_like:
       ((.name // "") | test("HDMI|TV"; "i"))
       or ((.manufacturer // "") | test("TV|LG|Samsung|Sony|TCL|Hisense|Vizio"; "i"))
@@ -103,7 +111,7 @@ kscreen_mode_for_output() {
     return 0
   fi
 
-  kscreen-doctor -j | jq -r --arg output "$output" '
+  run_kscreen_doctor -j | jq -r --arg output "$output" '
     .outputs[]
     | select(.name == $output)
     | ((.preferredModes // []) | first) // .currentModeId // empty
@@ -194,11 +202,11 @@ switch_kscreen_to_tv() {
   require_command kscreen-doctor
   require_command jq
 
-  if ! kscreen-doctor -j >/dev/null 2>&1; then
+  if ! run_kscreen_doctor -j >/dev/null 2>&1; then
     die "KScreen is not available in this session"
   fi
 
-  if ! kscreen-doctor -j | jq -e --arg output "$target_output" '.outputs[] | select(.name == $output and .connected == true)' >/dev/null; then
+  if ! run_kscreen_doctor -j | jq -e --arg output "$target_output" '.outputs[] | select(.name == $output and .connected == true)' >/dev/null; then
     die "output is not connected: $target_output"
   fi
 
@@ -210,7 +218,7 @@ switch_kscreen_to_tv() {
   args+=("output.$target_output.position.0,0")
   args+=("output.$target_output.scale.$target_scale")
 
-  kscreen-doctor "${args[@]}"
+  run_kscreen_doctor "${args[@]}"
 }
 
 switch_hyprland_to_tv() {
@@ -253,7 +261,7 @@ load_local_config
 
 target_output="${1:-${SWITCH_TO_TV_OUTPUT:-}}"
 if [[ -z "$target_output" ]]; then
-  if command -v kscreen-doctor >/dev/null 2>&1 && kscreen-doctor -j >/dev/null 2>&1; then
+  if command -v kscreen-doctor >/dev/null 2>&1 && run_kscreen_doctor -j >/dev/null 2>&1; then
     target_output="$(detect_kscreen_tv_output)"
   elif command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
     target_output="$(detect_hyprland_tv_output)"
@@ -267,7 +275,7 @@ target_scale="${SWITCH_TO_TV_SCALE:-1}"
 
 switch_tv_input_with_cec "$target_output"
 
-if command -v kscreen-doctor >/dev/null 2>&1 && kscreen-doctor -j >/dev/null 2>&1; then
+if command -v kscreen-doctor >/dev/null 2>&1 && run_kscreen_doctor -j >/dev/null 2>&1; then
   switch_kscreen_to_tv "$target_output" "$target_mode" "$target_scale"
 elif command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
   switch_hyprland_to_tv "$target_output" "$target_mode" "$target_scale"
