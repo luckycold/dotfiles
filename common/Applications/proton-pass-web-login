@@ -3,7 +3,77 @@
 PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 export PATH
 
-run_web_login='pass-cli logout --force >/dev/null 2>&1 || true; pass-cli login; pass-cli test && systemctl --user restart proton-pass-cli-autologin.service; read -rp "Press Enter to close..."'
+run_web_login='set -u
+
+prompt_default() {
+  local prompt="$1" default_value="$2" value
+  read -rp "$prompt [$default_value]: " value
+  printf "%s" "${value:-$default_value}"
+}
+
+echo "This will refresh Proton Pass auth for the systemd autologin and SSH signing agent."
+echo "It will create a Proton Pass agent token with access to the vault containing your SSH key."
+echo
+
+vault_name="$(prompt_default "Vault to grant to the agent token" "Main")"
+agent_name="$(prompt_default "Agent token name" "$(hostname)-systemd")"
+expiration="$(prompt_default "Agent token expiration (1d, 1w, 1m, 3m, 6m, 1y)" "1y")"
+
+echo
+echo "Logging out of the current Proton Pass CLI session, then launching interactive login."
+pass-cli logout --force >/dev/null 2>&1 || true
+pass-cli login || {
+  echo "Interactive Proton Pass login failed."
+  read -rp "Press Enter to close..."
+  exit 1
+}
+
+pass-cli test >/dev/null 2>&1 || {
+  echo "Proton Pass login did not verify successfully."
+  read -rp "Press Enter to close..."
+  exit 1
+}
+
+echo
+echo "Creating agent token $agent_name with viewer access to vault $vault_name."
+agent_output="$(pass-cli agent create --vault "$vault_name" --expiration "$expiration" "$agent_name" 2>&1)" || {
+  echo "Failed to create Proton Pass agent token."
+  printf "%s\n" "$agent_output"
+  read -rp "Press Enter to close..."
+  exit 1
+}
+
+agent_token="$(printf "%s\n" "$agent_output" | grep -Eo "pst_[^[:space:]]+::[^[:space:]]+" | head -n 1)"
+if [ -z "$agent_token" ]; then
+  echo "Created the agent token, but could not parse the token value from pass-cli output."
+  echo "The token was not printed to avoid leaking it. Store it manually, then restart proton-pass-cli-autologin.service."
+  read -rp "Press Enter to close..."
+  exit 1
+fi
+
+echo "Storing the new agent token in the local keyring."
+secret-tool clear service proton-pass type pat >/dev/null 2>&1 || true
+printf "%s" "$agent_token" | secret-tool store --label="Proton Pass Personal Access Token" service proton-pass type pat
+unset agent_token agent_output
+
+echo "Restarting Proton Pass autologin and SSH agent services."
+systemctl --user restart proton-pass-cli-autologin.service
+systemctl --user restart proton-pass-cli-ssh-agent.service
+
+echo
+echo "Verifying SSH agent identities."
+for i in $(seq 1 60); do
+  if SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock" ssh-add -L; then
+    break
+  fi
+
+  if [ "$i" -eq 60 ]; then
+    echo "SSH agent did not become ready within 60 seconds. Check proton-pass-cli-ssh-agent.service logs."
+  else
+    sleep 1
+  fi
+done
+read -rp "Press Enter to close..."'
 
 if command -v xdg-terminal-exec >/dev/null 2>&1; then
   xdg-terminal-exec bash -lc "$run_web_login"

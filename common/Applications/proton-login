@@ -50,13 +50,22 @@ verify_login_ready() {
     local i
 
     for i in $(seq 1 "$LOGIN_VERIFY_WAIT_SECONDS"); do
-        if pass-cli test >/dev/null 2>&1; then
+        if pass-cli test >/dev/null 2>&1 && has_pass_access; then
             return 0
         fi
         sleep 1
     done
 
     return 1
+}
+
+has_pass_access() {
+    local vaults shares
+
+    vaults="$(pass-cli vault list --output json 2>/dev/null | tr -d '[:space:]')" || return 1
+    shares="$(pass-cli share list --output json 2>/dev/null | tr -d '[:space:]')" || return 1
+
+    [ "$vaults" != '{"vaults":[]}' ] || [ "$shares" != '{"shares":[]}' ]
 }
 
 lookup_keyring_secret() {
@@ -94,9 +103,14 @@ done
 PASS_TEST_OUTPUT="$(pass-cli test 2>&1)"
 PASS_TEST_STATUS=$?
 
-if [ "$PASS_TEST_STATUS" -eq 0 ]; then
+if [ "$PASS_TEST_STATUS" -eq 0 ] && has_pass_access; then
     echo "✅ Already logged into Proton Pass."
     exit 0
+fi
+
+if [ "$PASS_TEST_STATUS" -eq 0 ]; then
+    echo "⚠️ Proton Pass session is authenticated but has no vault/share access. Re-authentication required."
+    exit 5
 fi
 
 if is_local_db_error "$PASS_TEST_OUTPUT"; then
