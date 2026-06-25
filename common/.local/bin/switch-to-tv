@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: switch-to-tv [OUTPUT]
+
+Switch the current desktop session to a single TV output.
+
+OUTPUT can be a display output name, such as DP-1 or HDMI-A-1. If omitted, the
+script uses SWITCH_TO_TV_OUTPUT or auto-detects an active TV-like monitor.
+
+Optional environment:
+  SWITCH_TO_TV_MODE   Display mode, default: preferred
+  SWITCH_TO_TV_SCALE  Display scale, default: 1
+  HTPC_TV_CEC_ENABLE  Send HDMI-CEC input switch commands when set to 1
+USAGE
+}
+
+die() {
+  printf 'switch-to-tv: %s\n' "$*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+run_cec_ctl() {
+  timeout "${HTPC_TV_CEC_TIMEOUT:-5}" cec-ctl "$@"
+}
+
+load_local_config() {
+  local config_file="${SWITCH_TO_TV_CONFIG:-$HOME/.config/htpc-tv-switch/env}"
+
+  if [[ -r "$config_file" ]]; then
+    # shellcheck source=/dev/null
+    source "$config_file"
+  fi
+}
+
+detect_hyprland_tv_output() {
+  hyprctl monitors all | awk '
+    function flush() {
+      if (name == "") return
+      if (!disabled && (name ~ /(HDMI|TV)/ || desc ~ /(TV|Television|LG|Samsung|SONY|Sony|TCL|Hisense|VIZIO|Vizio)/)) {
+        print name
+      }
+    }
+
+    /^Monitor / {
+      flush()
+      name = $2
+      desc = ""
+      disabled = 0
+      next
+    }
+
+    /^[[:space:]]*description:/ {
+      desc = substr($0, index($0, ":") + 2)
+      next
+    }
+
+    /^[[:space:]]*disabled:[[:space:]]*true/ {
+      disabled = 1
+      next
+    }
+
+    END { flush() }
+  ' | head -n 1
+}
+
+list_hyprland_active_outputs() {
+  hyprctl monitors | awk '/^Monitor / { print $2 }'
+}
+
+list_hyprland_workspaces() {
+  hyprctl workspaces | awk '/^workspace ID / { print $3 }'
+}
+
+detect_kscreen_tv_output() {
+  kscreen-doctor -j | jq -r '
+    def tv_like:
+      ((.name // "") | test("HDMI|TV"; "i"))
+      or ((.manufacturer // "") | test("TV|LG|Samsung|Sony|TCL|Hisense|Vizio"; "i"))
+      or ((.model // "") | test("TV|Television|LG|Samsung|Sony|TCL|Hisense|Vizio"; "i"));
+
+    ([.outputs[] | select(.connected == true and tv_like) | .name] | first)
+    // (if ([.outputs[] | select(.connected == true)] | length) == 1 then
+          ([.outputs[] | select(.connected == true) | .name] | first)
+        else
+          empty
+        end)
+  '
+}
+
+kscreen_mode_for_output() {
+  local output="$1"
+  local requested_mode="$2"
+
+  if [[ "$requested_mode" != "preferred" ]]; then
+    printf '%s\n' "$requested_mode"
+    return 0
+  fi
+
+  kscreen-doctor -j | jq -r --arg output "$output" '
+    .outputs[]
+    | select(.name == $output)
+    | ((.preferredModes // []) | first) // .currentModeId // empty
+  '
+}
+
+edid_path_for_output() {
+  local output="$1"
+  local edid_path
+
+  for edid_path in /sys/class/drm/*-"$output"/edid; do
+    if [[ -r "$edid_path" ]]; then
+      printf '%s\n' "$edid_path"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+switch_tv_input_with_cec() {
+  local target_output="$1"
+  local cec_device="${HTPC_TV_CEC_DEVICE:-/dev/cec0}"
+  local osd_name="${HTPC_TV_CEC_OSD_NAME:-HTPC}"
+  local logical_address="${HTPC_TV_CEC_LOGICAL_ADDRESS:-4}"
+  local edid_path
+  local physical_address
+
+  [[ "${HTPC_TV_CEC_ENABLE:-0}" == "1" ]] || return 0
+
+  require_command cec-ctl
+  require_command edid-decode
+
+  if [[ ! -e "$cec_device" ]]; then
+    die "CEC is enabled but device does not exist: $cec_device"
+  fi
+
+  edid_path="${HTPC_TV_CEC_EDID:-}"
+  if [[ -z "$edid_path" ]]; then
+    edid_path="$(edid_path_for_output "$target_output")" || die "could not find EDID for output: $target_output"
+  fi
+
+  physical_address="$(edid-decode "$edid_path" 2>/dev/null | awk -F': ' '/Source physical address:/ { print $2; exit }')"
+  [[ -n "$physical_address" ]] || die "could not read CEC physical address from EDID: $edid_path"
+
+  run_cec_ctl \
+    --device "$cec_device" \
+    --playback \
+    --from "$logical_address" \
+    --osd-name "$osd_name" \
+    --phys-addr-from-edid "$edid_path" \
+    --to 0 \
+    --user-control-pressed ui-cmd=power-on-function \
+    --user-control-released
+
+  sleep "${HTPC_TV_CEC_WAKE_DELAY:-1}"
+
+  run_cec_ctl \
+    --device "$cec_device" \
+    --playback \
+    --from "$logical_address" \
+    --osd-name "$osd_name" \
+    --phys-addr-from-edid "$edid_path" \
+    --to 0 \
+    --active-source "phys-addr=$physical_address"
+
+  run_cec_ctl \
+    --device "$cec_device" \
+    --playback \
+    --from "$logical_address" \
+    --osd-name "$osd_name" \
+    --phys-addr-from-edid "$edid_path" \
+    --to 0 \
+    --set-stream-path "phys-addr=$physical_address"
+
+  # Some TVs drop HPD or stop acknowledging directed CEC packets while waking.
+  # The broadcast source-selection messages above are the important part.
+}
+
+switch_kscreen_to_tv() {
+  local target_output="$1"
+  local target_mode="$2"
+  local target_scale="$3"
+  local resolved_mode
+  local args=()
+  local output
+
+  require_command kscreen-doctor
+  require_command jq
+
+  if ! kscreen-doctor -j >/dev/null 2>&1; then
+    die "KScreen is not available in this session"
+  fi
+
+  if ! kscreen-doctor -j | jq -e --arg output "$target_output" '.outputs[] | select(.name == $output and .connected == true)' >/dev/null; then
+    die "output is not connected: $target_output"
+  fi
+
+  resolved_mode="$(kscreen_mode_for_output "$target_output" "$target_mode")"
+  [[ -n "$resolved_mode" ]] || die "could not resolve mode for output: $target_output"
+
+  args+=("output.$target_output.enable")
+  args+=("output.$target_output.mode.$resolved_mode")
+  args+=("output.$target_output.position.0,0")
+  args+=("output.$target_output.scale.$target_scale")
+
+  kscreen-doctor "${args[@]}"
+}
+
+switch_hyprland_to_tv() {
+  local target_output="$1"
+  local target_mode="$2"
+  local target_scale="$3"
+  local active_outputs=()
+  local workspaces=()
+  local output
+  local workspace
+
+  require_command hyprctl
+
+  if ! hyprctl monitors >/dev/null 2>&1; then
+    die "Hyprland does not appear to be running"
+  fi
+
+  mapfile -t active_outputs < <(list_hyprland_active_outputs)
+  mapfile -t workspaces < <(list_hyprland_workspaces)
+
+  hyprctl keyword monitor "$target_output,$target_mode,0x0,$target_scale"
+
+  for workspace in "${workspaces[@]}"; do
+    hyprctl dispatch moveworkspacetomonitor "$workspace $target_output" >/dev/null
+  done
+
+  for output in "${active_outputs[@]}"; do
+    if [[ "$output" != "$target_output" ]]; then
+      hyprctl keyword monitor "$output,disable"
+    fi
+  done
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+load_local_config
+
+target_output="${1:-${SWITCH_TO_TV_OUTPUT:-}}"
+if [[ -z "$target_output" ]]; then
+  if command -v kscreen-doctor >/dev/null 2>&1 && kscreen-doctor -j >/dev/null 2>&1; then
+    target_output="$(detect_kscreen_tv_output)"
+  elif command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
+    target_output="$(detect_hyprland_tv_output)"
+  fi
+fi
+
+[[ -n "$target_output" ]] || die "could not detect a TV output; pass one explicitly"
+
+target_mode="${SWITCH_TO_TV_MODE:-preferred}"
+target_scale="${SWITCH_TO_TV_SCALE:-1}"
+
+switch_tv_input_with_cec "$target_output"
+
+if command -v kscreen-doctor >/dev/null 2>&1 && kscreen-doctor -j >/dev/null 2>&1; then
+  switch_kscreen_to_tv "$target_output" "$target_mode" "$target_scale"
+elif command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
+  switch_hyprland_to_tv "$target_output" "$target_mode" "$target_scale"
+else
+  die "no supported display controller found (expected kscreen-doctor or hyprctl)"
+fi

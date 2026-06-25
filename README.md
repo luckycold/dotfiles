@@ -95,6 +95,14 @@ stow -t ~ common
 stow -t ~ work
 ```
 ```
+# or, on the Nobara/Fedora HTPC:
+stow -t ~ common
+stow -t ~ htpc
+sudo stow -t / htpc-root
+systemctl --user daemon-reload
+systemctl --user enable --now steam-controller-tv-switch.service
+```
+```
 # For systems with my exclusive use
 # sudo stow -t / root
 ```
@@ -145,9 +153,10 @@ init-env-secrets --all
 The repo is organised as Stow packages plus a few things Stow cannot manage cleanly:
 
 - `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
-- `personal/` and `work/` - mutually exclusive persona profiles. Stow exactly one alongside `common`.
+- `personal/`, `work/`, and `htpc/` - mutually exclusive machine/persona profiles. Stow exactly one alongside `common`.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
+- `htpc-root/` - HTPC-only system files managed with `sudo stow -t / htpc-root`.
 - `bootstrap/` - host-specific setup that must be *copied* into place (not symlinked) and is applied by `apply.sh` scripts. See the Framework Power section below.
 - `.github/` and `.forgejo/` - CI for the GitHub mirror and the Codeberg/Forgejo canonical repo (see Automation).
 

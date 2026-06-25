@@ -1,0 +1,4 @@
+# Allow the active local user session to send HDMI-CEC commands to the TV.
+SUBSYSTEM=="cec", KERNEL=="cec[0-9]*", TAG+="uaccess"
+
+# vim: ft=udevrules

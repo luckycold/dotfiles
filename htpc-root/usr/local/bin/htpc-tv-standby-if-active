@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cec_device="${HTPC_TV_CEC_DEVICE:-/dev/cec0}"
+cec_output="${HTPC_TV_CEC_OUTPUT:-DP-3}"
+cec_timeout="${HTPC_TV_CEC_TIMEOUT:-5}"
+cec_logical_address="${HTPC_TV_CEC_LOGICAL_ADDRESS:-4}"
+edid_path="${HTPC_TV_CEC_EDID:-}"
+
+log() {
+  printf 'htpc-tv-standby-if-active: %s\n' "$*"
+}
+
+die() {
+  log "$*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+edid_path_for_output() {
+  local output="$1"
+  local path
+
+  for path in /sys/class/drm/*-"$output"/edid; do
+    if [[ -r "$path" ]]; then
+      printf '%s\n' "$path"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+run_cec_ctl() {
+  timeout "$cec_timeout" cec-ctl --device "$cec_device" "$@"
+}
+
+require_command cec-ctl
+require_command edid-decode
+require_command timeout
+
+[[ -e "$cec_device" ]] || die "CEC device does not exist: $cec_device"
+
+if [[ -z "$edid_path" ]]; then
+  edid_path="$(edid_path_for_output "$cec_output")" || die "could not find EDID for output: $cec_output"
+fi
+
+physical_address="$(edid-decode "$edid_path" 2>/dev/null | awk -F': ' '/Source physical address:/ { print $2; exit }')"
+[[ -n "$physical_address" ]] || die "could not read CEC physical address from EDID: $edid_path"
+
+active_source_output="$(run_cec_ctl \
+  --playback \
+  --from "$cec_logical_address" \
+  --osd-name HTPC \
+  --phys-addr-from-edid "$edid_path" \
+  --request-active-source \
+  --monitor-time 2 \
+  --monitor 2>&1 || true)"
+
+if ! grep -q "ACTIVE_SOURCE" <<<"$active_source_output" || ! grep -q "phys-addr: $physical_address" <<<"$active_source_output"; then
+  log "TV active source is not this HTPC ($physical_address); leaving TV on"
+  exit 0
+fi
+
+log "TV active source is this HTPC ($physical_address); sending standby"
+run_cec_ctl \
+  --playback \
+  --from "$cec_logical_address" \
+  --osd-name HTPC \
+  --phys-addr-from-edid "$edid_path" \
+  --to 0 \
+  --standby

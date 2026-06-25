@@ -1,0 +1,13 @@
+[Unit]
+Description=Put TV in standby before HTPC sleeps when HTPC is active input
+DefaultDependencies=no
+Before=sleep.target
+StopWhenUnneeded=yes
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/htpc-tv-standby-if-active
+TimeoutStartSec=10s
+
+[Install]
+WantedBy=sleep.target

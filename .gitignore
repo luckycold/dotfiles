@@ -14,6 +14,7 @@ common/.local/bin/*
 !common/.local/bin/opencode-brokkr-mcp
 !common/.local/bin/omarchy-setup-security-fingerprint
 !common/.local/bin/proton-pass-cli-autologin-monitor
+!common/.local/bin/switch-to-tv
 common/.local/share/nvim
 common/.local/share
 common/.local/state

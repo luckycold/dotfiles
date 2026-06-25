@@ -1,0 +1,15 @@
+[Unit]
+Description=Switch the HTPC to the TV when the Steam Controller connects
+Documentation=man:udevadm(8)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/htpc-tv-switch/env
+ExecStart=%h/.local/bin/steam-controller-tv-switch-monitor
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

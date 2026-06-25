@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+controller_pattern="${STEAM_CONTROLLER_PATTERN:-Steam Controller|Valve Software Steam Controller|Valve Steam Controller}"
+debounce_seconds="${STEAM_CONTROLLER_TV_SWITCH_DEBOUNCE:-3}"
+cooldown_seconds="${STEAM_CONTROLLER_TV_SWITCH_COOLDOWN:-10}"
+switch_to_tv_command="${SWITCH_TO_TV_COMMAND:-$HOME/.local/bin/switch-to-tv}"
+lock_file="${STEAM_CONTROLLER_TV_SWITCH_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.lock}"
+last_run_file="${STEAM_CONTROLLER_TV_SWITCH_LAST_RUN:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.last-run}"
+
+log() {
+  printf 'steam-controller-tv-switch-monitor: %s\n' "$*"
+}
+
+die() {
+  log "$*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+require_executable() {
+  [[ -x "$1" ]] || die "missing required executable: $1"
+}
+
+steam_controller_present() {
+  local name
+
+  for name_file in /sys/class/input/event*/device/name; do
+    [[ -r "$name_file" ]] || continue
+    name="$(<"$name_file")"
+
+    if [[ "$name" =~ $controller_pattern ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+switch_if_present() {
+  local last_run
+  local now
+
+  if steam_controller_present; then
+    now="$(date +%s)"
+    last_run="0"
+    [[ -r "$last_run_file" ]] && last_run="$(<"$last_run_file")"
+
+    if (( now - last_run < cooldown_seconds )); then
+      return 0
+    fi
+
+    log "Steam Controller detected; switching to TV"
+    printf '%s\n' "$now" >"$last_run_file"
+    flock -n "$lock_file" "$switch_to_tv_command"
+  fi
+}
+
+watch_input_events() {
+  udevadm monitor --udev --subsystem-match=input | while IFS= read -r line; do
+    case "$line" in
+      *add*|*bind*)
+        sleep "$debounce_seconds"
+        switch_if_present
+        ;;
+    esac
+  done
+}
+
+require_executable "$switch_to_tv_command"
+require_command udevadm
+
+switch_if_present
+log "watching input hotplug events"
+watch_input_events
