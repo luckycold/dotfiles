@@ -1,8 +1,6 @@
 [Unit]
 Description=Switch the HTPC to the TV when the Steam Controller connects
 Documentation=man:udevadm(8)
-After=graphical-session.target
-PartOf=graphical-session.target
 
 [Service]
 Type=simple

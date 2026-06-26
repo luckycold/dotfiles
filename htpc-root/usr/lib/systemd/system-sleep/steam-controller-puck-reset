@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ "${1:-}" == "post" ]] || exit 0
+
+for device in /sys/bus/usb/devices/*; do
+  [[ -r "$device/idVendor" && -r "$device/idProduct" && -w "$device/authorized" ]] || continue
+  [[ "$(<"$device/idVendor")" == "28de" && "$(<"$device/idProduct")" == "1304" ]] || continue
+
+  printf '0\n' >"$device/authorized"
+  sleep 1
+  printf '1\n' >"$device/authorized"
+done

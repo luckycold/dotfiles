@@ -40,10 +40,20 @@ run_kscreen_doctor() {
 
 load_local_config() {
   local config_file="${SWITCH_TO_TV_CONFIG:-$HOME/.config/htpc-tv-switch/env}"
+  local cec_wake_delay_override="${HTPC_TV_CEC_WAKE_DELAY-}"
+  local has_cec_wake_delay_override=0
+
+  if [[ -v HTPC_TV_CEC_WAKE_DELAY ]]; then
+    has_cec_wake_delay_override=1
+  fi
 
   if [[ -r "$config_file" ]]; then
     # shellcheck source=/dev/null
     source "$config_file"
+  fi
+
+  if (( has_cec_wake_delay_override )); then
+    HTPC_TV_CEC_WAKE_DELAY="$cec_wake_delay_override"
   fi
 }
 

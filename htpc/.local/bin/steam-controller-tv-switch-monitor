@@ -57,6 +57,7 @@ run_switch_command() {
 switch_if_present() {
   local cec_wake_delay="${1:-}"
   local force="${2:-0}"
+  local trigger="${3:-event}"
   local last_run
   local now
 
@@ -69,7 +70,7 @@ switch_if_present() {
       return 0
     fi
 
-    log "Steam Controller detected; switching to TV"
+    log "Steam Controller detected via $trigger; switching to TV"
     printf '%s\n' "$now" >"$last_run_file"
     run_switch_command "$cec_wake_delay"
   fi
@@ -80,7 +81,7 @@ watch_input_events() {
     case "$line" in
       *add*|*bind*)
         sleep "$debounce_seconds"
-        switch_if_present
+        switch_if_present "" 0 input-hotplug
         ;;
     esac
   done
@@ -91,7 +92,7 @@ watch_resume_events() {
     case "$line" in
       *"boolean false"*)
         sleep "$resume_delay_seconds"
-        switch_if_present "$resume_cec_wake_delay" 1
+        switch_if_present "$resume_cec_wake_delay" 1 resume
         ;;
     esac
   done
