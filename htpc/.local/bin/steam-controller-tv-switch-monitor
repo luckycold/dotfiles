@@ -2,14 +2,17 @@
 set -euo pipefail
 
 controller_pattern="${STEAM_CONTROLLER_PATTERN:-Steam Controller|Valve Software Steam Controller|Valve Steam Controller}"
+controller_ignore_pattern="${STEAM_CONTROLLER_IGNORE_PATTERN:-}"
 debounce_seconds="${STEAM_CONTROLLER_TV_SWITCH_DEBOUNCE:-3}"
 resume_delay_seconds="${STEAM_CONTROLLER_TV_SWITCH_RESUME_DELAY:-0}"
 resume_cec_wake_delay="${STEAM_CONTROLLER_TV_SWITCH_RESUME_CEC_WAKE_DELAY:-1}"
 cooldown_seconds="${STEAM_CONTROLLER_TV_SWITCH_COOLDOWN:-10}"
 switch_on_startup="${STEAM_CONTROLLER_TV_SWITCH_ON_STARTUP:-1}"
+ignore_initial_hotplug_seconds="${STEAM_CONTROLLER_TV_SWITCH_IGNORE_INITIAL_HOTPLUG_SECONDS:-0}"
 switch_to_tv_command="${SWITCH_TO_TV_COMMAND:-$HOME/.local/bin/switch-to-tv}"
 lock_file="${STEAM_CONTROLLER_TV_SWITCH_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.lock}"
 last_run_file="${STEAM_CONTROLLER_TV_SWITCH_LAST_RUN:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.last-run}"
+started_at="$(date +%s)"
 child_pids=()
 
 log() {
@@ -36,6 +39,10 @@ steam_controller_present() {
   for name_file in /sys/class/input/event*/device/name; do
     [[ -r "$name_file" ]] || continue
     name="$(<"$name_file")"
+
+    if [[ -n "$controller_ignore_pattern" && "$name" =~ $controller_ignore_pattern ]]; then
+      continue
+    fi
 
     if [[ "$name" =~ $controller_pattern ]]; then
       return 0
@@ -78,9 +85,17 @@ switch_if_present() {
 }
 
 watch_input_events() {
+  local now
+
   udevadm monitor --udev --subsystem-match=input | while IFS= read -r line; do
     case "$line" in
       *add*|*bind*)
+        now="$(date +%s)"
+        if (( now - started_at < ignore_initial_hotplug_seconds )); then
+          log "ignoring input hotplug during startup grace period"
+          continue
+        fi
+
         sleep "$debounce_seconds"
         switch_if_present "" 0 input-hotplug
         ;;
