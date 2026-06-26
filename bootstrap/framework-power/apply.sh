@@ -111,7 +111,7 @@ base_line = (
 extra_line = (
     'KERNEL_CMDLINE[default]+="quiet splash '
     f'resume=/dev/mapper/root resume_offset={resume_offset} '
-    'rtc_cmos.use_acpi_alarm=1 systemd.zram=0"'
+    'rtc_cmos.use_acpi_alarm=1 systemd.zram=0 thunderbolt.host_reset=0"'
 )
 
 text = re.sub(r'(?m)^KERNEL_CMDLINE\[default\]\+?=.*(?:\n|$)', '', text)
