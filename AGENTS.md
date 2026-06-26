@@ -19,6 +19,9 @@
   - `stow -n ...` for link simulation
   - reload affected shell/config session as needed.
 
+## HTPC gamemode
+- The HTPC runs gamemode without Hyprland involvement; do not assume `hyprctl` is available or relevant there.
+
 ## Bash execution
 - Some repo workflows rely on shell functions defined by Luke's dotfiles, such as `init-env-secrets`.
 - Non-interactive tool shells will not have those functions loaded by default.
