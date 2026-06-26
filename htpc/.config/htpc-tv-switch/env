@@ -3,12 +3,13 @@
 SWITCH_TO_TV_OUTPUT="DP-3"
 SWITCH_TO_TV_MODE="preferred"
 SWITCH_TO_TV_SCALE="1"
+SWITCH_TO_TV_DISPLAY_BACKEND="none"
 
-# Keep the TV duplicated with the local monitor. The script only ensures the TV
-# is enabled at 0,0 and asks the TV to switch to the HTPC input over HDMI-CEC.
+# In gamemode, only ask the TV to wake/switch to the HTPC input over HDMI-CEC.
+# Do not try to control the local display layout from this service.
 
-# Use HDMI-CEC to ask the TV to wake/switch to this PC input before applying
-# the local display layout. Requires /dev/cec0 access from the active session.
+# Use HDMI-CEC to ask the TV to wake/switch to this PC input. Requires
+# /dev/cec0 access from the active session.
 HTPC_TV_CEC_ENABLE="1"
 HTPC_TV_CEC_DEVICE="/dev/cec0"
 HTPC_TV_CEC_OSD_NAME="HTPC"

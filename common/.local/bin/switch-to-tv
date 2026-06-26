@@ -13,6 +13,7 @@ script uses SWITCH_TO_TV_OUTPUT or auto-detects an active TV-like monitor.
 Optional environment:
   SWITCH_TO_TV_MODE   Display mode, default: preferred
   SWITCH_TO_TV_SCALE  Display scale, default: 1
+  SWITCH_TO_TV_DISPLAY_BACKEND  Display backend: auto, hyprland, kscreen, or none
   HTPC_TV_CEC_ENABLE  Send HDMI-CEC input switch commands when set to 1
 USAGE
 }
@@ -282,13 +283,29 @@ fi
 
 target_mode="${SWITCH_TO_TV_MODE:-preferred}"
 target_scale="${SWITCH_TO_TV_SCALE:-1}"
+display_backend="${SWITCH_TO_TV_DISPLAY_BACKEND:-auto}"
 
 switch_tv_input_with_cec "$target_output"
 
-if command -v kscreen-doctor >/dev/null 2>&1 && run_kscreen_doctor -j >/dev/null 2>&1; then
-  switch_kscreen_to_tv "$target_output" "$target_mode" "$target_scale"
-elif command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
-  switch_hyprland_to_tv "$target_output" "$target_mode" "$target_scale"
-else
-  die "no supported display controller found (expected kscreen-doctor or hyprctl)"
-fi
+case "$display_backend" in
+  none)
+    ;;
+  hyprland)
+    switch_hyprland_to_tv "$target_output" "$target_mode" "$target_scale"
+    ;;
+  kscreen)
+    switch_kscreen_to_tv "$target_output" "$target_mode" "$target_scale"
+    ;;
+  auto)
+    if command -v kscreen-doctor >/dev/null 2>&1 && run_kscreen_doctor -j >/dev/null 2>&1; then
+      switch_kscreen_to_tv "$target_output" "$target_mode" "$target_scale"
+    elif command -v hyprctl >/dev/null 2>&1 && hyprctl monitors >/dev/null 2>&1; then
+      switch_hyprland_to_tv "$target_output" "$target_mode" "$target_scale"
+    else
+      die "no supported display controller found (expected kscreen-doctor or hyprctl)"
+    fi
+    ;;
+  *)
+    die "unsupported SWITCH_TO_TV_DISPLAY_BACKEND: $display_backend"
+    ;;
+esac
