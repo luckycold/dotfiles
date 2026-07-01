@@ -30,3 +30,9 @@ STEAM_CONTROLLER_TV_SWITCH_ON_STARTUP="0"
 STEAM_CONTROLLER_TV_SWITCH_ON_RESUME="0"
 STEAM_CONTROLLER_TV_SWITCH_IGNORE_INITIAL_HOTPLUG_SECONDS="30"
 STEAM_CONTROLLER_TV_SWITCH_IGNORE_RESUME_HOTPLUG_SECONDS="30"
+
+# Optional resume-only check: Steam can distinguish the physical wireless
+# controller from the always-present puck. Normal awake hotplug does not depend
+# on Steam, so controller switching still works if Steam is closed later.
+STEAM_CONTROLLER_TV_SWITCH_STEAM_RESUME_ENABLE="1"
+STEAM_CONTROLLER_TV_SWITCH_STEAM_RESUME_DELAY="5"

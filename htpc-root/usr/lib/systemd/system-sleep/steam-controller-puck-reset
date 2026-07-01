@@ -2,6 +2,7 @@
 set -euo pipefail
 
 [[ "${1:-}" == "post" ]] || exit 0
+[[ "${2:-}" == "suspend" ]] || exit 0
 
 for device in /sys/bus/usb/devices/*; do
   [[ -r "$device/idVendor" && -r "$device/idProduct" && -w "$device/authorized" ]] || continue
