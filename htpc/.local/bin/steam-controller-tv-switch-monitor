@@ -8,10 +8,14 @@ resume_delay_seconds="${STEAM_CONTROLLER_TV_SWITCH_RESUME_DELAY:-0}"
 resume_cec_wake_delay="${STEAM_CONTROLLER_TV_SWITCH_RESUME_CEC_WAKE_DELAY:-1}"
 cooldown_seconds="${STEAM_CONTROLLER_TV_SWITCH_COOLDOWN:-10}"
 switch_on_startup="${STEAM_CONTROLLER_TV_SWITCH_ON_STARTUP:-1}"
+switch_on_resume="${STEAM_CONTROLLER_TV_SWITCH_ON_RESUME:-1}"
 ignore_initial_hotplug_seconds="${STEAM_CONTROLLER_TV_SWITCH_IGNORE_INITIAL_HOTPLUG_SECONDS:-0}"
+ignore_resume_hotplug_seconds="${STEAM_CONTROLLER_TV_SWITCH_IGNORE_RESUME_HOTPLUG_SECONDS:-0}"
 switch_to_tv_command="${SWITCH_TO_TV_COMMAND:-$HOME/.local/bin/switch-to-tv}"
 lock_file="${STEAM_CONTROLLER_TV_SWITCH_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.lock}"
 last_run_file="${STEAM_CONTROLLER_TV_SWITCH_LAST_RUN:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.last-run}"
+last_resume_file="${STEAM_CONTROLLER_TV_SWITCH_LAST_RESUME:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.last-resume}"
+sleep_pending_file="${STEAM_CONTROLLER_TV_SWITCH_SLEEP_PENDING:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.sleep-pending}"
 started_at="$(date +%s)"
 child_pids=()
 
@@ -84,6 +88,25 @@ switch_if_present() {
   fi
 }
 
+resume_hotplug_suppressed() {
+  local last_resume
+  local now
+
+  (( ignore_resume_hotplug_seconds > 0 )) || return 1
+
+  if [[ -e "$sleep_pending_file" ]]; then
+    return 0
+  fi
+
+  [[ -r "$last_resume_file" ]] || return 1
+
+  last_resume="$(<"$last_resume_file")"
+  [[ "$last_resume" =~ ^[0-9]+$ ]] || return 1
+
+  now="$(date +%s)"
+  (( now - last_resume < ignore_resume_hotplug_seconds ))
+}
+
 watch_input_events() {
   local now
 
@@ -93,6 +116,11 @@ watch_input_events() {
         now="$(date +%s)"
         if (( now - started_at < ignore_initial_hotplug_seconds )); then
           log "ignoring input hotplug during startup grace period"
+          continue
+        fi
+
+        if resume_hotplug_suppressed; then
+          log "ignoring input hotplug during resume grace period"
           continue
         fi
 
@@ -106,7 +134,15 @@ watch_input_events() {
 watch_resume_events() {
   dbus-monitor --system "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'" | while IFS= read -r line; do
     case "$line" in
+      *"boolean true"*)
+        date +%s >"$sleep_pending_file"
+        ;;
       *"boolean false"*)
+        date +%s >"$last_resume_file"
+        rm -f "$sleep_pending_file"
+
+        [[ "$switch_on_resume" == "1" ]] || continue
+
         sleep "$resume_delay_seconds"
         switch_if_present "$resume_cec_wake_delay" 1 resume
         ;;
@@ -124,15 +160,29 @@ cleanup() {
 
 require_executable "$switch_to_tv_command"
 require_command udevadm
-require_command dbus-monitor
 require_command flock
+
+if [[ "$switch_on_resume" == "1" || "$ignore_resume_hotplug_seconds" != "0" ]]; then
+  require_command dbus-monitor
+fi
 
 if [[ "$switch_on_startup" == "1" ]]; then
   switch_if_present "" 0 startup
 fi
 
-log "watching input hotplug and resume events"
+if [[ "$switch_on_resume" == "1" ]]; then
+  log "watching input hotplug and resume events"
+elif [[ "$ignore_resume_hotplug_seconds" != "0" ]]; then
+  log "watching input hotplug events with resume suppression"
+else
+  log "watching input hotplug events"
+fi
+
 trap cleanup EXIT INT TERM
 watch_input_events & child_pids+=("$!")
-watch_resume_events & child_pids+=("$!")
+
+if [[ "$switch_on_resume" == "1" || "$ignore_resume_hotplug_seconds" != "0" ]]; then
+  watch_resume_events & child_pids+=("$!")
+fi
+
 wait -n "${child_pids[@]}"
