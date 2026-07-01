@@ -17,6 +17,12 @@ HTPC_TV_CEC_LOGICAL_ADDRESS="4"
 HTPC_TV_CEC_TIMEOUT="5"
 HTPC_TV_CEC_WAKE_DELAY="1"
 
+# Steam/game mode display preference. The helper below uses HDMI-CEC active
+# source status: if the TV is not on this HTPC input, prefer the local Dell.
+HTPC_STEAM_PRIMARY_TV_OUTPUT="DP-3"
+HTPC_STEAM_PRIMARY_FALLBACK_OUTPUT="DP-1"
+STEAM_CONTROLLER_TV_SWITCH_STEAM_PRIMARY_DISPLAY_ENABLE="1"
+
 # Steam Controller input device name matcher. This is an extended regular
 # expression matched against /sys/class/input/event*/device/name.
 STEAM_CONTROLLER_PATTERN="Steam Controller|Valve Software Steam Controller|Valve Steam Controller"

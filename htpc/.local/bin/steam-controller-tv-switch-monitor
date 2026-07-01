@@ -15,6 +15,8 @@ steam_resume_enable="${STEAM_CONTROLLER_TV_SWITCH_STEAM_RESUME_ENABLE:-0}"
 steam_resume_delay_seconds="${STEAM_CONTROLLER_TV_SWITCH_STEAM_RESUME_DELAY:-5}"
 steam_controller_log="${STEAM_CONTROLLER_TV_SWITCH_STEAM_CONTROLLER_LOG:-$HOME/.local/share/Steam/logs/controller_ui.txt}"
 steam_controller_log_lines="${STEAM_CONTROLLER_TV_SWITCH_STEAM_CONTROLLER_LOG_LINES:-500}"
+steam_primary_display_enable="${STEAM_CONTROLLER_TV_SWITCH_STEAM_PRIMARY_DISPLAY_ENABLE:-1}"
+steam_primary_display_command="${STEAM_CONTROLLER_TV_SWITCH_STEAM_PRIMARY_DISPLAY_COMMAND:-$HOME/.local/bin/htpc-steam-primary-display}"
 switch_to_tv_command="${SWITCH_TO_TV_COMMAND:-$HOME/.local/bin/switch-to-tv}"
 lock_file="${STEAM_CONTROLLER_TV_SWITCH_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.lock}"
 last_run_file="${STEAM_CONTROLLER_TV_SWITCH_LAST_RUN:-${XDG_RUNTIME_DIR:-/tmp}/steam-controller-tv-switch.last-run}"
@@ -67,6 +69,17 @@ run_switch_command() {
     flock -n "$lock_file" env HTPC_TV_CEC_WAKE_DELAY="$cec_wake_delay" "$switch_to_tv_command"
   else
     flock -n "$lock_file" "$switch_to_tv_command"
+  fi
+
+  sync_steam_primary_display
+}
+
+sync_steam_primary_display() {
+  [[ "$steam_primary_display_enable" == "1" ]] || return 0
+  [[ -x "$steam_primary_display_command" ]] || return 0
+
+  if ! "$steam_primary_display_command"; then
+    log "Steam primary display sync failed"
   fi
 }
 
@@ -227,6 +240,7 @@ watch_resume_events() {
       *"boolean false"*)
         date +%s >"$last_resume_file"
         rm -f "$sleep_pending_file"
+        sync_steam_primary_display
 
         if [[ "$steam_resume_enable" == "1" ]]; then
           switch_if_steam_controller_connected_after_resume "$(<"$last_resume_file")"
