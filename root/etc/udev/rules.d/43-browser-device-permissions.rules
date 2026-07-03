@@ -1,0 +1,5 @@
+# Allow the active user session to grant Chromium-based browsers access to
+# locally attached USB, HID, and USB serial devices via their browser prompts.
+SUBSYSTEM=="usb", TAG+="uaccess"
+SUBSYSTEM=="hidraw", TAG+="uaccess"
+SUBSYSTEM=="tty", ENV{ID_BUS}=="usb", TAG+="uaccess"
