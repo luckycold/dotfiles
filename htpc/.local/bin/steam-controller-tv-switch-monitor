@@ -3,6 +3,7 @@ set -euo pipefail
 
 controller_pattern="${STEAM_CONTROLLER_PATTERN:-Steam Controller|Valve Software Steam Controller|Valve Steam Controller}"
 controller_ignore_pattern="${STEAM_CONTROLLER_IGNORE_PATTERN:-}"
+controller_hotplug_pattern="${STEAM_CONTROLLER_HOTPLUG_PATTERN:-$controller_pattern}"
 debounce_seconds="${STEAM_CONTROLLER_TV_SWITCH_DEBOUNCE:-3}"
 resume_delay_seconds="${STEAM_CONTROLLER_TV_SWITCH_RESUME_DELAY:-0}"
 resume_cec_wake_delay="${STEAM_CONTROLLER_TV_SWITCH_RESUME_CEC_WAKE_DELAY:-1}"
@@ -60,6 +61,30 @@ steam_controller_present() {
   done
 
   return 1
+}
+
+input_hotplug_is_controller() {
+  local line="$1"
+  local name=""
+  local name_file
+  local sys_path
+
+  [[ "$line" =~ (/devices/[^[:space:]]+) ]] || return 1
+  sys_path="/sys${BASH_REMATCH[1]}"
+
+  for name_file in "$sys_path/device/name" "$sys_path/name"; do
+    [[ -r "$name_file" ]] || continue
+    name="$(<"$name_file")"
+    break
+  done
+
+  [[ -n "$name" ]] || return 1
+
+  if [[ -n "$controller_ignore_pattern" && "$name" =~ $controller_ignore_pattern ]]; then
+    return 1
+  fi
+
+  [[ "$name" =~ $controller_hotplug_pattern ]]
 }
 
 run_switch_command() {
@@ -225,7 +250,10 @@ watch_input_events() {
         fi
 
         sleep "$debounce_seconds"
-        switch_if_present "" 0 input-hotplug
+
+        if input_hotplug_is_controller "$line"; then
+          switch_if_present "" 0 input-hotplug
+        fi
         ;;
     esac
   done
