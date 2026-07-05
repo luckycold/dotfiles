@@ -21,6 +21,7 @@
 
 ## HTPC gamemode
 - The HTPC runs gamemode without Hyprland involvement; do not assume `hyprctl` is available or relevant there.
+- The virtual Xbox 360 controller/input device is not a reliable Steam Controller identity signal; do not treat it as the Steam Controller.
 
 ## Bash execution
 - Some repo workflows rely on shell functions defined by Luke's dotfiles, such as `init-env-secrets`.
