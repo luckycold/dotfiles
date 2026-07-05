@@ -31,6 +31,39 @@ curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
 curl -fsSL https://opencode.ai/install | bash
 ```
 
+###### Voxtype
+Voxtype is recommended for local voice-to-text, but it is intentionally not
+part of any default Stow profile. Opt in manually on Fedora/Nobara KDE systems
+with the bootstrap script:
+
+```bash
+./bootstrap/voxtype-fedora-kde/apply.sh
+```
+
+The script installs the upstream RPM, Fedora runtime/build packages, and
+upstream `dotool`; configures `ydotool` as a fallback; writes local-only
+Voxtype config; sets hold-to-talk to `F9`; uses the `small.en` Whisper model;
+and keeps output in real typing mode rather than clipboard/paste mode. Log out
+and back in afterward if this is the first time adding the user to the `input`
+group.
+
+If `voxtype setup --download` leaves a too-small or corrupt `small.en` model,
+replace it directly:
+
+```bash
+rm -f ~/.local/share/voxtype/models/ggml-small.en.bin
+curl -L --fail -o ~/.local/share/voxtype/models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+systemctl --user restart voxtype
+```
+
+Verify with:
+
+```bash
+YDOTOOL_SOCKET=/run/ydotoold/socket voxtype setup check
+voxtype config
+systemctl --user status voxtype
+```
+
 ##### Universal Flatpaks
 ```bash
 flatpak install io.github.pwr_solaar.solaar
