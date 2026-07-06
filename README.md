@@ -298,8 +298,8 @@ Files involved in this setup:
 - `bootstrap/framework-power/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for suspend
 - `bootstrap/framework-power/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for hibernate
 - `bootstrap/framework-power/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for delayed hibernate
-- `bootstrap/framework-power/etc/systemd/system/framework-pcloud-sleep.service` - stops pCloud before sleep and restarts it after resume
-- `bootstrap/framework-power/usr/local/libexec/framework-pcloud-sleep` - helper invoked by the sleep service to control the user pCloud unit
+- `bootstrap/framework-power/etc/systemd/system/framework-user-app-sleep.service` - stops selected user apps before sleep and restarts them after resume
+- `bootstrap/framework-power/usr/local/libexec/framework-user-app-sleep` - helper invoked by the sleep service to control selected user app units
 - `bootstrap/framework-power/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
 - `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
 - `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the lid-close hibernate delay back to `30min`

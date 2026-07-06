@@ -144,8 +144,8 @@ PY
   materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf" "/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf"
-  materialize_file "${bootstrap_dir}/etc/systemd/system/framework-pcloud-sleep.service" "/etc/systemd/system/framework-pcloud-sleep.service"
-  materialize_file "${bootstrap_dir}/usr/local/libexec/framework-pcloud-sleep" "/usr/local/libexec/framework-pcloud-sleep" 755
+  materialize_file "${bootstrap_dir}/etc/systemd/system/framework-user-app-sleep.service" "/etc/systemd/system/framework-user-app-sleep.service"
+  materialize_file "${bootstrap_dir}/usr/local/libexec/framework-user-app-sleep" "/usr/local/libexec/framework-user-app-sleep" 755
 
   if [[ -f /boot/EFI/limine/limine_x64.efi ]]; then
     cp -f /boot/EFI/limine/limine_x64.efi /boot/EFI/BOOT/BOOTX64.EFI
@@ -156,7 +156,9 @@ PY
   udevadm trigger --subsystem-match=pci || true
   systemd-tmpfiles --create /etc/tmpfiles.d/no-dock-wakeup.conf /etc/tmpfiles.d/hibernate-image-size.conf
   systemctl daemon-reload
-  systemctl enable framework-pcloud-sleep.service
+  systemctl disable --now framework-pcloud-sleep.service 2>/dev/null || true
+  rm -f /etc/systemd/system/framework-pcloud-sleep.service /usr/local/libexec/framework-pcloud-sleep
+  systemctl enable framework-user-app-sleep.service
   systemctl reload systemd-logind || true
 
   swapoff /dev/zram0 2>/dev/null || true
