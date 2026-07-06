@@ -1,0 +1,99 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly state_dir=/run/framework-power/user-sleep-units
+readonly user_units=(
+  app-pcloud@autostart.service
+  app-bitwarden@autostart.service
+)
+
+log() {
+  logger -t framework-user-app-sleep "$*"
+}
+
+user_systemctl() {
+  local uid=$1
+  local name=$2
+  shift 2
+
+  local runtime_dir=/run/user/"${uid}"
+  runuser -u "${name}" -- env \
+    XDG_RUNTIME_DIR="${runtime_dir}" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=${runtime_dir}/bus" \
+    systemctl --user "$@"
+}
+
+list_users() {
+  loginctl list-users --no-legend | awk '{print $1 ":" $2}'
+}
+
+stop_user_units_pre_sleep() {
+  local uid name unit marker unit_slug
+
+  mkdir -p "${state_dir}"
+
+  while IFS=: read -r uid name; do
+    [[ -n ${uid} && -n ${name} ]] || continue
+    [[ -S /run/user/${uid}/bus ]] || continue
+
+    for unit in "${user_units[@]}"; do
+      if user_systemctl "${uid}" "${name}" is-active --quiet "${unit}"; then
+        unit_slug=${unit//[^[:alnum:]_.-]/_}
+        marker="${state_dir}/${uid}.${name}.${unit_slug}.active"
+        : > "${marker}"
+        log "stopping ${unit} for ${name} before sleep"
+        if ! user_systemctl "${uid}" "${name}" stop "${unit}"; then
+          log "failed to stop ${unit} for ${name}"
+        fi
+      fi
+    done
+  done < <(list_users)
+}
+
+start_user_units_post_resume() {
+  local marker base uid name unit unit_slug candidate
+
+  shopt -s nullglob
+  for marker in "${state_dir}"/*.active; do
+    base=$(basename "${marker}")
+    uid=${base%%.*}
+    base=${base#*.}
+    name=${base%%.*}
+    unit_slug=${base#*.}
+    unit_slug=${unit_slug%.active}
+
+    unit=""
+    for candidate in "${user_units[@]}"; do
+      if [[ ${candidate//[^[:alnum:]_.-]/_} == "${unit_slug}" ]]; then
+        unit=${candidate}
+        break
+      fi
+    done
+    [[ -n ${unit} ]] || continue
+
+    if [[ -S /run/user/${uid}/bus ]]; then
+      log "starting ${unit} for ${name} after resume"
+      if ! user_systemctl "${uid}" "${name}" start "${unit}"; then
+        log "failed to start ${unit} for ${name}"
+      fi
+    fi
+
+    rm -f "${marker}"
+  done
+
+  rmdir "${state_dir}" 2>/dev/null || true
+}
+
+case "${1:-}" in
+  pre)
+    stop_user_units_pre_sleep
+    ;;
+  post)
+    start_user_units_post_resume
+    ;;
+  *)
+    printf 'usage: %s {pre|post}\n' "$0" >&2
+    exit 64
+    ;;
+esac
