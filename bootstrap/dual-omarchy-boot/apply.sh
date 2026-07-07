@@ -157,6 +157,75 @@ set_limine_default() {
   rm -f "$tmp"
 }
 
+set_personal_noresume_cmdline() {
+  local path=/etc/default/limine
+
+  install -d -m 0755 /etc/default
+  touch "$path"
+  cp -a "$path" "${path}.bak.$(date +%Y%m%d%H%M%S)"
+
+  python3 - <<'PY'
+from pathlib import Path
+import re
+
+path = Path('/etc/default/limine')
+text = path.read_text()
+
+def strip_resume_tokens(match):
+    key, quote, value = match.groups()
+    tokens = [
+        token for token in value.split()
+        if token != 'noresume'
+        and not token.startswith('resume=')
+        and not token.startswith('resume_offset=')
+    ]
+    return f'{key}{quote}{" ".join(tokens)}{quote}'
+
+text = re.sub(
+    r'(?m)^(KERNEL_CMDLINE\[default\]\+?=)(["\'])(.*?)\2$',
+    strip_resume_tokens,
+    text,
+)
+
+if re.search(r'(?m)^KERNEL_CMDLINE\[default\]\+=', text):
+    text = re.sub(
+        r'(?m)^(KERNEL_CMDLINE\[default\]\+=)(["\'])(.*?)\2$',
+        lambda match: f'{match.group(1)}{match.group(2)}{(match.group(3) + " noresume").strip()}{match.group(2)}',
+        text,
+        count=1,
+    )
+else:
+    text = text.rstrip() + '\nKERNEL_CMDLINE[default]+="noresume"\n'
+
+path.write_text(text.rstrip() + '\n')
+PY
+}
+
+install_personal_hibernate_disabled_policy() {
+  install -d -m 0755 /etc/systemd/sleep.conf.d /etc/systemd/logind.conf.d
+
+  cat >/etc/systemd/sleep.conf.d/95-personal-disable-hibernate.conf <<'EOF'
+[Sleep]
+AllowHibernation=no
+AllowSuspendThenHibernate=no
+AllowHybridSleep=no
+EOF
+
+  cat >/etc/systemd/logind.conf.d/95-personal-disable-hibernate.conf <<'EOF'
+[Login]
+HandleLidSwitch=suspend
+HandleLidSwitchExternalPower=suspend
+HandleLidSwitchDocked=suspend
+LidSwitchIgnoreInhibited=no
+EOF
+}
+
+remove_personal_hibernate_disabled_policy() {
+  rm -f \
+    /etc/systemd/sleep.conf.d/95-personal-disable-hibernate.conf \
+    /etc/systemd/logind.conf.d/95-personal-disable-hibernate.conf
+}
+
 install_peer_hook() {
   local title=$1 protocol=$2 value=$3 hook=/etc/boot/hooks/post.d/88-omarchy-peer-os
 
@@ -220,6 +289,58 @@ EOF
   chmod 0755 "$hook"
 }
 
+install_default_linux_entry_hook() {
+  local hook=/etc/boot/hooks/post.d/89-limine-default-linux-entry
+
+  install -d -m 0755 /etc/boot/hooks/post.d
+
+  cat >"$hook" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+config=/boot/limine.conf
+[[ -f "$config" ]] || exit 0
+
+default_entry=$(awk '
+  /^\/\+/ {
+    os = substr($0, 3)
+    next
+  }
+  os && /^[[:space:]]*\/\/[^/]/ {
+    kernel = $0
+    sub(/^[[:space:]]*\/\//, "", kernel)
+    print os "/" kernel
+    exit
+  }
+' "$config")
+
+[[ -n "$default_entry" ]] || exit 0
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+awk -v default_entry="$default_entry" '
+  /^default_entry:/ {
+    if (!done) {
+      print "default_entry: " default_entry
+      done = 1
+    }
+    next
+  }
+  { print }
+  END {
+    if (!done) {
+      print "default_entry: " default_entry
+    }
+  }
+' "$config" >"$tmp"
+
+cmp -s "$tmp" "$config" || install -m 0644 "$tmp" "$config"
+EOF
+
+  chmod 0755 "$hook"
+}
+
 main() {
   local role=
   while [[ $# -gt 0 ]]; do
@@ -265,10 +386,12 @@ main() {
   require_cmd install
   require_cmd findmnt
   require_cmd limine
+  require_cmd limine-update
   require_cmd lsblk
   require_cmd mktemp
   require_cmd mount
   require_cmd perl
+  require_cmd python3
   require_cmd readlink
   require_cmd sbctl
   require_cmd umount
@@ -280,20 +403,27 @@ main() {
       repair_limine_for_esp_guid "$EXTERNAL_ESP_GUID"
       remove_uefi_entries_by_label 'Work OS'
       ensure_uefi_entry 'Limine' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
+      set_personal_noresume_cmdline
+      install_personal_hibernate_disabled_policy
       keep_limine_first
       ;;
     work)
       set_limine_default SKIP_UEFI yes
+      remove_personal_hibernate_disabled_policy
       repair_limine_for_esp_guid "$INTERNAL_ESP_GUID"
       remove_uefi_entries_by_label 'Personal OS'
       ;;
   esac
 
   install_peer_hook "$title" "$protocol" "$value"
+  install_default_linux_entry_hook
   install_fallback_sync_hook
+
+  limine-update
 
   # Always ensure the local Limine menu has the peer entry and is enrolled.
   /etc/boot/hooks/post.d/88-omarchy-peer-os
+  /etc/boot/hooks/post.d/89-limine-default-linux-entry
 
   if command -v limine-enroll-config >/dev/null 2>&1; then
     limine-enroll-config
