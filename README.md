@@ -271,6 +271,7 @@ Scope note:
 - `bootstrap/framework-power/` is fully personal to this specific Framework + Thunderbolt dock + NVIDIA eGPU setup and should be treated as host-specific
 - `bootstrap/sddm-gnome-keyring/` is personal auth/session setup and should also be treated as a root-applied bootstrap, not a stowed profile
 - `bootstrap/philosophia-audio/` is a host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
+- the dual-boot hibernate policy is intentionally asymmetric: the external Work OS may hibernate, while the internal Personal OS is configured as suspend-only so the two installs do not compete over firmware-global hibernate state
 
 Overview of what had to be fixed to make this setup reliable:
 
@@ -283,7 +284,10 @@ Overview of what had to be fixed to make this setup reliable:
 - stop pCloud before sleep and start it again after resume so its FUSE mount does not strand user processes in unfreezable I/O
 - wire hibernate to the real swapfile with the correct `resume=` and `resume_offset=` values
 - disable zram so hibernate does not fail from memory pressure while building the image
+- remove older local sleep/logind drop-ins that override the Framework hibernate policy
+- warn when another OS left a firmware-global `HibernateLocation` EFI variable behind
 - refresh Limine EFI binaries and boot order so fallback boot and hibernate resume use the same working path
+- set the generated Limine default to the concrete Linux entry under the OS folder, not the collapsed top-level folder
 - leave TPM/Clevis as a final machine-specific step, since measured-boot changes can require regenerating the unlock binding
 
 Files involved in this setup:
@@ -304,6 +308,11 @@ Files involved in this setup:
 - `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`, except while docked where it stays on suspend
 - `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the lid-close hibernate delay back to `30min` and prefers platform hibernate mode
 - `bootstrap/framework-power/etc/systemd/zram-generator.conf` - disables zram so the swapfile is the only hibernate backing store
+
+On the dual-boot Framework, systemd also uses the firmware-global
+`HibernateLocation` EFI variable. If the other OS was hibernated, booting this
+OS can leave hibernation unavailable here until that OS is resumed or the stale
+hibernate image is intentionally discarded by clearing the EFI variable.
 
 Apply them like this:
 
@@ -327,6 +336,12 @@ sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
 ```
 
 The personal role keeps the internal Limine install as the firmware default and adds a `Work OS (external drive)` Limine menu entry that chainloads the external ESP directly by partition GUID, avoiding dependence on removable-drive UEFI NVRAM entries that firmware may delete. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. When the peer ESP is visible, either role also re-enrolls the peer `limine.conf` checksum into that peer Limine binary and signs the main/fallback Limine loaders, preventing Secure Boot config-checksum panics after menu changes. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
+
+The personal role also disables hibernation locally by removing generated
+`resume=` arguments from `/etc/default/limine`, adding `noresume`, and installing
+late `systemd` drop-ins that disable hibernate/suspend-then-hibernate. This
+keeps the internal Personal OS suspend-only while allowing the external Work OS
+to own hibernation on this dual-boot Framework.
 
 On Work OS, verify the user services that should stay enabled after stowing `common`:
 
@@ -414,6 +429,8 @@ Useful verification commands after reboot:
 ```bash
 cat /proc/cmdline
 swapon --show
+cat /sys/power/state /sys/power/disk
+busctl call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanHibernate
 systemctl hibernate
 ```
 

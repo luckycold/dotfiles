@@ -33,6 +33,14 @@ backup_path() {
   fi
 }
 
+backup_legacy_path() {
+  local path=$1
+  if [[ -e ${path} || -L ${path} ]]; then
+    printf 'Moving legacy config out of the way: %s\n' "${path}"
+    backup_path "${path}"
+  fi
+}
+
 ensure_real_directory() {
   local path=$1
   local mode=${2:-755}
@@ -62,6 +70,53 @@ materialize_file() {
 
   install -D -m "${mode}" "${source_path}" "${target_path}"
   chown root:root "${target_path}"
+}
+
+warn_stale_hibernate_location() {
+  local root_uuid current_kernel hibernate_var payload hibernate_uuid hibernate_offset hibernate_kernel
+
+  root_uuid=$(findmnt -no UUID /)
+  current_kernel=$(uname -r)
+  hibernate_var=$(find /sys/firmware/efi/efivars -maxdepth 1 -name 'HibernateLocation-*' -print -quit 2>/dev/null || true)
+  [[ -n ${hibernate_var} && -r ${hibernate_var} ]] || return 0
+
+  payload=$(python3 - "${hibernate_var}" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+try:
+    text = Path(sys.argv[1]).read_bytes()[4:].decode('utf-16-le').rstrip('\0')
+    data = json.loads(text)
+except Exception:
+    raise SystemExit(0)
+
+print(data.get('uuid', ''))
+print(data.get('offset', ''))
+print(data.get('kernelVersion', ''))
+PY
+)
+
+  hibernate_uuid=$(sed -n '1p' <<<"${payload}")
+  hibernate_offset=$(sed -n '2p' <<<"${payload}")
+  hibernate_kernel=$(sed -n '3p' <<<"${payload}")
+
+  if [[ -n ${hibernate_uuid} ]]; then
+    cat <<EOF >&2
+
+Warning: firmware contains an existing HibernateLocation EFI variable.
+  HibernateLocation UUID: ${hibernate_uuid}
+  HibernateLocation offset: ${hibernate_offset:-unknown}
+  HibernateLocation kernel: ${hibernate_kernel:-unknown}
+  Current root filesystem UUID: ${root_uuid}
+  Current kernel: ${current_kernel}
+
+systemd hibernate resume uses a firmware-global EFI variable on this
+dual-boot Framework. If this points at an OS image you intend to resume, boot
+that OS first. If it is stale, explicitly discard it by clearing the EFI
+HibernateLocation variable.
+EOF
+  fi
 }
 
 main() {
@@ -148,6 +203,8 @@ PY
   materialize_file "${bootstrap_dir}/etc/tmpfiles.d/no-dock-wakeup.conf" "/etc/tmpfiles.d/no-dock-wakeup.conf"
   materialize_file "${bootstrap_dir}/etc/tmpfiles.d/hibernate-image-size.conf" "/etc/tmpfiles.d/hibernate-image-size.conf"
   materialize_file "${bootstrap_dir}/etc/udev/rules.d/43-framework-dock-wakeup.rules" "/etc/udev/rules.d/43-framework-dock-wakeup.rules"
+  backup_legacy_path "/etc/systemd/sleep.conf.d/hibernate.conf"
+  backup_legacy_path "/etc/systemd/logind.conf.d/lid.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf" "/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf" "/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf"
   materialize_file "${bootstrap_dir}/etc/systemd/zram-generator.conf" "/etc/systemd/zram-generator.conf"
@@ -176,6 +233,8 @@ PY
 
   swapoff /dev/zram0 2>/dev/null || true
   systemctl stop systemd-zram-setup@zram0.service 2>/dev/null || true
+
+  warn_stale_hibernate_location
 
   limine-mkinitcpio
   limine-update
