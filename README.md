@@ -301,8 +301,8 @@ Files involved in this setup:
 - `bootstrap/framework-power/etc/systemd/system/framework-user-app-sleep.service` - stops selected user apps before sleep and restarts them after resume
 - `bootstrap/framework-power/usr/local/libexec/framework-user-app-sleep` - helper invoked by the sleep service to control selected user app units
 - `bootstrap/framework-power/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
-- `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`
-- `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the lid-close hibernate delay back to `30min`
+- `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`, except while docked where it stays on suspend
+- `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the lid-close hibernate delay back to `30min` and prefers platform hibernate mode
 - `bootstrap/framework-power/etc/systemd/zram-generator.conf` - disables zram so the swapfile is the only hibernate backing store
 
 Apply them like this:
@@ -394,7 +394,7 @@ What this covers:
 - restore systemd's default user-session freezing during sleep operations
 - quiesce pCloud so its FUSE mount does not block user-slice freezing
 - force hibernate to use the swapfile instead of zram
-- set lid-close to `suspend-then-hibernate` after the configured delay
+- set lid-close to `suspend-then-hibernate` after the configured delay, while keeping docked lid-close on plain suspend
 - regenerate Limine boot artifacts and refresh fallback EFI binaries
 - install the SDDM PAM configuration that hooks GNOME keyring into login
 - disable WirePlumber's MPRIS pause-on-output-removal behavior on `philosophia`
