@@ -95,7 +95,7 @@ main() {
 
   backup_file /etc/default/limine
 
-  python3 - "${partuuid}" "${resume_offset}" <<'PY'
+python3 - "${partuuid}" "${resume_offset}" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -103,15 +103,28 @@ import sys
 partuuid, resume_offset = sys.argv[1:3]
 path = Path('/etc/default/limine')
 text = path.read_text()
+running_cmdline = Path('/proc/cmdline').read_text()
+cmdline_source = f'{running_cmdline}\n{text}'
+
+def cmdline_value(name):
+    match = re.search(rf'(?<!\S){re.escape(name)}=([^\s"]+)', cmdline_source)
+    return match.group(1) if match else None
+
+cryptdevice = cmdline_value('cryptdevice') or f'PARTUUID={partuuid}:root'
+rootflags = cmdline_value('rootflags') or 'subvol=/@'
+if '/.snapshots/' in rootflags:
+    rootflags = 'subvol=/@'
+rootdelay = cmdline_value('rootdelay')
+rootdelay_arg = f' rootdelay={rootdelay}' if rootdelay else ''
 
 base_line = (
-    f'KERNEL_CMDLINE[default]="cryptdevice=PARTUUID={partuuid}:root '
-    'root=/dev/mapper/root zswap.enabled=0 rootflags=subvol=@ rw rootfstype=btrfs"'
+    f'KERNEL_CMDLINE[default]="cryptdevice={cryptdevice} '
+    f'root=/dev/mapper/root zswap.enabled=0 rootflags={rootflags} rw rootfstype=btrfs"'
 )
 extra_line = (
     'KERNEL_CMDLINE[default]+="quiet splash '
     f'resume=/dev/mapper/root resume_offset={resume_offset} '
-    'rtc_cmos.use_acpi_alarm=1 systemd.zram=0 thunderbolt.host_reset=0"'
+    f'rtc_cmos.use_acpi_alarm=1 systemd.zram=0 thunderbolt.host_reset=0{rootdelay_arg}"'
 )
 
 text = re.sub(r'(?m)^KERNEL_CMDLINE\[default\]\+?=.*(?:\n|$)', '', text)
@@ -148,8 +161,8 @@ PY
   materialize_file "${bootstrap_dir}/usr/local/libexec/framework-user-app-sleep" "/usr/local/libexec/framework-user-app-sleep" 755
 
   if [[ -f /boot/EFI/limine/limine_x64.efi ]]; then
-    cp -f /boot/EFI/limine/limine_x64.efi /boot/EFI/BOOT/BOOTX64.EFI
-    cp -f /boot/EFI/limine/limine_x64.efi /boot/EFI/arch-limine/BOOTX64.EFI
+    install -D -m 755 /boot/EFI/limine/limine_x64.efi /boot/EFI/BOOT/BOOTX64.EFI
+    install -D -m 755 /boot/EFI/limine/limine_x64.efi /boot/EFI/arch-limine/BOOTX64.EFI
   fi
 
   udevadm control --reload
