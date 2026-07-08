@@ -1331,18 +1331,6 @@
           }
         }
       }
-    },
-    "xai": {
-      "models": {
-        "grok-composer-2.5-fast": {
-          "name": "Composer 2.5 Fast",
-          "limit": {
-            "context": 200000,
-            "output": 32768
-          },
-          "tool_call": true
-        }
-      }
     }
   },
   "mcp": {
