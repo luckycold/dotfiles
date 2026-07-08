@@ -252,75 +252,24 @@ opencode models | grep cursor-acp
 - **Renovate** (`.forgejo/workflows/renovate.yml`, `renovate.json`) runs on Codeberg and keeps the OpenCode plugin version pins in `common/.config/opencode/config.json` up to date via custom regex managers, surfacing updates through the dependency dashboard.
 - **OpenCode bot** (`.github/workflows/opencode.yml`) responds to `/oc` or `/opencode` comments on issues/PRs in the GitHub mirror, running OpenCode against the repo.
 
-## Omarchy Framework Power Setup
+## Omarchy Setup Notes
 
-For my personal Framework AMD + Thunderbolt dock + NVIDIA eGPU setup, the power-management changes are split between:
+This repo now leaves hibernation behavior to stock Omarchy. Use Omarchy's own setup and removal commands for hibernation rather than host-specific wrappers, `systemd` sleep drop-ins, or custom Limine `noresume` policy.
 
-- `personal/` for user-session behavior
-- `root/` for stow-safe machine policy under `/etc`
-- `bootstrap/framework-power/` for the root-owned files that should be copied into `/etc`, not left as symlinks into `/home`
-- `bootstrap/dual-omarchy-boot/` for coordinating the personal/internal and work/external Omarchy boot menus
-- `bootstrap/sddm-gnome-keyring/` for the root-owned SDDM PAM config that unlocks the GNOME keyring on login
-
-Scope note:
-
-- the `personal/` changes here are still primarily aimed at this AMD Framework laptop, but the `uwsm` GPU pin is now conditional instead of hardcoded
-- `personal/.config/uwsm/env` only exports `AQ_DRM_DEVICES` when both an AMD DRM card and an NVIDIA DRM card are present, and then picks the first AMD card it finds
-- `work/.config/uwsm/env` carries the same Omarchy PATH, default terminal/editor, mise activation, and conditional AMD GPU preference for the external Work OS profile
-- that makes the `personal/` side safer across other machines, but it is still not meant as a fully generic power profile for every AMD laptop
-- `bootstrap/framework-power/` is fully personal to this specific Framework + Thunderbolt dock + NVIDIA eGPU setup and should be treated as host-specific
-- `bootstrap/sddm-gnome-keyring/` is personal auth/session setup and should also be treated as a root-applied bootstrap, not a stowed profile
-- `bootstrap/philosophia-audio/` is a host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
-- the dual-boot hibernate policy is intentionally asymmetric: the external Work OS may hibernate, while the internal Personal OS is configured as suspend-only so the two installs do not compete over firmware-global hibernate state
-
-Overview of what had to be fixed to make this setup reliable:
-
-- keep Hyprland on the AMD iGPU so the desktop session is not tied to the NVIDIA eGPU on boot, suspend, or wake
-- remove the old `hypridle` DPMS-off behavior that could leave wakeup in a broken state
-- disable NVIDIA's suspend video-memory preservation path, which was breaking suspend and hibernate with the eGPU attached
-- disable Thunderbolt dock wake sources so suspend does not immediately wake back up
-- use both `tmpfiles.d` and a udev rule so wakeup gets disabled both at boot and when dock/eGPU PCI devices hotplug later
-- override NVIDIA's sleep-unit drop-ins so systemd freezes user sessions again during suspend, hibernate, and suspend-then-hibernate
-- stop pCloud before sleep and start it again after resume so its FUSE mount does not strand user processes in unfreezable I/O
-- wire hibernate to the real swapfile with the correct `resume=` and `resume_offset=` values
-- disable zram so hibernate does not fail from memory pressure while building the image
-- remove older local sleep/logind drop-ins that override the Framework hibernate policy
-- warn when another OS left a firmware-global `HibernateLocation` EFI variable behind
-- refresh Limine EFI binaries and boot order so fallback boot and hibernate resume use the same working path
-- set the generated Limine default to the concrete Linux entry under the OS folder, not the collapsed top-level folder
-- leave TPM/Clevis as a final machine-specific step, since measured-boot changes can require regenerating the unlock binding
-
-Files involved in this setup:
+The remaining Omarchy-specific pieces are:
 
 - `personal/.config/uwsm/env` - conditionally pins Hyprland to the AMD DRM card when both AMD and NVIDIA GPUs are present
 - `work/.config/uwsm/env` - Work OS equivalent of the UWSM session environment setup
-- `personal/.config/hypr/hypridle.conf` - keeps the safer lock/suspend behavior without the old DPMS-off listener
-- `bootstrap/framework-power/apply.sh` - personal bootstrap for this machine that fills in install-specific boot values, copies real root-owned files into `/etc`, refreshes Limine, and applies wake settings
-- `bootstrap/framework-power/etc/modprobe.d/99-nvidia-suspend-workaround.conf` - disables NVIDIA video-memory preservation during suspend/hibernate
-- `bootstrap/framework-power/etc/tmpfiles.d/no-dock-wakeup.conf` - disables the Thunderbolt dock PCI wake sources on boot
-- `bootstrap/framework-power/etc/udev/rules.d/43-framework-dock-wakeup.rules` - disables wake on the same PCI devices when the dock/eGPU chain appears later via hotplug or resume
-- `bootstrap/framework-power/etc/systemd/system/systemd-suspend.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for suspend
-- `bootstrap/framework-power/etc/systemd/system/systemd-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for hibernate
-- `bootstrap/framework-power/etc/systemd/system/systemd-suspend-then-hibernate.service.d/90-freeze-user-sessions.conf` - overrides the NVIDIA vendor drop-in and freezes user sessions for delayed hibernate
-- `bootstrap/framework-power/etc/systemd/system/framework-user-app-sleep.service` - stops selected user apps before sleep and restarts them after resume
-- `bootstrap/framework-power/usr/local/libexec/framework-user-app-sleep` - helper invoked by the sleep service to control selected user app units
-- `bootstrap/framework-power/etc/tmpfiles.d/hibernate-image-size.conf` - forces the kernel to use the minimum hibernate image size
-- `bootstrap/framework-power/etc/systemd/logind.conf.d/90-lid-suspend-then-hibernate.conf` - sets lid close to `suspend-then-hibernate`, except while docked where it stays on suspend
-- `bootstrap/framework-power/etc/systemd/sleep.conf.d/90-suspend-then-hibernate.conf` - sets the lid-close hibernate delay back to `30min` and prefers platform hibernate mode
-- `bootstrap/framework-power/etc/systemd/zram-generator.conf` - disables zram so the swapfile is the only hibernate backing store
+- `bootstrap/dual-omarchy-boot/` - coordinates the personal/internal and work/external Omarchy boot menus
+- `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login
+- `bootstrap/philosophia-audio/` - host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
 
-On the dual-boot Framework, systemd also uses the firmware-global
-`HibernateLocation` EFI variable. If the other OS was hibernated, booting this
-OS can leave hibernation unavailable here until that OS is resumed or the stale
-hibernate image is intentionally discarded by clearing the EFI variable.
-
-Apply them like this:
+Apply the personal Omarchy profile like this:
 
 ```bash
 stow -t ~ common
 stow -t ~ personal
 sudo stow -t / root
-sudo ./bootstrap/framework-power/apply.sh
 sudo ./bootstrap/dual-omarchy-boot/apply.sh --role personal
 sudo ./bootstrap/sddm-gnome-keyring/apply.sh
 ./bootstrap/philosophia-audio/apply.sh
@@ -336,12 +285,6 @@ sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
 ```
 
 The personal role keeps the internal Limine install as the firmware default and adds a `Work OS (external drive)` Limine menu entry that chainloads the external ESP directly by partition GUID, avoiding dependence on removable-drive UEFI NVRAM entries that firmware may delete. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. When the peer ESP is visible, either role also re-enrolls the peer `limine.conf` checksum into that peer Limine binary and signs the main/fallback Limine loaders, preventing Secure Boot config-checksum panics after menu changes. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
-
-The personal role also disables hibernation locally by removing generated
-`resume=` arguments from `/etc/default/limine`, adding `noresume`, and installing
-late `systemd` drop-ins that disable hibernate/suspend-then-hibernate. This
-keeps the internal Personal OS suspend-only while allowing the external Work OS
-to own hibernation on this dual-boot Framework.
 
 On Work OS, verify the user services that should stay enabled after stowing `common`:
 
@@ -403,22 +346,9 @@ sudo stow --adopt -t / root
 What this covers:
 
 - pin Hyprland to the AMD iGPU in `personal/.config/uwsm/env`
-- keep `hypridle` from using the old DPMS-off path in `personal/.config/hypr/hypridle.conf`
-- disable NVIDIA suspend integration that breaks suspend/hibernate with the eGPU
-- disable Thunderbolt dock wakeups
-- restore systemd's default user-session freezing during sleep operations
-- quiesce pCloud so its FUSE mount does not block user-slice freezing
-- force hibernate to use the swapfile instead of zram
-- set lid-close to `suspend-then-hibernate` after the configured delay, while keeping docked lid-close on plain suspend
-- regenerate Limine boot artifacts and refresh fallback EFI binaries
+- coordinate the dual-boot Limine menus
 - install the SDDM PAM configuration that hooks GNOME keyring into login
 - disable WirePlumber's MPRIS pause-on-output-removal behavior on `philosophia`
-
-What is still intentionally machine-specific and generated by the bootstrap script:
-
-- the encrypted root `PARTUUID`
-- the Btrfs swapfile `resume_offset`
-- EFI boot-order cleanup for the current firmware
 
 What is still a manual post-install step:
 
@@ -437,10 +367,8 @@ systemctl hibernate
 Important note for `root/` files:
 
 - `root/` is now reserved for files that are safe to manage directly with Stow
-- the power-management files for this specific Framework setup live under `bootstrap/framework-power/` instead
 - the SDDM PAM login file lives under `bootstrap/sddm-gnome-keyring/` so it is installed as a real root-owned file under `/etc/pam.d`
-- those files are copied into `/etc` as real root-owned files because symlinks into `/home` are not reliable for early boot, udev, modprobe, and `systemd-logind`
-- treat the bootstrap scripts as the required final step for these root-owned files, not just optional helpers
+- SDDM PAM files are copied into `/etc` as real root-owned files because symlinks into `/home` are not reliable for login-time PAM configuration
 
 ## Instructional Video
 This is a useful video if you get lost:

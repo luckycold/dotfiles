@@ -13,7 +13,6 @@ common/.local/bin/*
 !common/.local/bin/omarchy
 !common/.local/bin/opencode-brokkr-mcp
 !common/.local/bin/omarchy-setup-security-fingerprint
-!common/.local/bin/framework-hibernate
 !common/.local/bin/proton-pass-cli-autologin-monitor
 !common/.local/bin/switch-to-tv
 common/.local/share/nvim
@@ -31,6 +30,7 @@ __pycache__/
 *.pyc
 *.bak
 *.bak.*
+/root/etc/wireguard/*.disabled
 /common/.config/Cursor/.org.chromium.Chromium.P186S7
 /common/.config/Cursor/CachedConfigurations/folder
 /common/.config/Cursor/CachedData
