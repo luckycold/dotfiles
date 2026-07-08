@@ -157,75 +157,6 @@ set_limine_default() {
   rm -f "$tmp"
 }
 
-set_personal_noresume_cmdline() {
-  local path=/etc/default/limine
-
-  install -d -m 0755 /etc/default
-  touch "$path"
-  cp -a "$path" "${path}.bak.$(date +%Y%m%d%H%M%S)"
-
-  python3 - <<'PY'
-from pathlib import Path
-import re
-
-path = Path('/etc/default/limine')
-text = path.read_text()
-
-def strip_resume_tokens(match):
-    key, quote, value = match.groups()
-    tokens = [
-        token for token in value.split()
-        if token != 'noresume'
-        and not token.startswith('resume=')
-        and not token.startswith('resume_offset=')
-    ]
-    return f'{key}{quote}{" ".join(tokens)}{quote}'
-
-text = re.sub(
-    r'(?m)^(KERNEL_CMDLINE\[default\]\+?=)(["\'])(.*?)\2$',
-    strip_resume_tokens,
-    text,
-)
-
-if re.search(r'(?m)^KERNEL_CMDLINE\[default\]\+=', text):
-    text = re.sub(
-        r'(?m)^(KERNEL_CMDLINE\[default\]\+=)(["\'])(.*?)\2$',
-        lambda match: f'{match.group(1)}{match.group(2)}{(match.group(3) + " noresume").strip()}{match.group(2)}',
-        text,
-        count=1,
-    )
-else:
-    text = text.rstrip() + '\nKERNEL_CMDLINE[default]+="noresume"\n'
-
-path.write_text(text.rstrip() + '\n')
-PY
-}
-
-install_personal_hibernate_disabled_policy() {
-  install -d -m 0755 /etc/systemd/sleep.conf.d /etc/systemd/logind.conf.d
-
-  cat >/etc/systemd/sleep.conf.d/95-personal-disable-hibernate.conf <<'EOF'
-[Sleep]
-AllowHibernation=no
-AllowSuspendThenHibernate=no
-AllowHybridSleep=no
-EOF
-
-  cat >/etc/systemd/logind.conf.d/95-personal-disable-hibernate.conf <<'EOF'
-[Login]
-HandleLidSwitch=suspend
-HandleLidSwitchExternalPower=suspend
-HandleLidSwitchDocked=suspend
-LidSwitchIgnoreInhibited=no
-EOF
-}
-
-remove_personal_hibernate_disabled_policy() {
-  rm -f \
-    /etc/systemd/sleep.conf.d/95-personal-disable-hibernate.conf \
-    /etc/systemd/logind.conf.d/95-personal-disable-hibernate.conf
-}
-
 install_peer_hook() {
   local title=$1 protocol=$2 value=$3 hook=/etc/boot/hooks/post.d/88-omarchy-peer-os
 
@@ -403,13 +334,10 @@ main() {
       repair_limine_for_esp_guid "$EXTERNAL_ESP_GUID"
       remove_uefi_entries_by_label 'Work OS'
       ensure_uefi_entry 'Limine' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
-      set_personal_noresume_cmdline
-      install_personal_hibernate_disabled_policy
       keep_limine_first
       ;;
     work)
       set_limine_default SKIP_UEFI yes
-      remove_personal_hibernate_disabled_policy
       repair_limine_for_esp_guid "$INTERNAL_ESP_GUID"
       remove_uefi_entries_by_label 'Personal OS'
       ;;
