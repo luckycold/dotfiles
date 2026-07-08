@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+
+set -u
+
+cooldown_seconds=${HIBERNATE_INHIBITOR_NOTIFY_COOLDOWN_SECONDS:-10}
+last_signature=""
+last_sent_at=0
+
+hibernate_capability_summary() {
+  local can_hibernate="unknown"
+  local disk_state="unknown"
+  local summary=""
+
+  can_hibernate=$(
+    busctl call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanHibernate 2>/dev/null |
+      awk -F'"' '{print $2}'
+  )
+  [[ -n $can_hibernate ]] || can_hibernate="unknown"
+
+  if [[ -r /sys/power/disk ]]; then
+    disk_state=$(tr '\n' ' ' </sys/power/disk | sed 's/[[:space:]]*$//')
+  fi
+
+  if [[ $can_hibernate != "yes" ]]; then
+    summary="Hibernate is unavailable: logind CanHibernate=$can_hibernate"
+
+    if [[ $disk_state == *'[disabled]'* ]]; then
+      summary="$summary
+/sys/power/disk is disabled"
+    else
+      summary="$summary
+/sys/power/disk: $disk_state"
+    fi
+  fi
+
+  printf '%s' "$summary"
+}
+
+sleep_inhibitor_summary() {
+  local inhibitors=""
+
+  if command -v jq >/dev/null 2>&1; then
+    inhibitors=$(
+      systemd-inhibit --list --what=sleep --json=short --no-pager 2>/dev/null |
+        jq -r '
+          def format_inhibitor:
+            "- \(.who) (\(.comm), pid \(.pid), \(.mode)): \(.why)";
+
+          map(select(.what | split(":") | index("sleep"))) as $sleep |
+          ($sleep | map(select(.mode == "block" or .mode == "block-weak"))) as $blocking |
+          ($sleep | map(select(.uid != 0))) as $user_inhibitors |
+          (if ($blocking | length) > 0 then $blocking
+           elif ($user_inhibitors | length) > 0 then $user_inhibitors
+           else $sleep end) |
+          unique_by([.who, .uid, .pid, .comm, .mode, .why]) |
+          .[:6][] |
+          format_inhibitor
+        '
+    )
+  else
+    inhibitors=$(systemd-inhibit --list --what=sleep --no-legend --no-pager 2>/dev/null | head -n 6)
+  fi
+
+  if [[ -z $inhibitors ]]; then
+    inhibitors="No active sleep inhibitors were listed by systemd-inhibit."
+  fi
+
+  printf '%s' "$inhibitors"
+}
+
+notify_hibernate_issue() {
+  local context="$1"
+  local capability=""
+  local inhibitors=""
+  local title="Hibernate blocked"
+  local body=""
+
+  capability=$(hibernate_capability_summary)
+  inhibitors=$(sleep_inhibitor_summary)
+
+  if [[ -n $capability ]]; then
+    title="Hibernate unavailable"
+    body="System hibernation is unavailable, not blocked by an app.
+
+$capability
+
+Active sleep inhibitors:
+$inhibitors"
+  else
+    body="$inhibitors"
+  fi
+
+  notify-send \
+    --app-name="Hibernate Monitor" \
+    --urgency=critical \
+    --expire-time=10000 \
+    --icon=system-suspend-hibernate \
+    "$title" \
+    "$body"
+
+  printf '%s: %s\n%s\n' "$title" "$context" "$body" >&2
+}
+
+should_notify_for_line() {
+  local line="${1,,}"
+
+  [[ $line == *inhibit* ]] || return 1
+  [[ $line == *hibernate* || $line == *sleep* ]] || return 1
+}
+
+if [[ ${1:-} == "--notify-now" ]]; then
+  notify_hibernate_issue "${2:-manual check}"
+  exit 0
+fi
+
+journalctl -n0 -f -u systemd-logind.service -o cat --no-pager |
+  while IFS= read -r line; do
+    should_notify_for_line "$line" || continue
+
+    now=$(date +%s)
+    if [[ $line == "$last_signature" ]] && ((now - last_sent_at < cooldown_seconds)); then
+      continue
+    fi
+
+    last_signature="$line"
+    last_sent_at=$now
+    notify_hibernate_issue "$line"
+  done
