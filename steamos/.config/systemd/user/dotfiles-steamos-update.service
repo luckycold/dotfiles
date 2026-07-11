@@ -1,0 +1,8 @@
+[Unit]
+Description=Update SteamOS user-local tools and Flatpaks
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/bootstrap/steamos/apply.sh --update
