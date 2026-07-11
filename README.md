@@ -23,6 +23,25 @@ sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 sudo dnf install stow git gh neovim ghostty bitwarden-cli lsof oathtool solaar
 ```
 
+##### SteamOS
+
+SteamOS is immutable. The SteamOS bootstrap uses per-user Flatpaks and
+user-local CLI tools only; it does not invoke `pacman`, `sudo`, or
+`steamos-readonly`. From Desktop Mode, clone this repository to `~/dotfiles`
+and run:
+
+```bash
+./bootstrap/steamos/apply.sh
+```
+
+It installs Brave, Bitwarden, Proton Pass, Obsidian, ElectronMail, Zed,
+Flatseal, and Solaar as per-user Flatpaks. Stow, Neovim, GitHub CLI, Lazygit,
+Proton Pass CLI, and OpenCode are installed below `~/.local` (OpenCode uses
+`~/.opencode`). Stow comes from Arch's prebuilt package and is extracted into
+`~/.local`; no programs are compiled. A user-systemd timer checks for Flatpak
+and CLI updates daily. Resilio is intentionally not managed here. Beeper and
+Ghostty are not in Flathub, so they are not installed on SteamOS.
+
 ##### Universal Extras
 ```bash
 #Proton Pass CLI
@@ -128,14 +147,6 @@ stow -t ~ common
 stow -t ~ work
 ```
 ```
-# or, on the Nobara/Fedora HTPC:
-stow -t ~ common
-stow -t ~ htpc
-sudo stow -t / htpc-root
-systemctl --user daemon-reload
-systemctl --user enable --now steam-controller-tv-switch.service
-```
-```
 # For systems with my exclusive use
 # sudo stow -t / root
 ```
@@ -174,7 +185,7 @@ The helper prompts for the vault, agent token name, and expiration, then stores 
 
 The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
 
-`stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root`, `htpc-root`, and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
+`stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root` and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
 
 After switching profiles, refresh generated secret-backed configs:
 
@@ -187,10 +198,9 @@ init-env-secrets --all
 The repo is organised as Stow packages plus a few things Stow cannot manage cleanly:
 
 - `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
-- `personal/`, `work/`, and `htpc/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`.
+- `personal/`, `work/`, and `steamos/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
-- `htpc-root/` - HTPC-only system files managed with `sudo stow -t / htpc-root`.
 - `bootstrap/` - host-specific setup that must be *copied* into place (not symlinked) and is applied by `apply.sh` scripts. See the Framework Power section below.
 - `.github/` and `.forgejo/` - CI for the GitHub mirror and the Codeberg/Forgejo canonical repo (see Automation).
 

@@ -2,7 +2,7 @@
 
 ## Deployment model
 - This repo is managed with GNU Stow profiles.
-- Typical setup is `common` plus exactly one persona profile (`personal` or `work`).
+- Typical setup is `common` plus exactly one persona profile (`personal`, `work`, or `steamos`).
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
 
@@ -18,10 +18,6 @@
 - Validate changes with Stow dry runs and basic runtime checks:
   - `stow -n ...` for link simulation
   - reload affected shell/config session as needed.
-
-## HTPC gamemode
-- The HTPC runs gamemode without Hyprland involvement; do not assume `hyprctl` is available or relevant there.
-- The virtual Xbox 360 controller/input device is not a reliable Steam Controller identity signal; do not treat it as the Steam Controller.
 
 ## Bash execution
 - Some repo workflows rely on shell functions defined by Luke's dotfiles, such as `init-env-secrets`.

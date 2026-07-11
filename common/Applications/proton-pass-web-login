@@ -16,7 +16,11 @@ echo "It will create a Proton Pass agent token with access to the vault containi
 echo
 
 vault_name="$(prompt_default "Vault to grant to the agent token" "Main")"
-agent_name="$(prompt_default "Agent token name" "$(hostname)-systemd")"
+host_name="${HOSTNAME:-}"
+if [ -z "$host_name" ] && [ -r /etc/hostname ]; then
+  IFS= read -r host_name < /etc/hostname || true
+fi
+agent_name="$(prompt_default "Agent token name" "${host_name:-steamdeck}-systemd")"
 expiration="$(prompt_default "Agent token expiration (1d, 1w, 1m, 3m, 6m, 1y)" "1y")"
 
 echo
@@ -77,10 +81,14 @@ read -rp "Press Enter to close..."'
 
 if command -v xdg-terminal-exec >/dev/null 2>&1; then
   xdg-terminal-exec bash -lc "$run_web_login"
+elif command -v konsole >/dev/null 2>&1; then
+  konsole --hold -e bash -lc "$run_web_login"
 elif command -v alacritty >/dev/null 2>&1; then
   alacritty -e bash -lc "$run_web_login"
 elif command -v ghostty >/dev/null 2>&1; then
   ghostty -e bash -lc "$run_web_login"
+elif command -v xterm >/dev/null 2>&1; then
+  xterm -e bash -lc "$run_web_login"
 else
   notify-send --urgency=critical "Proton Pass" "No terminal launcher available for web login." 2>/dev/null || true
   exit 1

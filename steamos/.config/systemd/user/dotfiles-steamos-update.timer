@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily SteamOS user-local tool updates
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
