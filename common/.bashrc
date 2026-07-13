@@ -54,29 +54,32 @@ fi
 # Generated for envman. Do not edit.
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
 
-# Keep system Python ahead of mise's managed interpreter so distro-packaged
-# apps using /usr/bin/env python3 can still import Arch Python modules.
-if compgen -G "$HOME/.local/share/mise/installs/python/*/bin" > /dev/null; then
-  _opencode_new_path=""
+# Keep system/devenv interpreters ahead of mise's managed ones.
+# - Python: distro apps using /usr/bin/env python3 still see Arch modules.
+# - Node: brokkr devenv (nodejs_24) must not lose to global mise node 25.
+if compgen -G "$HOME/.local/share/mise/installs/python/*/bin" > /dev/null ||
+  compgen -G "$HOME/.local/share/mise/installs/node/*/bin" > /dev/null; then
+  _mise_demote_path=""
 
   IFS=':'
-  for _opencode_path_entry in $PATH; do
-    case "$_opencode_path_entry" in
+  for _mise_path_entry in $PATH; do
+    case "$_mise_path_entry" in
       "$HOME"/.local/share/mise/installs/python/*/bin) ;;
+      "$HOME"/.local/share/mise/installs/node/*/bin) ;;
       *)
-        if [ -n "$_opencode_new_path" ]; then
-          _opencode_new_path="$_opencode_new_path:$_opencode_path_entry"
+        if [ -n "$_mise_demote_path" ]; then
+          _mise_demote_path="$_mise_demote_path:$_mise_path_entry"
         else
-          _opencode_new_path="$_opencode_path_entry"
+          _mise_demote_path="$_mise_path_entry"
         fi
         ;;
     esac
   done
   unset IFS
 
-  PATH="$_opencode_new_path"
-  unset _opencode_new_path
-  unset _opencode_path_entry
+  PATH="$_mise_demote_path"
+  unset _mise_demote_path
+  unset _mise_path_entry
 fi
 
 export WARP_ENABLE_WAYLAND=1
