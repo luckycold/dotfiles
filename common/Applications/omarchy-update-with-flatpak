@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+if command -v flatpak >/dev/null; then
+  echo -e "\e[32m\nUpdate Flatpak packages\e[0m"
+  flatpak update -y
+  echo
+fi
+
+omarchy-update "$@"
