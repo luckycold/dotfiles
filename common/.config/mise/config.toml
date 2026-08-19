@@ -1,6 +1,11 @@
 [tools]
+claude = "latest"
+codex = "latest"
+gh = "latest"
 node = "latest"
 "npm:@mem0/cli" = "latest"
+"npm:@xai-official/grok" = "latest"
+opencode = "latest"
 python = "latest"
 redis = "8.6.3"
 zig = "latest"
