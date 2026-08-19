@@ -201,7 +201,7 @@ The repo is organised as Stow packages plus a few things Stow cannot manage clea
 - `personal/`, `work/`, and `steamos/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
-- `bootstrap/` - host-specific setup that must be *copied* into place (not symlinked) and is applied by `apply.sh` scripts. See the Framework Power section below.
+- `bootstrap/` - host-specific setup that must be *copied* into place (not stowed) and is applied by `apply.sh` scripts (dual-boot, SDDM keyring, host audio).
 - `.github/` and `.forgejo/` - CI for the GitHub mirror and the Codeberg/Forgejo canonical repo (see Automation).
 
 ## Secret templates (`init-env-secrets`)
@@ -211,7 +211,7 @@ Configs that embed secrets are committed as `*.template.*` files with `{{pass://
 - A template named `foo.template.json` renders to `foo.json`; `bar.template` renders to `bar`.
 - `{{pass://...}}` placeholders are resolved with Proton Pass's `pass-cli` (not the unrelated `pass` command).
 - Rendered outputs are gitignored and never committed.
-- An interactive shell refreshes stale secrets automatically on startup and raises a mako notification when something needs attention; `update-dotfiles` and `stow-profile` also offer to re-render.
+- An interactive shell refreshes stale secrets automatically on startup and raises a desktop notification when something needs attention; `update-dotfiles` and `stow-profile` also offer to re-render.
 
 Common commands:
 
@@ -227,7 +227,7 @@ Currently templated secrets include the Codex config, the Zed AI config, the MCP
 
 `common/.bashrc.d/` is split into focused modules. The main user-facing commands:
 
-- `update-dotfiles` - pull the repo, re-render secrets, reload units; a background check also notifies (via mako) when the repo is behind.
+- `update-dotfiles` - pull the repo, re-render secrets, reload units; a background check also notifies when the repo is behind.
 - `stow-profile` - switch between `personal`/`work` profiles, restow, reload Hyprland/systemd, and re-render secrets.
 - `proton-pass-login` / `netbird-login` - convenience auth helpers.
 
@@ -268,8 +268,8 @@ This repo now leaves hibernation behavior to stock Omarchy. Use Omarchy's own se
 
 The remaining Omarchy-specific pieces are:
 
-- `personal/.config/uwsm/env` - conditionally pins Hyprland to the AMD DRM card when both AMD and NVIDIA GPUs are present
-- `work/.config/uwsm/env` - Work OS equivalent of the UWSM session environment setup
+- `common/.config/hypr/*.lua` - Omarchy 4 Hyprland overrides (bindings, input, looknfeel, monitors)
+- `personal/.config/hypr/autostart.lua` / `work/.config/hypr/autostart.lua` - persona autostart
 - `bootstrap/dual-omarchy-boot/` - coordinates the personal/internal and work/external Omarchy boot menus
 - `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login
 - `bootstrap/philosophia-audio/` - host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
@@ -355,7 +355,6 @@ sudo stow --adopt -t / root
 
 What this covers:
 
-- pin Hyprland to the AMD iGPU in `personal/.config/uwsm/env`
 - coordinate the dual-boot Limine menus
 - install the SDDM PAM configuration that hooks GNOME keyring into login
 - disable WirePlumber's MPRIS pause-on-output-removal behavior on `philosophia`
