@@ -17,11 +17,16 @@ return {
       },
     },
     -- Optional, for file mentions and commands completion, pick only one
-    'saghen/blink.cmp',
-    -- 'hrsh7th/nvim-cmp',
+    'hrsh7th/nvim-cmp',
+    -- 'saghen/blink.cmp',
 
     -- Optional, for file mentions picker, pick only one
-    'folke/snacks.nvim',
+    {
+      'folke/snacks.nvim',
+      lazy = false,
+      priority = 1000,
+      opts = {},
+    },
     -- 'nvim-telescope/telescope.nvim',
     -- 'ibhagwan/fzf-lua',
     -- 'nvim_mini/mini.nvim',
