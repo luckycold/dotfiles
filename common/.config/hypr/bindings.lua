@@ -33,6 +33,10 @@ o.bind("SUPER + ALT + L", "Toggle workspace layout", "omarchy-hyprland-workspace
 -- (Super+Space is still the full Omarchy menu).
 o.bind("SUPER + D", "Applications", "omarchy-menu toggle apps")
 
+-- Super+Shift+S was Google Maps. Print still takes a screenshot too.
+hl.unbind("SUPER + SHIFT + S")
+o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
+
 -- Personal app bindings that differ from Omarchy 4 defaults.
 
 hl.unbind("SUPER + SHIFT + M")
