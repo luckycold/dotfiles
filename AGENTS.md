@@ -30,6 +30,13 @@
 - Do not commit real secrets or host-specific credentials.
 - Keep secrets in template placeholders and local-only overlays.
 
+## Git commits and pushes
+- When work on this repo is done, commit it and push to `origin` without asking.
+- Prefer finishing the change over offering to do it later.
+- There is no harm in committing and pushing as long as the change is not sensitive.
+- Still do not commit secrets, credentials, or host-specific private data.
+- Do not force-push, rewrite published history, or change remotes unless Luke asked for that.
+
 ## Working agreement
 - This file is a shared agreement between Luke and coding agents.
 - It can be updated as we discover better operating rules over time.
