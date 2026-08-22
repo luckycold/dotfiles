@@ -61,3 +61,9 @@
 	helper = !/usr/bin/glab auth git-credential
 [gpg]
 	format = ssh
+[credential "https://origin.cursor.com/git"]
+	helper =
+	helper = !~/.local/bin/origin credential-helper
+[credential "https://origin.cursor.com"]
+	helper =
+	helper = !~/.local/bin/origin credential-helper
