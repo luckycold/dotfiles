@@ -1,0 +1,276 @@
+#!/usr/bin/python3
+# omarchy:summary=Print the Cursor usage record as JSON
+# omarchy:args=[--force] [--limits-only]
+# omarchy:hidden=true
+"""Collect Cursor usage into one display-ready JSON record.
+
+Limits come from Cursor's dashboard API. Local session counts come from
+agent transcripts under ~/.cursor/projects. The agents panel only reads
+the JSON this prints.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import tempfile
+import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Any
+
+AGENT_ID = "cursor"
+AGENT_NAME = "Cursor"
+AUTH_HELP = "Run `cursor-agent login` to restore authoritative usage."
+USAGE_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage"
+PLAN_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetPlanInfo"
+SCAN_REUSE_SECONDS = 20
+LIMITS_ONLY_REUSE_SECONDS = 900
+
+
+def cache_root() -> Path:
+  root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "omarchy" / "agent-usage"
+  root.mkdir(parents=True, exist_ok=True)
+  return root
+
+
+def cache_path() -> Path:
+  return cache_root() / "cursor.json"
+
+
+def now_utc() -> dt.datetime:
+  return dt.datetime.now(dt.timezone.utc)
+
+
+def iso(value: dt.datetime) -> str:
+  return value.astimezone(dt.timezone.utc).isoformat()
+
+
+def ms_to_iso(raw: Any) -> str:
+  try:
+    millis = int(str(raw).strip())
+    return iso(dt.datetime.fromtimestamp(millis / 1000, tz=dt.timezone.utc))
+  except (TypeError, ValueError, OSError):
+    return ""
+
+
+def empty_stats() -> dict[str, Any]:
+  today = dt.datetime.now().astimezone().date()
+  recent = [{"date": (today - dt.timedelta(days=offset)).isoformat(), "messageCount": 0} for offset in range(6, -1, -1)]
+  return {
+    "todayPrompts": 0,
+    "todaySessions": 0,
+    "todayTotalTokens": 0,
+    "todayTokensByModel": {},
+    "recentDays": recent,
+    "totalPrompts": 0,
+    "totalSessions": 0,
+    "activeDays": 0,
+    "activeDates": [],
+    "modelUsage": {},
+  }
+
+
+def base_record(**overrides: Any) -> dict[str, Any]:
+  record: dict[str, Any] = {
+    "schemaVersion": 1,
+    "id": AGENT_ID,
+    "name": AGENT_NAME,
+    "updatedAt": iso(now_utc()),
+    "ready": False,
+    "hasLocalStats": False,
+    "hasPromptStats": True,
+    "scope": "account",
+    "tierLabel": "",
+    "usageStatusText": "",
+    "authHelpText": "",
+    "limits": [],
+  }
+  record.update(empty_stats())
+  record.update(overrides)
+  return record
+
+
+def load_token() -> str:
+  path = Path.home() / ".config" / "cursor" / "auth.json"
+  try:
+    data = json.loads(path.read_text())
+  except (OSError, json.JSONDecodeError):
+    return ""
+  if isinstance(data, dict):
+    return str(data.get("accessToken") or "")
+  return ""
+
+
+def request_json(url: str, token: str) -> dict[str, Any]:
+  req = urllib.request.Request(url, data=b"{}", method="POST", headers={
+    "Authorization": f"Bearer {token}",
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "User-Agent": "omarchy-agent-usage-cursor",
+  })
+  with urllib.request.urlopen(req, timeout=15) as response:
+    payload = json.loads(response.read())
+  return payload if isinstance(payload, dict) else {}
+
+
+def scan_transcripts() -> dict[str, Any]:
+  stats = empty_stats()
+  root = Path.home() / ".cursor" / "projects"
+  if not root.is_dir():
+    return stats
+
+  today = dt.datetime.now().astimezone().date()
+  recent_dates = [(today - dt.timedelta(days=offset)).isoformat() for offset in range(6, -1, -1)]
+  recent = {day: 0 for day in recent_dates}
+  active_dates: set[str] = set()
+  sessions = 0
+  prompts = 0
+  today_sessions = 0
+  today_prompts = 0
+
+  for path in root.rglob("*.jsonl"):
+    try:
+      mtime = dt.datetime.fromtimestamp(path.stat().st_mtime).astimezone()
+    except OSError:
+      continue
+    day = mtime.date().isoformat()
+    sessions += 1
+    active_dates.add(day)
+    assistant = 0
+    try:
+      with path.open(errors="replace") as handle:
+        for line in handle:
+          try:
+            event = json.loads(line)
+          except json.JSONDecodeError:
+            continue
+          if isinstance(event, dict) and event.get("role") == "assistant":
+            assistant += 1
+    except OSError:
+      continue
+    prompts += assistant
+    if day in recent:
+      recent[day] += assistant
+    if day == today.isoformat():
+      today_sessions += 1
+      today_prompts += assistant
+
+  stats.update({
+    "hasLocalStats": sessions > 0,
+    "todayPrompts": today_prompts,
+    "todaySessions": today_sessions,
+    "recentDays": [{"date": day, "messageCount": recent[day]} for day in recent_dates],
+    "totalPrompts": prompts,
+    "totalSessions": sessions,
+    "activeDays": len(active_dates),
+    "activeDates": sorted(active_dates),
+  })
+  return stats
+
+
+def dashboard_limits(token: str) -> tuple[list[dict[str, Any]], str, str]:
+  usage = request_json(USAGE_URL, token)
+  plan = {}
+  try:
+    plan = request_json(PLAN_URL, token)
+  except Exception:
+    plan = {}
+  plan_info = plan.get("planInfo") if isinstance(plan.get("planInfo"), dict) else {}
+  plan_usage = usage.get("planUsage") if isinstance(usage.get("planUsage"), dict) else {}
+  percent = float(plan_usage.get("totalPercentUsed") or 0) / 100.0
+  if percent <= 0:
+    remaining = float(plan_usage.get("remaining") or 0)
+    limit = float(plan_usage.get("limit") or 0)
+    if limit > 0:
+      percent = max(0.0, min(1.0, 1.0 - remaining / limit))
+  limits = [{
+    "label": "Monthly",
+    "title": "Monthly",
+    "percent": max(0.0, min(1.0, percent)),
+    "resetsAt": ms_to_iso(usage.get("billingCycleEnd") or plan_info.get("billingCycleEnd")),
+  }]
+  tier = str(plan_info.get("planName") or "").strip() or "Cursor"
+  status = str(usage.get("displayMessage") or "")
+  return limits, tier, status
+
+
+def load_cache() -> dict[str, Any] | None:
+  try:
+    return json.loads(cache_path().read_text())
+  except (OSError, json.JSONDecodeError):
+    return None
+
+
+def save_cache(record: dict[str, Any]) -> None:
+  path = cache_path()
+  tmp = tempfile.NamedTemporaryFile("w", delete=False, dir=path.parent, prefix=".cursor.")
+  json.dump(record, tmp)
+  tmp.close()
+  os.replace(tmp.name, path)
+
+
+def scan(force: bool, limits_only: bool) -> dict[str, Any]:
+  cached = load_cache()
+  if cached and not force:
+    try:
+      age = (now_utc() - dt.datetime.fromisoformat(cached["updatedAt"])).total_seconds()
+    except Exception:
+      age = 10**9
+    reuse = LIMITS_ONLY_REUSE_SECONDS if limits_only else SCAN_REUSE_SECONDS
+    if age < reuse:
+      return cached
+
+  record = base_record()
+  stats = cached if limits_only and cached else scan_transcripts()
+  record.update({k: stats[k] for k in empty_stats()})
+  record["hasLocalStats"] = bool(stats.get("hasLocalStats"))
+  record["hasPromptStats"] = True
+
+  token = load_token()
+  if not token:
+    record["usageStatusText"] = "Cursor unavailable"
+    record["authHelpText"] = AUTH_HELP
+    if record["hasLocalStats"]:
+      record["ready"] = True
+    record["updatedAt"] = iso(now_utc())
+    return record
+
+  try:
+    limits, tier, status = dashboard_limits(token)
+    record["limits"] = limits
+    record["tierLabel"] = tier
+    record["ready"] = True
+    record["usageStatusText"] = status if status and not limits else ""
+    record["authHelpText"] = ""
+  except urllib.error.HTTPError:
+    record["usageStatusText"] = "Cursor limits unavailable"
+    record["authHelpText"] = AUTH_HELP
+    record["ready"] = record["hasLocalStats"]
+  except Exception:
+    record["usageStatusText"] = "Cursor limits unavailable"
+    record["authHelpText"] = AUTH_HELP
+    record["ready"] = record["hasLocalStats"]
+
+  record["updatedAt"] = iso(now_utc())
+  save_cache(record)
+  return record
+
+
+def main() -> int:
+  parser = argparse.ArgumentParser(description="Print the Cursor usage record as JSON")
+  parser.add_argument("--force", action="store_true")
+  parser.add_argument("--limits-only", action="store_true")
+  args = parser.parse_args()
+  try:
+    record = scan(args.force, args.limits_only)
+  except Exception:
+    record = base_record(usageStatusText="Cursor unavailable", authHelpText=AUTH_HELP)
+  print(json.dumps(record, separators=(",", ":")))
+  return 0
+
+
+if __name__ == "__main__":
+  raise SystemExit(main())

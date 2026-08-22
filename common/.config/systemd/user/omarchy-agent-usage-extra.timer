@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Grok and Cursor Omarchy agent usage records
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=5min
+Persistent=true
+Unit=omarchy-agent-usage-extra.service
+
+[Install]
+WantedBy=timers.target
