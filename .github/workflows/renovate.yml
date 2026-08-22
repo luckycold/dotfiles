@@ -13,15 +13,13 @@ concurrency:
 
 jobs:
   renovate:
-    runs-on: docker
+    runs-on: ubuntu-latest
     container:
       image: renovate/renovate:43.150.0
     env:
       LOG_LEVEL: info
-      RENOVATE_ENDPOINT: https://codeberg.org/api/v1
-      RENOVATE_GIT_AUTHOR: Renovate Bot <renovate@codeberg.org>
-      RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.RENOVATE_GITHUB_COM_TOKEN }}
-      RENOVATE_PLATFORM: forgejo
+      RENOVATE_GIT_AUTHOR: Renovate Bot <renovate@users.noreply.github.com>
+      RENOVATE_PLATFORM: github
       RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
     steps:
       - name: Run Renovate

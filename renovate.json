@@ -61,7 +61,7 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/^\\.forgejo/workflows/renovate\\.yml$/"
+        "/^\\.github/workflows/renovate\\.yml$/"
       ],
       "matchStrings": [
         "image: renovate/renovate:(?<currentValue>[^\\s]+)"
