@@ -32,6 +32,10 @@ if [ -d ~/.bashrc.d ]; then
   done
 fi
 
+if [ ! -d "$HOME/.local/share/omarchy" ]; then
+  alias c=opencode
+fi
+
 # Completion (cross-distro)
 if ! shopt -oq posix; then
   if [ -f /usr/share/bash-completion/bash_completion ]; then

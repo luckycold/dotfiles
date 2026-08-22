@@ -23,7 +23,7 @@ for command in bsdtar curl flatpak git install perl python3 sha256sum tar; do
 done
 
 mkdir -p "$local_bin" "$local_share"
-export PATH="$local_bin:$PATH"
+export PATH="$local_bin:$HOME/.opencode/bin:$PATH"
 
 install_stow() {
   local destination archive extraction
@@ -161,6 +161,14 @@ print(binary["hash"])
   rm -f "$download"
 }
 
+install_opencode() {
+  local installer
+  installer=$(mktemp)
+  curl --fail --location --silent --show-error https://opencode.ai/install --output "$installer"
+  bash "$installer" --no-modify-path
+  rm -f "$installer"
+}
+
 install_flatpaks() {
   flatpak install --user --noninteractive flathub \
     com.bitwarden.desktop \
@@ -180,6 +188,7 @@ install_neovim
 install_github_cli
 install_lazygit
 install_proton_pass_cli
+install_opencode
 install_flatpaks
 
 "$local_bin/stow" --no-folding -R -t "$HOME" -d "$repo_root" common steamos

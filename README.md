@@ -11,12 +11,12 @@ Canonical repository: [github.com/luckycold/dotfiles](https://github.com/luckyco
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode
 # yay -S ...
 ```
 ##### Debian/Ubuntu
 ```bash
-sudo apt install stow git gh neovim ghostty lsof oathtool solaar
+sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 ```
 ##### Fedora
 ```bash
@@ -36,16 +36,18 @@ and run:
 
 It installs Brave, Bitwarden, Proton Pass, Obsidian, ElectronMail, Zed,
 Flatseal, and Solaar as per-user Flatpaks. Stow, Neovim, GitHub CLI, Lazygit,
-and Proton Pass CLI are installed below `~/.local`. Stow comes from Arch's
-prebuilt package and is extracted into `~/.local`; no programs are compiled. A
-user-systemd timer checks for Flatpak and CLI updates daily. Resilio is
-intentionally not managed here. Beeper and Ghostty are not in Flathub, so they
-are not installed on SteamOS.
+Proton Pass CLI, and OpenCode are installed below `~/.local` (OpenCode uses
+`~/.opencode`). Stow comes from Arch's prebuilt package and is extracted into
+`~/.local`; no programs are compiled. A user-systemd timer checks for Flatpak
+and CLI updates daily. Resilio is intentionally not managed here. Beeper and
+Ghostty are not in Flathub, so they are not installed on SteamOS.
 
 ##### Universal Extras
 ```bash
 #Proton Pass CLI
 curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
+#OpenCode
+curl -fsSL https://opencode.ai/install | bash
 ```
 
 ###### Voxtype
@@ -89,7 +91,7 @@ flatpak install io.github.pwr_solaar.solaar
 #### For Mac (Mostly for work)
 ```bash
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof
+brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof opencode
 ```
 
 ##### Caveat for Mac
@@ -219,7 +221,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
+Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
 
 ## Shell tooling
 
@@ -231,10 +233,25 @@ Currently templated secrets include the Codex config, the Zed AI config, the MCP
 
 ## AI coding tooling
 
-This repo carries agent/LLM configuration for Codex CLI and Zed:
+This repo carries a fair amount of agent/LLM configuration:
 
+- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, MCP servers (Kagi, GitLab, mem0, and several disabled-by-default work servers), and the `cursor-acp` provider.
+- `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler).
 - `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates).
 - `common/.mcporter/mcporter.json` - [MCPorter](https://github.com/steipete/mcporter) config for direct MCP auth/inspection (templated).
+
+### Cursor models via open-cursor (`cursor-acp`)
+
+The `cursor-acp` provider routes OpenCode through a Cursor subscription using the [`open-cursor`](https://github.com/Nomadcxx/opencode-cursor) plugin (an `@ai-sdk/openai-compatible` provider pointed at the local proxy on `127.0.0.1:32124`). Authenticate once with `cursor-agent login`.
+
+The `cursor-acp` model catalog is committed directly in `opencode.json`. This keeps the Stow-managed config self-contained and avoids runtime-generated OpenCode config overlays.
+
+To refresh the committed model list, use `open-cursor sync-models --variants --compact` as a source of truth, review the diff, then commit the updated `opencode.json`:
+
+```bash
+npx -y @rama_nigg/open-cursor@latest sync-models --variants --compact --config ~/.config/opencode/opencode.json --no-backup
+opencode models | grep cursor-acp
+```
 
 ## Other systemd user services
 
