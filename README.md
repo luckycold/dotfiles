@@ -11,12 +11,12 @@ Canonical repository: [github.com/luckycold/dotfiles](https://github.com/luckyco
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar
 # yay -S ...
 ```
 ##### Debian/Ubuntu
 ```bash
-sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
+sudo apt install stow git gh neovim ghostty lsof oathtool solaar
 ```
 ##### Fedora
 ```bash
@@ -36,18 +36,16 @@ and run:
 
 It installs Brave, Bitwarden, Proton Pass, Obsidian, ElectronMail, Zed,
 Flatseal, and Solaar as per-user Flatpaks. Stow, Neovim, GitHub CLI, Lazygit,
-Proton Pass CLI, and OpenCode are installed below `~/.local` (OpenCode uses
-`~/.opencode`). Stow comes from Arch's prebuilt package and is extracted into
-`~/.local`; no programs are compiled. A user-systemd timer checks for Flatpak
-and CLI updates daily. Resilio is intentionally not managed here. Beeper and
-Ghostty are not in Flathub, so they are not installed on SteamOS.
+and Proton Pass CLI are installed below `~/.local`. Stow comes from Arch's
+prebuilt package and is extracted into `~/.local`; no programs are compiled. A
+user-systemd timer checks for Flatpak and CLI updates daily. Resilio is
+intentionally not managed here. Beeper and Ghostty are not in Flathub, so they
+are not installed on SteamOS.
 
 ##### Universal Extras
 ```bash
 #Proton Pass CLI
 curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
-#OpenCode
-curl -fsSL https://opencode.ai/install | bash
 ```
 
 ###### Voxtype
@@ -91,7 +89,7 @@ flatpak install io.github.pwr_solaar.solaar
 #### For Mac (Mostly for work)
 ```bash
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof opencode
+brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof
 ```
 
 ##### Caveat for Mac
@@ -202,7 +200,7 @@ The repo is organised as Stow packages plus a few things Stow cannot manage clea
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
 - `bootstrap/` - host-specific setup that must be *copied* into place (not stowed) and is applied by `apply.sh` scripts (dual-boot, SDDM keyring, host audio).
-- `.github/` - GitHub Actions (Renovate and the OpenCode bot; see Automation).
+- `.github/` - GitHub Actions (Renovate; see Automation).
 
 ## Secret templates (`init-env-secrets`)
 
@@ -221,7 +219,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
+Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
 
 ## Shell tooling
 
@@ -233,25 +231,10 @@ Currently templated secrets include the Codex config, the Zed AI config, the MCP
 
 ## AI coding tooling
 
-This repo carries a fair amount of agent/LLM configuration:
+This repo carries agent/LLM configuration for Codex CLI and Zed:
 
-- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, MCP servers (Kagi, GitLab, mem0, and several disabled-by-default work servers), and the `cursor-acp` provider.
-- `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler). The version pins here are bumped automatically by Renovate.
 - `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates).
 - `common/.mcporter/mcporter.json` - [MCPorter](https://github.com/steipete/mcporter) config for direct MCP auth/inspection (templated).
-
-### Cursor models via open-cursor (`cursor-acp`)
-
-The `cursor-acp` provider routes OpenCode through a Cursor subscription using the [`open-cursor`](https://github.com/Nomadcxx/opencode-cursor) plugin (an `@ai-sdk/openai-compatible` provider pointed at the local proxy on `127.0.0.1:32124`). Authenticate once with `cursor-agent login`.
-
-The `cursor-acp` model catalog is committed directly in `opencode.json`. This keeps the Stow-managed config self-contained and avoids runtime-generated OpenCode config overlays.
-
-To refresh the committed model list, use `open-cursor sync-models --variants --compact` as a source of truth, review the diff, then commit the updated `opencode.json`:
-
-```bash
-npx -y @rama_nigg/open-cursor@latest sync-models --variants --compact --config ~/.config/opencode/opencode.json --no-backup
-opencode models | grep cursor-acp
-```
 
 ## Other systemd user services
 
@@ -259,8 +242,7 @@ opencode models | grep cursor-acp
 
 ## Automation
 
-- **Renovate** (`.github/workflows/renovate.yml`, `renovate.json`) keeps the OpenCode plugin version pins in `common/.config/opencode/config.json` up to date via custom regex managers, surfacing updates through the dependency dashboard.
-- **OpenCode bot** (`.github/workflows/opencode.yml`) responds to `/oc` or `/opencode` comments on issues/PRs, running OpenCode against the repo.
+- **Renovate** (`.github/workflows/renovate.yml`, `renovate.json`) keeps the self-hosted Renovate image pin up to date via a custom regex manager, surfacing updates through the dependency dashboard.
 
 ## Omarchy Setup Notes
 

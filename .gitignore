@@ -5,24 +5,17 @@
 personal/Applications/codex-acp
 common/.config/systemd/user/openclaw-gateway.service
 common/.config/systemd/user/protonmail-bridge.service
-common/.config/systemd/user/opencode.service
 common/.config/systemd/user/9router.service
 common/.local/bin
 !common/.local/bin/
 common/.local/bin/*
-!common/.local/bin/opencode-brokkr-mcp
+!common/.local/bin/brokkr-mcp
 !common/.local/bin/hibernate-inhibitor-notify
 !common/.local/bin/proton-pass-cli-autologin-monitor
 !common/.local/bin/switch-to-tv
 common/.local/share/nvim
 common/.local/share
 common/.local/state
-common/.config/opencode/assets
-common/.config/opencode/logs
-common/.config/opencode/smart-voice-notify.jsonc
-# Rendered raw secret token consumed by opencode.json via {file:...}
-/common/.config/opencode/mem0-token
-/common/.config/opencode/linear
 /common/.mcporter/mcporter.json
 common/.config/mcporter/mcporter.json
 __pycache__/

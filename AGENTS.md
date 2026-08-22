@@ -22,7 +22,7 @@
 ## Bash execution
 - Some repo workflows rely on shell functions defined by Luke's dotfiles, such as `init-env-secrets`.
 - Non-interactive tool shells will not have those functions loaded by default.
-- When OpenCode needs to run one of these functions, explicitly load Luke's shell environment first in that command invocation, then run the function.
+- When an agent needs to run one of these functions, explicitly load Luke's shell environment first in that command invocation, then run the function.
 - Do not assume the function exists in the tool shell without loading the shell config.
 - If loading the shell config still does not make the function available, report that clearly and do not present the step as completed.
 
@@ -31,6 +31,6 @@
 - Keep secrets in template placeholders and local-only overlays.
 
 ## Working agreement
-- This file is a shared agreement between Luke and OpenCode.
+- This file is a shared agreement between Luke and coding agents.
 - It can be updated as we discover better operating rules over time.
-- If OpenCode updates this file after deeper/long-form discovery, OpenCode must explicitly notify Luke in the response.
+- If an agent updates this file after deeper/long-form discovery, it must explicitly notify Luke in the response.
