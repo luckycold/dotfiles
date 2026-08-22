@@ -61,6 +61,8 @@
 	helper = !/usr/bin/glab auth git-credential
 [gpg]
 	format = ssh
+[gpg "ssh"]
+	program = ~/.local/bin/git-ssh-sign
 [credential "https://origin.cursor.com/git"]
 	helper =
 	helper = !~/.local/bin/origin credential-helper

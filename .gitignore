@@ -10,6 +10,7 @@ common/.config/systemd/user/9router.service
 common/.local/bin
 !common/.local/bin/
 common/.local/bin/*
+!common/.local/bin/git-ssh-sign
 !common/.local/bin/brokkr-mcp
 !common/.local/bin/omarchy-agent-usage-codex
 !common/.local/bin/omarchy-agent-usage-cursor
@@ -81,6 +82,7 @@ __pycache__/
 /common/.config/Cursor/Partitions/cursor-browser/DawnWebGPUCache
 /common/.config/Cursor/Partitions/cursor-browser/GPUCache
 /common/.config/Cursor/Partitions/cursor-browser/Local Storage/leveldb
+/common/.config/Cursor/Partitions/cursor-browser/Preferences
 /common/.config/Cursor/Partitions/cursor-browser/Network Persistent State
 /common/.config/Cursor/Partitions/cursor-browser/Session Storage
 /common/.config/Cursor/Partitions/cursor-browser/Shared Dictionary
