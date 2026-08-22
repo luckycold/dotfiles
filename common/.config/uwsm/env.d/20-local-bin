@@ -1,2 +1,8 @@
 # Prefer user collectors over packaged Omarchy ones (Codex 0.149 flag fix).
 export PATH="$HOME/.local/bin:$PATH"
+
+if [ -S "$HOME/.ssh/proton-pass-agent.sock" ]; then
+  export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock"
+elif [ -S "$HOME/.bitwarden-ssh-agent.sock" ]; then
+  export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
+fi

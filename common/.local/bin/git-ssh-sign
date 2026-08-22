@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# ssh-keygen wrapper so git SSH signing works when callers omit SSH_AUTH_SOCK.
+set -euo pipefail
+if [[ -z ${SSH_AUTH_SOCK:-} || ! -S ${SSH_AUTH_SOCK} ]]; then
+  if [[ -S $HOME/.ssh/proton-pass-agent.sock ]]; then
+    export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock"
+  elif [[ -S $HOME/.bitwarden-ssh-agent.sock ]]; then
+    export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
+  fi
+fi
+exec ssh-keygen "$@"
