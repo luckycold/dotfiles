@@ -26,6 +26,17 @@
 - Do not assume the function exists in the tool shell without loading the shell config.
 - If loading the shell config still does not make the function available, report that clearly and do not present the step as completed.
 
+## Personal skills
+- `common/.agents/AGENTS.md` is Luke's canonical cross-agent working agreement and personal-skill index; Stow exposes it as `~/.agents/AGENTS.md` and tool-specific global instruction files resolve to it.
+- Luke-authored personal Agent Skills live in `common/.agents/skills/` (SKILL.md directories) and are marked with `author: Luke`.
+- Stow `common` to expose them at `~/.agents/skills/`, which Codex, Cursor, and OpenCode discover natively. Claude receives required compatibility links under `~/.claude/skills/`.
+- Do not invent a parallel skills tree. Add or edit the canonical copy under `common/.agents/skills/`.
+- After a personal skill produces a verified reusable correction or workflow, update its canonical package before the final response by following `personal-skill-maintenance`.
+- Do not self-modify third-party or bundled skills. Do not record secrets, transient state, or inferred preferences.
+- Report skill changes and leave them uncommitted unless Luke explicitly asks for a commit.
+- These skills can describe homelab and personal workflows. Review for hostnames, IPs, emails, and similar identifiers before committing.
+- Approved private operational values belong in the Proton Pass-backed `common/.agents/private-context.template.md`; `init-env-secrets` renders the ignored local file `~/.agents/private-context.md`. Keep tracked skills placeholder-only.
+
 ## Security
 - Do not commit real secrets or host-specific credentials.
 - Keep secrets in template placeholders and local-only overlays.
