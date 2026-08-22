@@ -11,16 +11,33 @@ concurrency:
   group: renovate
   cancel-in-progress: false
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  statuses: write
+
 jobs:
+  resolve-image:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.read.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: read
+        name: Read Renovate image tag
+        run: echo "tag=$(tr -d '[:space:]' < .github/renovate-image)" >> "$GITHUB_OUTPUT"
+
   renovate:
+    needs: resolve-image
     runs-on: ubuntu-latest
     container:
-      image: renovate/renovate:43.150.0
+      image: renovate/renovate:${{ needs.resolve-image.outputs.tag }}
     env:
       LOG_LEVEL: info
       RENOVATE_GIT_AUTHOR: Renovate Bot <renovate@users.noreply.github.com>
       RENOVATE_PLATFORM: github
-      RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+      RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - name: Run Renovate
         run: renovate luckycold/dotfiles
