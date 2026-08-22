@@ -2,7 +2,7 @@
 
 These are the dotfiles for my system
 
-Repository discussion and review happens on [Codeberg](https://codeberg.org/luckycold/dotfiles) only. Comments and pull requests opened elsewhere are not reviewed.
+Canonical repository: [github.com/luckycold/dotfiles](https://github.com/luckycold/dotfiles).
 
 ## Requirements
 
@@ -131,7 +131,7 @@ First, "check out" (the meaning you use in git not "take a look at") the dotfile
 
 ```bash
 cd
-git clone https://codeberg.org/luckycold/dotfiles.git
+git clone https://github.com/luckycold/dotfiles.git
 cd dotfiles
 ```
 
@@ -202,7 +202,7 @@ The repo is organised as Stow packages plus a few things Stow cannot manage clea
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
 - `bootstrap/` - host-specific setup that must be *copied* into place (not stowed) and is applied by `apply.sh` scripts (dual-boot, SDDM keyring, host audio).
-- `.github/` and `.forgejo/` - CI for the GitHub mirror and the Codeberg/Forgejo canonical repo (see Automation).
+- `.github/` - GitHub Actions (Renovate and the OpenCode bot; see Automation).
 
 ## Secret templates (`init-env-secrets`)
 
@@ -259,8 +259,8 @@ opencode models | grep cursor-acp
 
 ## Automation
 
-- **Renovate** (`.forgejo/workflows/renovate.yml`, `renovate.json`) runs on Codeberg and keeps the OpenCode plugin version pins in `common/.config/opencode/config.json` up to date via custom regex managers, surfacing updates through the dependency dashboard.
-- **OpenCode bot** (`.github/workflows/opencode.yml`) responds to `/oc` or `/opencode` comments on issues/PRs in the GitHub mirror, running OpenCode against the repo.
+- **Renovate** (`.github/workflows/renovate.yml`, `renovate.json`) keeps the OpenCode plugin version pins in `common/.config/opencode/config.json` up to date via custom regex managers, surfacing updates through the dependency dashboard.
+- **OpenCode bot** (`.github/workflows/opencode.yml`) responds to `/oc` or `/opencode` comments on issues/PRs, running OpenCode against the repo.
 
 ## Omarchy Setup Notes
 
