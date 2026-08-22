@@ -1,0 +1,9 @@
+[Unit]
+Description=Rewrite Omarchy agent usage after the stock collectors run
+
+[Path]
+PathChanged=%h/.local/state/omarchy/agents/usage
+Unit=omarchy-agent-usage-extra.service
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run packaged collectors, then overlay Grok/Cursor/Codex records.
+set -euo pipefail
+/usr/bin/omarchy-agent-usage-update "$@" || true
+exec "$HOME/.local/bin/omarchy-agent-usage-extra" "$@"

@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+# omarchy:hidden=true
+"""Run the packaged Codex usage collector with a Codex 0.149-compatible
+approval flag. Stock Omarchy still passes `-a untrusted`, which the current
+CLI rejects, so rate limits never load."""
+
+from __future__ import annotations
+
+import io
+import json
+import runpy
+import subprocess
+import sys
+
+_ORIG_POPEN = subprocess.Popen
+
+
+def _popen(args, *pargs, **kwargs):
+  if isinstance(args, (list, tuple)):
+    args = list(args)
+    for index, value in enumerate(args):
+      if value == "untrusted" and index > 0 and args[index - 1] in ("-a", "--ask-for-approval"):
+        args[index] = "never"
+        break
+  return _ORIG_POPEN(args, *pargs, **kwargs)
+
+
+subprocess.Popen = _popen  # type: ignore[assignment]
+sys.argv[0] = "/usr/bin/omarchy-agent-usage-codex"
+captured = io.StringIO()
+sys_stdout = sys.stdout
+try:
+  sys.stdout = captured
+  runpy.run_path("/usr/bin/omarchy-agent-usage-codex", run_name="__main__")
+finally:
+  sys.stdout = sys_stdout
+
+raw = captured.getvalue().strip().splitlines()[-1] if captured.getvalue().strip() else "{}"
+record = json.loads(raw)
+if record.get("limits"):
+  record["authHelpText"] = ""
+  record["usageStatusText"] = ""
+print(json.dumps(record, separators=(",", ":")))
