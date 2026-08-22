@@ -168,6 +168,12 @@ When Luke wants a Hermes-like NAS agent through the ChatGPT app, treat Codex Rem
 
 If a manually started app server blocks managed bootstrap, verify that no rollout is active, terminate only the exact matched unmanaged process after scope approval, then use Codex's own `app-server daemon bootstrap --remote-control` and verify the managed daemon before generating a short-lived mobile pairing code. See `references/codex-truenas-remote-control.md` for the validated reconnaissance, skill mirroring, Memories, unmanaged-to-managed conversion, pairing, security, and smoke-test workflow.
 
+## T3 Connect on an always-on TrueNAS host
+
+Use T3's official user-systemd service model with its persistent base directory on the Apps pool and the local listener restricted to loopback. For a root-owned service, enable user lingering. If `npx t3 service install` fails because `node-pty` cannot compile on the appliance host, do not add a host build toolchain: build the runtime in a temporary compatible Debian/glibc container using the same Node release and architecture, copy it into the persistent base, and point the systemd unit's `PATH` at that Node/runtime.
+
+Complete `t3 connect link --headless` in a durable interactive session, treat its challenge URL and one-time code as transient secrets, restart the service after authorization, and require a provisioned environment link and relay—not merely a stored credential. See `references/t3-connect-truenas-host-service.md` for the verified deployment and health checks.
+
 ## TrueNAS App Deployment Preference
 When deploying apps on Luke's TrueNAS SCALE host, prefer approaches in this order:
 
