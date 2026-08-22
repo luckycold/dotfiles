@@ -29,6 +29,7 @@ common/.config/opencode/smart-voice-notify.jsonc
 # Rendered raw secret token consumed by opencode.json via {file:...}
 /common/.config/opencode/mem0-token
 /common/.config/opencode/linear
+/common/.kagi_session_token
 __pycache__/
 *.pyc
 *.bak
