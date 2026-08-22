@@ -26,7 +26,7 @@ if [ -f "$hydra_env_file" ]; then
 fi
 
 if [ -z "${BROKKR_API_KEY:-}" ]; then
-  echo "BROKKR_API_KEY is not set. Add it to $hydra_env_file or launch OpenCode from a Hydra login shell." >&2
+  echo "BROKKR_API_KEY is not set. Add it to $hydra_env_file or launch from a Hydra login shell." >&2
   exit 1
 fi
 

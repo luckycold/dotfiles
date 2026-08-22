@@ -66,7 +66,6 @@ require('lazy').setup({
   -- Code Snippets
   require 'lucky/plugins/cmp',
   require 'lucky/plugins/supermaven',
-  require 'lucky/plugins/opencode',
 
   -- Tokyo Night Theme
   require 'lucky/plugins/tokyonight',

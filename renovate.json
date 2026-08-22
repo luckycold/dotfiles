@@ -11,56 +11,6 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/^common/\\.config/opencode/config\\.json$/"
-      ],
-      "matchStrings": [
-        "\\\"opencode-openai-codex-auth@(?<currentValue>[^\\\"]+)\\\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "numman-ali/opencode-openai-codex-auth",
-      "versioningTemplate": "semver",
-      "extractVersionTemplate": "^v(?<version>.+)$"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^common/\\.config/opencode/config\\.json$/"
-      ],
-      "matchStrings": [
-        "\\\"@mohak34/opencode-notifier@(?<currentValue>[^\\\"]+)\\\""
-      ],
-      "datasourceTemplate": "npm",
-      "depNameTemplate": "@mohak34/opencode-notifier",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^common/\\.config/opencode/config\\.json$/"
-      ],
-      "matchStrings": [
-        "\\\"opencode-gemini-auth@(?<currentValue>[^\\\"]+)\\\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "jenslys/opencode-gemini-auth",
-      "versioningTemplate": "semver",
-      "extractVersionTemplate": "^v(?<version>.+)$"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^common/\\.local/bin/opencode-kagi-ken-mcp$/"
-      ],
-      "matchStrings": [
-        "package_ref=\\\"@iflow-mcp/kagi-ken-mcp@(?<currentValue>[^\\\"]+)\\\""
-      ],
-      "datasourceTemplate": "npm",
-      "depNameTemplate": "@iflow-mcp/kagi-ken-mcp",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
         "/^\\.github/workflows/renovate\\.yml$/"
       ],
       "matchStrings": [
