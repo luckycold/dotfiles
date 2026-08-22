@@ -12,8 +12,8 @@
     },
     "favorite_models": [],
     "commit_message_model": {
-      "provider": "grok-build",
-      "model": "grok-4.5"
+      "provider": "opencode",
+      "model": "opencode/grok-build-0.1"
     },
     "default_profile": "build",
     "profiles": {
@@ -65,6 +65,9 @@
   },
   "agent_servers": {
     "grok-build": {
+      "type": "registry"
+    },
+    "opencode": {
       "type": "registry"
     },
     "cursor": {
