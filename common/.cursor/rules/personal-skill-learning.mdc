@@ -1,0 +1,11 @@
+---
+description: Self-maintain Luke-authored personal Agent Skills
+alwaysApply: true
+---
+
+# Canonical Personal Agent Guidance
+
+- Read and follow `~/.agents/AGENTS.md`; it is Luke's canonical cross-agent working agreement and personal-skill index.
+- Luke-authored personal skills have `author: Luke` and resolve through `~/.agents/skills/`.
+- After a verified reusable correction or workflow, follow `personal-skill-maintenance` and update only the relevant Luke-authored skill.
+- Do not record secrets, transient state, or inferred preferences. Report skill changes and leave them uncommitted unless Luke explicitly asks.

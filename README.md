@@ -199,6 +199,7 @@ The repo is organised as Stow packages plus a few things Stow cannot manage clea
 
 - `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
 - `personal/`, `work/`, and `steamos/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`.
+- `common/.agents/AGENTS.md` and `common/.agents/skills/` - Luke's canonical cross-agent working agreement and personal [Agent Skills](https://agentskills.io). Codex, Cursor, and OpenCode discover the standard skill path directly; Claude uses relative compatibility links. Each harness keeps its required global-instruction entry point.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
 - `bootstrap/` - host-specific setup that must be *copied* into place (not stowed) and is applied by `apply.sh` scripts (dual-boot, SDDM keyring, host audio).
@@ -221,7 +222,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
+Currently templated secrets include the Codex config, the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
 
 ## Shell tooling
 
@@ -235,10 +236,20 @@ Currently templated secrets include the Codex config, the Zed AI config, the MCP
 
 This repo carries a fair amount of agent/LLM configuration:
 
+- `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, and OpenCode global instruction files resolve directly to it; Cursor uses an always-on user rule that loads it.
+- `common/.agents/skills/` - personal Agent Skills transferred from Hermes (`direct-action-preferences`, `infrastructure-hygiene`, `proton-pass-cli`, `tasker-automation`, `truenas-custom-apps`) plus `personal-skill-maintenance`, which defines the shared self-learning workflow. Skills marked `author: Luke` may make targeted, evidence-backed updates to their canonical package after use.
+- `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`; tracked skills use placeholders and load exact values only when needed.
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, MCP servers (Kagi, GitLab, mem0, and several disabled-by-default work servers), and the `cursor-acp` provider.
 - `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler).
 - `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates).
-- `common/.mcporter/mcporter.json` - [MCPorter](https://github.com/steipete/mcporter) config for direct MCP auth/inspection (templated).
+
+### Personal skill self-learning
+
+Hermes combines foreground `skill_manage` writes, a background review fork, usage metadata, and the Curator lifecycle. Only the foreground learning loop is portable across general Agent Skills implementations. This repo reproduces that part through always-on agent instructions and writable links to one canonical package: after a verified reusable workflow or correction, an agent updates only skills marked `author: Luke`.
+
+The shared setup deliberately does not imitate Hermes' background usage counters, automatic stale/archive transitions, or LLM consolidation. Those require runtime-specific hooks and provenance state that standard `SKILL.md` consumers do not expose consistently. Git diffs provide the cross-agent review and rollback layer; skill changes remain uncommitted until explicitly requested.
+
+Private operational context is kept out of the portable skill packages. Agents resolve approved exact values from the local Proton Pass-backed private context and must not quote or copy that rendered file into tracked documentation.
 
 ### Cursor models via open-cursor (`cursor-acp`)
 

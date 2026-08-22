@@ -29,8 +29,6 @@ common/.config/opencode/smart-voice-notify.jsonc
 # Rendered raw secret token consumed by opencode.json via {file:...}
 /common/.config/opencode/mem0-token
 /common/.config/opencode/linear
-/common/.mcporter/mcporter.json
-common/.config/mcporter/mcporter.json
 __pycache__/
 *.pyc
 *.bak
@@ -105,6 +103,11 @@ __pycache__/
 /common/.cursor/skills-cursor
 common/.cursor/agent-cli-state.json
 
+# Track the always-on Cursor shim for canonical personal instructions.
+!/common/.cursor/
+!/common/.cursor/rules/
+!/common/.cursor/rules/personal-skill-learning.mdc
+
 # Cursor CLI runtime state/noise (not settings)
 /common/.cursor/projects/
 /common/.cursor/ai-tracking/
@@ -126,3 +129,4 @@ common/.config/cliamp/cliamp.sock.pid
 /common/.config/environment.d/mem0.conf
 /common/.codex/config.toml
 /common/.config/solaar/config.yaml
+/common/.agents/private-context.md
