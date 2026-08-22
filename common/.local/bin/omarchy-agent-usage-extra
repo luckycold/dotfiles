@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Write Grok and Cursor usage records, then hide Claude/Fireworks snapshots.
+set -euo pipefail
+
+USAGE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage"
+BIN_DIR="${HOME}/.local/bin"
+mkdir -p "$USAGE_DIR"
+
+collect() {
+  local agent="$1"
+  shift
+  local collector="$BIN_DIR/omarchy-agent-usage-$agent"
+  local record tmp
+  [[ -x $collector ]] || return 0
+  if ! record=$("$collector" "$@") || [[ -z $record ]] || ! jq -e . >/dev/null 2>&1 <<<"$record"; then
+    echo "omarchy-agent-usage-extra: $agent collector failed" >&2
+    return 1
+  fi
+  tmp=$(mktemp "$USAGE_DIR/.$agent.XXXXXX")
+  printf '%s\n' "$record" >"$tmp"
+  mv "$tmp" "$USAGE_DIR/$agent.json"
+}
+
+status=0
+collect grok "$@" || status=1
+collect cursor "$@" || status=1
+rm -f "$USAGE_DIR/claude.json" "$USAGE_DIR/fireworks.json"
+exit "$status"

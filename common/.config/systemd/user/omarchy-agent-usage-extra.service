@@ -1,0 +1,6 @@
+[Unit]
+Description=Refresh Grok and Cursor Omarchy agent usage records
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/omarchy-agent-usage-extra

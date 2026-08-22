@@ -11,6 +11,9 @@ common/.local/bin
 !common/.local/bin/
 common/.local/bin/*
 !common/.local/bin/brokkr-mcp
+!common/.local/bin/omarchy-agent-usage-cursor
+!common/.local/bin/omarchy-agent-usage-extra
+!common/.local/bin/omarchy-agent-usage-grok
 !common/.local/bin/hibernate-inhibitor-notify
 !common/.local/bin/proton-pass-cli-autologin-monitor
 !common/.local/bin/switch-to-tv
