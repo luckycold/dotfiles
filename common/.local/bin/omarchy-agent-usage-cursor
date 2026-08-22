@@ -4,9 +4,10 @@
 # omarchy:hidden=true
 """Collect Cursor usage into one display-ready JSON record.
 
-Limits come from Cursor's dashboard API. Local session counts come from
-agent transcripts under ~/.cursor/projects. The agents panel only reads
-the JSON this prints.
+Limits come from Cursor's dashboard API and are reported as two monthly
+pools: Cursor-specific models (Composer/Auto/first-party) and other API
+models. Local session counts come from agent transcripts under
+~/.cursor/projects. The agents panel only reads the JSON this prints.
 """
 
 from __future__ import annotations
@@ -180,18 +181,32 @@ def dashboard_limits(token: str) -> tuple[list[dict[str, Any]], str, str]:
     plan = {}
   plan_info = plan.get("planInfo") if isinstance(plan.get("planInfo"), dict) else {}
   plan_usage = usage.get("planUsage") if isinstance(usage.get("planUsage"), dict) else {}
-  percent = float(plan_usage.get("totalPercentUsed") or 0) / 100.0
-  if percent <= 0:
-    remaining = float(plan_usage.get("remaining") or 0)
-    limit = float(plan_usage.get("limit") or 0)
-    if limit > 0:
-      percent = max(0.0, min(1.0, 1.0 - remaining / limit))
-  limits = [{
-    "label": "Monthly",
-    "title": "Monthly",
-    "percent": max(0.0, min(1.0, percent)),
-    "resetsAt": ms_to_iso(usage.get("billingCycleEnd") or plan_info.get("billingCycleEnd")),
-  }]
+  reset_at = ms_to_iso(usage.get("billingCycleEnd") or plan_info.get("billingCycleEnd"))
+
+  def pool_percent(*keys: str) -> float:
+    for key in keys:
+      if plan_usage.get(key) is None:
+        continue
+      try:
+        return max(0.0, min(1.0, float(plan_usage.get(key) or 0) / 100.0))
+      except (TypeError, ValueError):
+        continue
+    return 0.0
+
+  limits = [
+    {
+      "label": "Cursor models (monthly)",
+      "title": "Cursor models",
+      "percent": pool_percent("autoPercentUsed"),
+      "resetsAt": reset_at,
+    },
+    {
+      "label": "Other models (monthly)",
+      "title": "Other models",
+      "percent": pool_percent("apiPercentUsed"),
+      "resetsAt": reset_at,
+    },
+  ]
   tier = str(plan_info.get("planName") or "").strip() or "Cursor"
   status = str(usage.get("displayMessage") or "")
   return limits, tier, status
