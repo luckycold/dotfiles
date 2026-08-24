@@ -85,11 +85,6 @@ fi
 export WARP_ENABLE_WAYLAND=1
 export WGPU_BACKEND=gl
 
-# OpenClaw Completion
-if [ -d "/home/lucky/.openclaw/completions" ]; then
-  [ -f "/home/lucky/.openclaw/completions/openclaw.bash" ] && source "/home/lucky/.openclaw/completions/openclaw.bash"
-fi
-
 if command -v direnv >/dev/null 2>&1; then
   eval "$(direnv hook bash)"
 fi

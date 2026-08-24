@@ -3,7 +3,6 @@
 
 # Ignore local Codex integration assets
 personal/Applications/codex-acp
-common/.config/systemd/user/openclaw-gateway.service
 common/.config/systemd/user/protonmail-bridge.service
 common/.config/systemd/user/opencode.service
 common/.config/systemd/user/9router.service
@@ -24,12 +23,10 @@ common/.config/opencode/smart-voice-notify.jsonc
 /common/.config/opencode/mem0-token
 /common/.config/opencode/linear
 /common/.mcporter/mcporter.json
-common/.config/mcporter/mcporter.json
 __pycache__/
 *.pyc
 *.bak
 *.bak.*
-/root/etc/wireguard/*.disabled
 /common/.config/Cursor/.org.chromium.Chromium.P186S7
 /common/.config/Cursor/CachedConfigurations/folder
 /common/.config/Cursor/CachedData

@@ -4,6 +4,10 @@
 send_dotfiles_notification() {
   local summary="Dotfiles Update Available"
   local body="Run 'update-dotfiles' to update your configuration"
+  local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+  local management_script="$dotfiles_dir/common/.bashrc.d/dotfiles_management.bash"
+  local update_command
+  printf -v update_command 'source %q && update-dotfiles' "$management_script"
 
   # Omarchy 4 uses omarchy-shell as the notification daemon (not mako).
   if command -v notify-send >/dev/null 2>&1 && (pgrep -x omarchy-shell >/dev/null 2>&1 || pgrep -x mako >/dev/null 2>&1); then
@@ -24,9 +28,9 @@ send_dotfiles_notification() {
       default)
         # Spawn update terminal in background
         if command -v omarchy 2>/dev/null; then
-          omarchy-launch-floating-terminal-with-presentation "source $HOME/dotfiles/common/.bashrc.d/dotfiles_management.bash && update-dotfiles" &
+          omarchy-launch-floating-terminal-with-presentation "$update_command" &
         else
-          xdg-terminal-exec --title="Dotfiles Update" -e bash -c "source $HOME/dotfiles/common/.bashrc.d/dotfiles_management.bash && update-dotfiles" &
+          xdg-terminal-exec --title="Dotfiles Update" -e bash -c "$update_command" &
         fi
 
         # Wait for terminal to spawn

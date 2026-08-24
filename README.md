@@ -39,8 +39,10 @@ Flatseal, and Solaar as per-user Flatpaks. Stow, Neovim, GitHub CLI, Lazygit,
 Proton Pass CLI, and OpenCode are installed below `~/.local` (OpenCode uses
 `~/.opencode`). Stow comes from Arch's prebuilt package and is extracted into
 `~/.local`; no programs are compiled. A user-systemd timer checks for Flatpak
-and CLI updates daily. Resilio is intentionally not managed here. Beeper and
-Ghostty are not in Flathub, so they are not installed on SteamOS.
+and CLI updates daily. Its `--update` path updates existing user-local tools
+and Flatpaks without reapplying Stow packages or re-enabling services. Resilio
+is intentionally not managed here. Beeper and Ghostty are not in Flathub, so
+they are not installed on SteamOS.
 
 ##### Universal Extras
 ```bash
@@ -95,10 +97,13 @@ brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwa
 ```
 
 ##### Caveat for Mac
-iterm2's settings does not allow for symlinking, you'll need to hardlink the files instead.
+iTerm2's settings do not support symlinks. Stow the manually selected `mac`
+package for its other items, then hard-link the ignored plist separately:
 
 ```bash
-ln -s ~/dotfiles/work/Library/Preferences/com.googlecode.iterm2.plist ~/Library/Preferences/com.googlecode.iterm2.plist
+stow -t ~ common
+stow -t ~ mac
+ln ~/dotfiles/mac/Library/Preferences/com.googlecode.iterm2.plist ~/Library/Preferences/com.googlecode.iterm2.plist
 ```
 
 
@@ -140,13 +145,11 @@ then use GNU stow to create symlinks
 ```bash
 stow -t ~ common
 stow -t ~ personal
-```
-```
+
 # or, on the external Work OS install:
 stow -t ~ common
 stow -t ~ work
-```
-```
+
 # For systems with my exclusive use
 # sudo stow -t / root
 ```
@@ -221,15 +224,19 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the WireGuard tunnels under `root/etc/wireguard/`.
+Currently templated secrets include the Codex config, the Zed AI config, the MCPorter config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, and the Kagi session token.
 
 ## Shell tooling
 
 `common/.bashrc.d/` is split into focused modules. The main user-facing commands:
 
 - `update-dotfiles` - pull the repo, re-render secrets, reload units; a background check also notifies when the repo is behind.
-- `stow-profile` - switch between `personal`/`work` profiles, restow, reload Hyprland/systemd, and re-render secrets.
+- `stow-profile` - select `personal`, `work`, `steamos`, or the manual `mac` package; restow, reload Hyprland/systemd, and re-render secrets.
 - `proton-pass-login` / `netbird-login` - convenience auth helpers.
+
+These commands default to a clone at `~/dotfiles`. Set `DOTFILES_DIR` to use a
+different clone location consistently across update, notification, profile,
+and secret tooling.
 
 ## AI coding tooling
 
