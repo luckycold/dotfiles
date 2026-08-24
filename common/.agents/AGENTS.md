@@ -11,8 +11,6 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 - Prefer supported first-class configuration over custom wrappers, helper binaries, or bespoke glue unless Luke explicitly requests that implementation.
 - When authenticated tooling is needed, prefer the agent's native tools and configured MCP integrations. If neither provides a clear supported path, ask Luke to enable or authenticate the appropriate integration instead of inventing custom glue.
 
-<<<<<<< HEAD
-=======
 ## Dotfiles freshness
 
 Personal skills and this agreement live in the Stow `common` package under `~/dotfiles` (or `$DOTFILES_DIR`). If the CLI, prompt, notification, or git status shows that checkout is behind remote — including "Dotfiles Update Available", "Run update-dotfiles", or `behind N` — sync **before any other work**. Stale skills are worse than a delayed answer.
@@ -23,7 +21,6 @@ Personal skills and this agreement live in the Stow `common` package under `~/do
 
 Do not `git reset --hard`, stash unrelated work, or force-push. If a fast-forward fails, report the divergence and continue only with whatever skill copies are already on disk.
 
->>>>>>> 6911e7e (Sync stale dotfiles before other agent work.)
 ## Personal skills
 
 Luke-authored personal skills are canonical under `~/.agents/skills/` and have `author: Luke` in `SKILL.md`. Load the relevant skill before acting:
