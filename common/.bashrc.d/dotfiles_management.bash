@@ -1,6 +1,10 @@
 #!/bin/bash
 # Dotfiles Management and Update Checker (merged)
 
+_dotfiles_dir() {
+    printf '%s\n' "${DOTFILES_DIR:-$HOME/dotfiles}"
+}
+
 # Desktop notification helper (freedesktop.org spec)
 _can_send_desktop_notification() {
     command -v notify-send &>/dev/null || return 1
@@ -58,8 +62,10 @@ send_update_notification() {
     fi
 
     # Fallback to sourcing the file if function not found (e.g. background subshell)
-    if [ -f "$HOME/dotfiles/common/.bashrc.d/dotfiles_notify.bash" ]; then
-        source "$HOME/dotfiles/common/.bashrc.d/dotfiles_notify.bash"
+    local dotfiles_dir
+    dotfiles_dir="$(_dotfiles_dir)"
+    if [ -f "$dotfiles_dir/common/.bashrc.d/dotfiles_notify.bash" ]; then
+        source "$dotfiles_dir/common/.bashrc.d/dotfiles_notify.bash"
         if command -v send_dotfiles_notification &>/dev/null; then
             send_dotfiles_notification
             return $?
@@ -82,7 +88,8 @@ background_dotfiles_check() {
     [ -n "$_DOTFILES_CHECKED" ] && return 0
     export _DOTFILES_CHECKED=1
 
-    local dotfiles_dir="$HOME/dotfiles"
+    local dotfiles_dir
+    dotfiles_dir="$(_dotfiles_dir)"
     [ ! -d "$dotfiles_dir/.git" ] && return 0
 
     # Run check in background (suppress job notifications in zsh)
@@ -148,7 +155,8 @@ background_dotfiles_check() {
 
 # Manual update command (includes profile management after update)
 update-dotfiles() {
-    local dotfiles_dir="$HOME/dotfiles"
+    local dotfiles_dir
+    dotfiles_dir="$(_dotfiles_dir)"
     local original_dir="$(pwd)"
 
     [ ! -d "$dotfiles_dir/.git" ] && echo "Error: Dotfiles not found at $dotfiles_dir" && return 1
@@ -231,7 +239,8 @@ _skip_dotfiles_profile() {
 
 _switch_dotfiles_profile() {
   local target_profile="$1"
-  local dotfiles_dir="$HOME/dotfiles"
+  local dotfiles_dir
+  dotfiles_dir="$(_dotfiles_dir)"
 
   if [ ! -d "$dotfiles_dir" ]; then
     echo "Error: Dotfiles directory '$dotfiles_dir' not found." >&2
@@ -312,7 +321,8 @@ _switch_dotfiles_profile() {
 
 # List available profiles
 _list_dotfiles_profiles() {
-  local dotfiles_dir="$HOME/dotfiles"
+  local dotfiles_dir
+  dotfiles_dir="$(_dotfiles_dir)"
   local profiles=()
 
   for dir in "$dotfiles_dir"/*/; do

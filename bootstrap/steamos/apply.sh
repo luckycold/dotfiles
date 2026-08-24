@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "${1:-}" != "" && "${1:-}" != "--update" ]]; then
-  printf 'Usage: %s [--update]\n' "$0" >&2
-  exit 64
-fi
+mode=setup
+case "${1:-}" in
+  "")
+    ;;
+  --update)
+    mode=update
+    ;;
+  *)
+    printf 'Usage: %s [--update]\n' "$0" >&2
+    exit 64
+    ;;
+esac
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 local_bin="$HOME/.local/bin"
@@ -183,14 +191,23 @@ install_flatpaks() {
 }
 
 install_stow
-"$local_bin/stow" --no-folding -n -t "$HOME" -d "$repo_root" common steamos
+if [[ "$mode" == setup ]]; then
+  "$local_bin/stow" --no-folding -n -t "$HOME" -d "$repo_root" common steamos
+fi
+
 install_neovim
 install_github_cli
 install_lazygit
 install_proton_pass_cli
 install_opencode
-install_flatpaks
 
+if [[ "$mode" == update ]]; then
+  flatpak update --user --noninteractive
+  printf 'SteamOS user-local tools and Flatpaks updated.\n'
+  exit 0
+fi
+
+install_flatpaks
 "$local_bin/stow" --no-folding -R -t "$HOME" -d "$repo_root" common steamos
 systemctl --user daemon-reload
 systemctl --user enable --now dotfiles-steamos-update.timer

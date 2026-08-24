@@ -19,6 +19,32 @@
       "datasourceTemplate": "docker",
       "depNameTemplate": "renovate/renovate",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.config/opencode/config\\.json$/"
+      ],
+      "matchStrings": [
+        "\\\"opencode-openai-codex-auth@(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "numman-ali/opencode-openai-codex-auth",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.config/opencode/config\\.json$/"
+      ],
+      "matchStrings": [
+        "\\\"opencode-gemini-auth@(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "jenslys/opencode-gemini-auth",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>.+)$"
     }
   ]
 }
