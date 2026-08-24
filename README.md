@@ -270,7 +270,7 @@ opencode models | grep cursor-acp
 
 ## Automation
 
-- **Renovate** (`.github/workflows/renovate.yml`, `renovate.json`) keeps the self-hosted Renovate image pin up to date via a custom regex manager, surfacing updates through the dependency dashboard.
+- **Renovate** (`.github/workflows/renovate.yml`, `.github/renovate-image`, `renovate.json`) keeps the self-hosted Renovate image pin up to date via a custom regex manager, surfacing updates through the dependency dashboard. The workflow authenticates with `GITHUB_TOKEN` (or optional `RENOVATE_TOKEN`) so it can run on GitHub Actions without a Forgejo leftover secret.
 
 ## Omarchy Setup Notes
 

@@ -11,6 +11,7 @@ Session-derived note for Luke's TrueNAS SCALE host (`192.168.1.157`) where the s
 - **DNS:** Luke also uses **`192.168.0.2` as an alternate DNS IP** on the NAS (same `br0` host). Verify live with `dig @192.168.0.2` and `dig @192.168.1.157` — publish/bind may differ by app config over time. Do not tell Luke ".0.2 is not DNS" from Traefik notes alone.
 - AdGuard DNS is often published on `192.168.1.157` when DHCP should hand clients that IP first.
 - AdGuard rewrites for the private app wildcard intentionally send HTTPS app hostnames to Traefik, not to the TrueNAS UI. Resolve exact names and addresses from `~/.agents/private-context.md`.
+- Hosts that must **not** land on Traefik need an **exact** rewrite that wins over `*.lan.1al.cc` → `192.168.0.2`. Verified: `pbs.lan.1al.cc` → hypervisor PBS and `pbs-nas.lan.1al.cc` → the TrueNAS PBS VM. Edit `/mnt/Apps/Applications/adguard-home/config/AdGuardHome.yaml` `filtering.rewrites`, then **restart** `ix-adguard-home-adguard-1`. `SIGHUP` does not reload that YAML.
 
 ## Important pitfall
 

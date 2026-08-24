@@ -126,7 +126,7 @@ When Luke asks you to "learn" an infrastructure host so you can help later, do a
 - **Work-from-home NetBird:** unstable private routed networks on home LAN with fine hotspot behavior → check dual-homed Wi‑Fi + Ethernet on the workstation; resolve private values from `~/.agents/private-context.md` and see `references/netbird-bmc-work-pc-dual-homed.md`.
 - Save durable topology facts, but not raw credentials, private keys, cookies, or transient outage/error claims.
 
-For Proxmox hosts, see `references/proxmox-readonly-recon.md` for the reusable checklist and Luke's current PVE snapshot. For workstation/laptop discovery from the HA add-on, see `references/laptop-lan-recon.md`. For NetBird → work BMC from home, see `references/netbird-bmc-work-pc-dual-homed.md`. For idempotent UniFi WAN port-forward creation with an API key, exact legacy endpoint/schema, credential hygiene, and external verification, see `references/unifi-port-forwarding-via-api.md`.
+For Proxmox hosts, see `references/proxmox-readonly-recon.md` for the reusable checklist and Luke's current PVE snapshot, and `references/proxmox-cluster-ceph.md` for join/upgrade/Ceph recovery. For workstation/laptop discovery from the HA add-on, see `references/laptop-lan-recon.md`. For NetBird → work BMC from home, see `references/netbird-bmc-work-pc-dual-homed.md`. For idempotent UniFi WAN port-forward creation with an API key, exact legacy endpoint/schema, credential hygiene, and external verification, see `references/unifi-port-forwarding-via-api.md`.
 
 ## Proton Pass CLI for audited agent secrets
 
@@ -172,7 +172,11 @@ If a manually started app server blocks managed bootstrap, verify that no rollou
 
 Use T3's official user-systemd service model with its persistent base directory on the Apps pool and the local listener restricted to loopback. For a root-owned service, enable user lingering. If `npx t3 service install` fails because `node-pty` cannot compile on the appliance host, do not add a host build toolchain: build the runtime in a temporary compatible Debian/glibc container using the same Node release and architecture, copy it into the persistent base, and point the systemd unit's `PATH` at that Node/runtime.
 
-Complete `t3 connect link --headless` in a durable interactive session, treat its challenge URL and one-time code as transient secrets, restart the service after authorization, and require a provisioned environment link and relay—not merely a stored credential. See `references/t3-connect-truenas-host-service.md` for the verified deployment and health checks.
+Complete `t3 connect link --headless` in a durable interactive session, treat its challenge URL and one-time code as transient secrets, restart the service after authorization, and require a provisioned environment link and relay—not merely a stored credential. Install agent CLIs with official installers into the NAS root home, expose them with a systemd drop-in `PATH`, and use a scoped Proton Pass CLI agent plus filesystem key store rather than interactive Pass login in T3. When a vendor login page blocks automation (Cloudflare Turnstile), copy an existing same-account CLI session file from a already-authenticated workstation instead of storing passwords in skills. See `references/t3-connect-truenas-host-service.md` for the verified deployment and health checks. Cursor is opt-in in T3: a logged-in `cursor-agent` still stays hidden until Settings → Providers enables it on that T3 server.
+
+## Agent CLIs on Proxmox and Home Assistant
+
+Reuse the NAS Cursor/Grok/Codex/Pass pattern on other LAN hosts. Luke treats the Proxmox nodes, TrueNAS, and the PBS VM as his machines: stow `common` then `personal` on those homes. Keep binaries, Codex auth (`CODEX_HOME`), and T3/Pass units outside the Stow package. On Home Assistant, do not install glibc CLIs into the Alpine SSH add-on; use the Debian Hermes add-on `/config` and keep `cursor-agent` as the Cursor binary. See `references/agent-clis-lan-hosts.md`.
 
 ## TrueNAS App Deployment Preference
 When deploying apps on Luke's TrueNAS SCALE host, prefer approaches in this order:
@@ -267,6 +271,8 @@ This is a hygiene rule for the HA portion of the stack.
 - `references/kagi-mcp-schema-probe.py` — Tirith-safe schema probe script (no shell pipes); exit 1 if the five required tools lack typed properties.
 - See `references/hermes-harness-boundary.md` for the specific incident that established the Hermes harness rule.
 - See `references/proxmox-readonly-recon.md` for read-only Proxmox reconnaissance steps and Luke's current PVE topology snapshot.
+- See `references/proxmox-cluster-ceph.md` for cluster join, PVE 8→9 reboot ordering, JetKVM ISO Range mounts, Ceph removal, HAOS `pvesr` ZFS replication, and dual PBS (pve CT + TrueNAS `pbsnas` remote sync).
+- `references/agent-clis-lan-hosts.md` — Cursor/Grok/Codex/Pass on Proxmox, TrueNAS, PBS, and Hermes; `common`+`personal` Stow; vendored Stow when `apt` is disabled.
 - `references/truenas-backrest-restic-path-health.md` — Backrest/restic: empty `_backrest-view` ix-app-mounts stub; Immich Media mount failure (top-level `additional_storage` ignored; use `storage.additional_storage`); host-eval secrets + `docker exec restic` (no python3 in image); midclt app.update Extra inputs pitfall; plan gaps (odysseus, HA); FUTO restore drill; NFSv4 ACL for uid 568.
 - `references/truenas-apps-pool-space-reclaim.md` — Apps pool near full: Docker image prune first; karakeep/plex-stage leftovers; legacy Immich `app_mounts` destroy only after live mounts verified; snapshot holdback.
 - `references/netbird-bmc-work-pc-dual-homed.md` — generic diagnosis for NetBird routed-network instability when Wi‑Fi and Ethernet are both active.

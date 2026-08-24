@@ -11,10 +11,10 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/^\\.github/workflows/renovate\\.yml$/"
+        "/^\\.github/renovate-image$/"
       ],
       "matchStrings": [
-        "image: renovate/renovate:(?<currentValue>[^\\s]+)"
+        "^(?<currentValue>\\S+)\\s*$"
       ],
       "datasourceTemplate": "docker",
       "depNameTemplate": "renovate/renovate",
