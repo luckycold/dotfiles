@@ -77,6 +77,20 @@ PROTON_PASS_AGENT_REASON="Verification read" proton-pass-agent item view --help
 
 For unauthenticated setups, `pass-cli info` should fail cleanly with an authenticated-client error.
 
+### Scoped SSH agent for Git operations
+
+When a headless host needs Git SSH authentication, start the CLI's native daemon through the scoped wrapper instead of exporting a private key or falling back to an expired HTTPS token:
+
+```bash
+PROTON_PASS_AGENT_REASON="Authenticate Git remote" proton-pass-agent ssh-agent daemon start \
+  --socket-path "<ssh-agent-socket>" \
+  --vault-name "<scoped-vault>" \
+  --pid-file "<ssh-agent-pid-file>" \
+  --log-file "<ssh-agent-log-file>"
+```
+
+The first status check can briefly report `degraded` while keys are loading. Wait for the socket with a bounded retry, require `ssh-agent daemon status` to report `running`, then verify identities with `SSH_AUTH_SOCK="<ssh-agent-socket>" ssh-add -l`. For a new Git host, compare the scanned host-key fingerprint with the provider's official documentation before adding a scoped `known_hosts` entry. Test `ssh -T` before changing the remote and pushing. Keep the socket, PID, log, vault, and remote values in host-local configuration or the private context, not in this skill.
+
 ## CLI v2.1.0 syntax notes
 
 - `pass-cli item list` takes the vault as a positional argument in the observed 2.1.0 CLI:
