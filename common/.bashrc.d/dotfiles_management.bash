@@ -153,11 +153,76 @@ background_dotfiles_check() {
     fi
 }
 
-# Manual update command (includes profile management after update)
+_dotfiles_linked_persona() {
+    local dotfiles_dir="$(_dotfiles_dir)"
+    local profile link target
+    for profile in personal work steamos; do
+        [ -d "$dotfiles_dir/$profile" ] || continue
+        while IFS= read -r -d '' link; do
+            target=$(readlink -n "$link" 2>/dev/null || true)
+            case "$target" in
+                *"dotfiles/${profile}/"*)
+                    printf '%s\n' "$profile"
+                    return 0
+                    ;;
+            esac
+        done < <(find "$HOME/.config" "$HOME/.bashrc.d" "$HOME/.local" "$HOME/.agents" -maxdepth 3 -type l -print0 2>/dev/null)
+    done
+    return 1
+}
+
+_dotfiles_restow_active() {
+    local dotfiles_dir="$(_dotfiles_dir)"
+    local persona
+    pushd "$dotfiles_dir" >/dev/null || return 1
+    echo "Restowing 'common' profile..."
+    stow -R -t ~ common || { popd >/dev/null; return 1; }
+    if persona="$(_dotfiles_linked_persona)"; then
+        echo "Restowing '$persona' profile..."
+        stow -R -t ~ "$persona" || { popd >/dev/null; return 1; }
+    fi
+    popd >/dev/null
+}
+
+_dotfiles_refresh_secrets_noninteractive() {
+    if ! declare -F init-env-secrets >/dev/null; then
+        local secrets_file
+        secrets_file="$(_dotfiles_dir)/common/.bashrc.d/secrets.bash"
+        # shellcheck disable=SC1090
+        [ -f "$secrets_file" ] && source "$secrets_file"
+    fi
+    if declare -F init-env-secrets >/dev/null; then
+        echo "Refreshing template-generated secrets..."
+        init-env-secrets --all || echo "Warning: secret refresh failed; run init-env-secrets --all"
+    fi
+}
+
+# Manual update command (includes profile management after update).
+# Agents should use: source this file, then `update-dotfiles --yes`.
 update-dotfiles() {
     local dotfiles_dir
     dotfiles_dir="$(_dotfiles_dir)"
     local original_dir="$(pwd)"
+    local noninteractive=0
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --yes|-y|--non-interactive)
+                noninteractive=1
+                ;;
+            -h|--help)
+                echo "Usage: update-dotfiles [--yes]"
+                echo "  --yes  Fast-forward, restow the active profile, refresh secrets; no prompts."
+                return 0
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                echo "Usage: update-dotfiles [--yes]" >&2
+                return 1
+                ;;
+        esac
+        shift
+    done
 
     [ ! -d "$dotfiles_dir/.git" ] && echo "Error: Dotfiles not found at $dotfiles_dir" && return 1
 
@@ -172,6 +237,24 @@ update-dotfiles() {
 
     if [ "$local_head" = "$remote_head" ]; then
         echo "Already up to date!"
+        if [ "$noninteractive" -eq 1 ]; then
+            _dotfiles_restow_active || { cd "$original_dir"; return 1; }
+            _dotfiles_refresh_secrets_noninteractive
+        fi
+        cd "$original_dir"
+        return 0
+    fi
+
+    if [ "$noninteractive" -eq 1 ]; then
+        echo "Pulling updates (fast-forward only)..."
+        if ! git pull --ff-only; then
+            echo "Fast-forward failed. Report the divergence; do not reset or force-push." >&2
+            cd "$original_dir"
+            return 1
+        fi
+        _dotfiles_restow_active || { cd "$original_dir"; return 1; }
+        _dotfiles_refresh_secrets_noninteractive
+        echo "Update complete. Re-read ~/.agents/AGENTS.md and any skills this task needs."
         cd "$original_dir"
         return 0
     fi
