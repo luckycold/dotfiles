@@ -8,31 +8,14 @@
     "tail_turns": 4
   },
   "mcp": {
-    "kagi-ken": {
+    "mcporter": {
       "command": [
-        "npx",
-        "-y",
-        "czottmann/kagi-ken-mcp"
+        "sh",
+        "-lc",
+        "exec \"$HOME/.local/bin/mcporter-mcp\""
       ],
       "enabled": true,
       "type": "local"
-    },
-    "linear": {
-      "enabled": false,
-      "headers": {
-        "Authorization": "Bearer {file:~/.config/opencode/linear}"
-      },
-      "oauth": false,
-      "type": "remote",
-      "url": "https://mcp.linear.app/mcp"
-    },
-    "mem0": {
-      "headers": {
-        "Authorization": "Token {file:~/.config/opencode/mem0-token}"
-      },
-      "oauth": false,
-      "type": "remote",
-      "url": "https://mcp.mem0.ai/mcp/"
     }
   }
 }

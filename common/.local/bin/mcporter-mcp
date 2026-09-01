@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+config="${MCPORTER_CONFIG:-$HOME/.mcporter/mcporter.json}"
+servers="${MCPORTER_SERVERS:-kagi-ken,context7,gh_grep,gitlab,mem0}"
+
+if ! command -v mcporter >/dev/null 2>&1; then
+  printf '%s\n' 'mcporter-mcp: mcporter is not installed; see the dotfiles README' >&2
+  exit 127
+fi
+
+exec mcporter --config "$config" serve --stdio --servers "$servers"

@@ -11,6 +11,7 @@ common/.local/bin
 common/.local/bin/*
 !common/.local/bin/git-ssh-sign
 !common/.local/bin/brokkr-mcp
+!common/.local/bin/mcporter-mcp
 !common/.local/bin/omarchy-agent-usage-codex
 !common/.local/bin/omarchy-agent-usage-cursor
 !common/.local/bin/omarchy-agent-usage-extra
@@ -130,3 +131,6 @@ common/.config/cliamp/cliamp.sock.pid
 /common/.codex/config.toml
 /common/.config/solaar/config.yaml
 /common/.agents/private-context.md
+/common/.mcporter/mcporter.json
+/common/.mcporter/credentials.json
+/common/.mcporter/daemon/

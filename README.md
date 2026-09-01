@@ -50,7 +50,11 @@ they are not installed on SteamOS.
 curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
 #OpenCode
 curl -fsSL https://opencode.ai/install | bash
+#MCPorter (preferred when Homebrew is available)
+brew install steipete/tap/mcporter
 ```
+
+Without Homebrew, MCPorter can be installed with `npm install -g mcporter` when Node.js 24 or newer is available.
 
 ###### Voxtype
 Voxtype is recommended for local voice-to-text, but it is intentionally not
@@ -248,9 +252,25 @@ This repo carries a fair amount of agent/LLM configuration:
 - `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`; tracked skills use placeholders and load exact values only when needed.
 - Luke-authored portable skills are also published in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills). `update-agent-skills` installs or refreshes the full collection through the `skills.sh` CLI for Codex, Claude Code, Cursor, and OpenCode. Interactive shells run it in the same locked background startup job as stale-secret detection, and `update-dotfiles` runs it after restowing the selected profile and before regenerating secret-backed templates.
 
-- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, MCP servers (Kagi, GitLab, mem0, and several disabled-by-default work servers), and the `cursor-acp` provider.
+- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, the single MCPorter aggregate bridge, and the `cursor-acp` provider.
 - `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler).
-- `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates).
+- `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates), each connected only to MCPorter.
+- `common/.mcporter/mcporter.template.json` - the canonical [MCPorter](https://github.com/openclaw/mcporter) MCP registry. It owns all upstream server definitions.
+- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, Zed, and Hermes.
+
+### Universal MCP aggregation
+
+Every agent connects to one stdio server named `mcporter`. MCPorter then exposes the active upstream registry with namespaced tools. Individual agent configs must not carry direct upstream MCP definitions.
+
+After stowing `common`, render the registry and verify it:
+
+```bash
+init-env-secrets --all
+mcporter --config ~/.mcporter/mcporter.json config doctor
+mcporter --config ~/.mcporter/mcporter.json list
+```
+
+The shared adapter exposes `kagi-ken,context7,gh_grep,gitlab,mem0` by default. Set `MCPORTER_SERVERS` locally to a comma-separated subset or to include work servers (Brokkr, Bridge, NetBox, Gravwell, and the others in the registry). OAuth state stays local under MCPorter's data directory and must not be committed.
 
 ### Personal skill self-learning
 
