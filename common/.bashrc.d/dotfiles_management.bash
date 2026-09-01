@@ -82,6 +82,51 @@ send_update_notification() {
     fi
 }
 
+# Run the official skills.sh CLI through Node. This also works on hosts where
+# npm's cache is mounted noexec and the generated `skills` shim cannot run.
+_run_agent_skills_cli() {
+    if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+        echo "Node.js and npm are required to manage agent skills." >&2
+        return 1
+    fi
+
+    DISABLE_TELEMETRY=1 npm exec --yes --package=skills@latest -- sh -c '
+        cli=$(command -v skills) || exit 127
+        exec node "$(dirname "$cli")/../skills/bin/cli.mjs" "$@"
+    ' sh "$@"
+}
+
+_remove_legacy_agent_skills_link() {
+    local link_path="$1"
+    local expected_suffix="$2"
+    local link_target
+
+    [ -L "$link_path" ] || return 0
+    link_target=$(readlink "$link_path") || return 1
+
+    case "$link_target" in
+        *"$expected_suffix")
+            unlink "$link_path"
+            ;;
+        *)
+            echo "Refusing to replace unexpected skill link: $link_path -> $link_target" >&2
+            return 1
+            ;;
+    esac
+}
+
+# Install or refresh Luke's portable skills for the supported local agents.
+update-agent-skills() {
+    _remove_legacy_agent_skills_link \
+        "$HOME/.agents/skills" "dotfiles/common/.agents/skills" || return 1
+    _remove_legacy_agent_skills_link \
+        "$HOME/.claude/skills" "dotfiles/common/.claude/skills" || return 1
+
+    _run_agent_skills_cli add luckycold/agent-skills \
+        --skill '*' --global --yes \
+        --agent codex --agent claude-code --agent cursor --agent opencode
+}
+
 # Background check for updates (runs once per shell session)
 background_dotfiles_check() {
     # Only check once per shell session
@@ -284,6 +329,9 @@ update-dotfiles() {
     fi
 
     _switch_dotfiles_profile "$target_profile"
+
+    echo "Refreshing agent skills..."
+    update-agent-skills || echo "Warning: agent skill refresh failed; run update-agent-skills"
 
     if command -v init-env-secrets &>/dev/null; then
         echo "Refreshing template-generated secrets..."

@@ -5,6 +5,7 @@
 - Typical setup is `common` plus exactly one persona profile (`personal`, `work`, or `steamos`).
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
+- Luke-authored portable agent skills are tracked under `common/.agents/skills` and published in `luckycold/agent-skills`; `update-agent-skills` refreshes installed copies through `skills.sh`.
 
 ## Secret templates
 - Secret-backed configs use `*.template.*` filenames (for example `foo.template.json` -> `foo.json`).
