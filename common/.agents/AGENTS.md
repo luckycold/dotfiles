@@ -11,6 +11,26 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 - Prefer supported first-class configuration over custom wrappers, helper binaries, or bespoke glue unless Luke explicitly requests that implementation.
 - When authenticated tooling is needed, prefer the agent's native tools and configured MCP integrations. If neither provides a clear supported path, ask Luke to enable or authenticate the appropriate integration instead of inventing custom glue.
 
+## Skill freshness
+
+At the start of each new run — once per session, not every turn — refresh installed portable skills with the skills.sh CLI before other work.
+
+Non-interactive shells do not load Luke's bash functions. In the same command:
+
+```bash
+source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash"
+update-agent-skills
+```
+
+That is the skills.sh (`skills`) CLI: `add luckycold/agent-skills --skill '*' --global --yes` for Codex, Claude Code, Cursor, and OpenCode. If this session already ran it, skip. If Node.js or npm is missing, report that and continue with on-disk skills. After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
+
+## MCP aggregation
+
+- `~/.mcporter/mcporter.json` is the canonical MCP registry. Render it from `common/.mcporter/mcporter.template.json` with `init-env-secrets`.
+- Codex, OpenCode, Zed, and Hermes should connect only to `~/.local/bin/mcporter-mcp`. Do not duplicate upstream MCP server definitions in those clients.
+- Add or change servers in the mcporter template. Keep credentials as Proton Pass placeholders, never literal values.
+- The default bridge set is `kagi-ken,context7,gh_grep,gitlab,mem0`. Override per host with `MCPORTER_SERVERS`. Set `"imports": []` in the registry so mcporter does not re-import the client configs it now fronts.
+
 ## Dotfiles freshness
 
 Personal skills and this agreement live in the Stow `common` package under `~/dotfiles` (or `$DOTFILES_DIR`). If the CLI, prompt, notification, or git status shows that checkout is behind remote — including "Dotfiles Update Available", "Run update-dotfiles", or `behind N` — sync **before any other work**. Stale skills are worse than a delayed answer.

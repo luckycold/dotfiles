@@ -16,6 +16,10 @@ Treat Luke-authored personal skills as writable procedural memory shared across 
 - Codex, Cursor, and OpenCode discover the canonical standard skill path directly. Claude's required `~/.claude/skills/` entries resolve to the same packages. Never create divergent copies.
 - Do not self-modify third-party, bundled, system, or project-owned skills.
 
+## Session start
+
+At the start of each new run, refresh installed copies of this library with `update-agent-skills` (the skills.sh CLI) before other work. In non-interactive shells, source `${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash` in the same command first. Skip if this session already ran it. If Node.js or npm is missing, report that and continue with on-disk skills.
+
 ## When to learn
 
 Update or create a personal skill when at least one is true:

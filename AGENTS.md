@@ -6,6 +6,7 @@
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
 - Luke-authored portable agent skills are tracked under `common/.agents/skills` and published in `luckycold/agent-skills`; `update-agent-skills` refreshes installed copies through `skills.sh`.
+- `~/.mcporter/mcporter.json` is the canonical MCP registry. Agent harnesses connect only through `~/.local/bin/mcporter-mcp`.
 
 ## Secret templates
 - Secret-backed configs use `*.template.*` filenames (for example `foo.template.json` -> `foo.json`).
