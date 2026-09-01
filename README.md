@@ -136,7 +136,7 @@ First, "check out" (the meaning you use in git not "take a look at") the dotfile
 
 ```bash
 cd
-git clone https://github.com/luckycold/dotfiles.git
+git clone git@github.com:luckycold/dotfiles.git
 cd dotfiles
 ```
 
