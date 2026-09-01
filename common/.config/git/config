@@ -64,10 +64,10 @@
 [gpg "ssh"]
 	program = git-ssh-sign
 [credential "https://origin.cursor.com/git"]
-	helper =
-	helper = !~/.local/bin/origin credential-helper
+	helper = 
+	helper = !/home/lucky/.local/bin/origin credential-helper
 [credential "https://origin.cursor.com"]
-	helper =
-	helper = !~/.local/bin/origin credential-helper
+	helper = 
+	helper = !/home/lucky/.local/bin/origin credential-helper
 [safe]
 	directory = /root/dotfiles
