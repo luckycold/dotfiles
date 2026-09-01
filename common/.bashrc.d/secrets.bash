@@ -369,21 +369,40 @@ _secret_send_refresh_notification() {
   fi
 }
 
+# Refresh portable agent skills as part of the same background startup job used
+# for stale template-generated secrets. Keep failures quiet in the terminal and
+# surface them through the existing desktop notification path.
+_agent_skills_refresh_on_startup() {
+  declare -F update-agent-skills >/dev/null || return 0
+
+  if update-agent-skills </dev/null >/dev/null 2>&1; then
+    return 0
+  fi
+
+  _secret_send_refresh_notification \
+    "Agent Skills Refresh Failed" \
+    "Run update-agent-skills for details." \
+    "critical"
+  return 1
+}
+
 background_secret_refresh() {
   [ -n "${_SECRET_AUTO_REFRESH_STARTED-}" ] && return 0
   export _SECRET_AUTO_REFRESH_STARTED=1
 
-  command -v pass-cli >/dev/null 2>&1 || return 0
-
   (
     local stale_count refresh_output refresh_status summary_line line
     local updated failed
-    local lock_file="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-secrets-refresh.lock"
+    local lock_file="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-startup-refresh.lock"
 
     if ! ( set -o noclobber; : > "$lock_file" ) 2>/dev/null; then
       exit 0
     fi
     trap 'rm -f "$lock_file"' EXIT
+
+    _agent_skills_refresh_on_startup || true
+
+    command -v pass-cli >/dev/null 2>&1 || exit 0
 
     stale_count="$(_secret_count_stale_mappings)" || exit 0
     [[ "$stale_count" =~ ^[0-9]+$ ]] || exit 0

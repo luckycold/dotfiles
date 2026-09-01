@@ -215,7 +215,7 @@ Configs that embed secrets are committed as `*.template.*` files with `{{pass://
 - A template named `foo.template.json` renders to `foo.json`; `bar.template` renders to `bar`.
 - `{{pass://...}}` placeholders are resolved with Proton Pass's `pass-cli` (not the unrelated `pass` command).
 - Rendered outputs are gitignored and never committed.
-- An interactive shell refreshes stale secrets automatically on startup and raises a desktop notification when something needs attention; `update-dotfiles` and `stow-profile` also offer to re-render.
+- An interactive shell refreshes portable agent skills and stale secrets automatically in one locked background startup job, raising a desktop notification when something needs attention; `update-dotfiles` and `stow-profile` also offer to re-render secrets.
 
 Common commands:
 
@@ -246,7 +246,7 @@ This repo carries a fair amount of agent/LLM configuration:
 - `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, and OpenCode global instruction files resolve directly to it; Cursor uses an always-on user rule that loads it.
 - `common/.agents/skills/` - personal Agent Skills transferred from Hermes (`direct-action-preferences`, `infrastructure-hygiene`, `proton-pass-cli`, `tasker-automation`, `truenas-custom-apps`) plus `personal-skill-maintenance`, which defines the shared self-learning workflow. Skills marked `author: Luke` may make targeted, evidence-backed updates to their canonical package after use.
 - `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`; tracked skills use placeholders and load exact values only when needed.
-- Luke-authored portable skills are also published in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills). `update-agent-skills` installs or refreshes the full collection through the `skills.sh` CLI for Codex, Claude Code, Cursor, and OpenCode. `update-dotfiles` runs that refresh after restowing the selected profile and before regenerating secret-backed templates.
+- Luke-authored portable skills are also published in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills). `update-agent-skills` installs or refreshes the full collection through the `skills.sh` CLI for Codex, Claude Code, Cursor, and OpenCode. Interactive shells run it in the same locked background startup job as stale-secret detection, and `update-dotfiles` runs it after restowing the selected profile and before regenerating secret-backed templates.
 
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, MCP servers (Kagi, GitLab, mem0, and several disabled-by-default work servers), and the `cursor-acp` provider.
 - `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler).
