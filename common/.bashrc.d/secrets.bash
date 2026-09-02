@@ -369,19 +369,67 @@ _startup_send_refresh_notification() {
   fi
 }
 
+_agent_skills_lock_state() {
+  local lock_file
+
+  if [ -n "${XDG_STATE_HOME-}" ]; then
+    lock_file="$XDG_STATE_HOME/skills/.skill-lock.json"
+  else
+    lock_file="$HOME/.agents/.skill-lock.json"
+  fi
+
+  [ -f "$lock_file" ] || return 0
+  command -v node >/dev/null 2>&1 || return 1
+
+  node -e '
+    const fs = require("fs");
+    const lock = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const skills = lock.skills || {};
+
+    for (const name of Object.keys(skills).sort()) {
+      const skill = skills[name];
+      if (skill.source === "luckycold/agent-skills") {
+        process.stdout.write(`${name}\t${skill.skillFolderHash || ""}\n`);
+      }
+    }
+  ' "$lock_file"
+}
+
 # Refresh portable agent skills as part of the same background startup job used
 # for stale template-generated secrets. Keep output quiet in the terminal and
-# notify only when the refresh fails.
+# notify only when content changes or the refresh fails.
 _agent_skills_refresh_on_startup() {
+  local before_state after_state refresh_status failure_body
+  local state_available=1
+
   declare -F update-agent-skills >/dev/null || return 0
 
+  before_state="$(_agent_skills_lock_state 2>/dev/null)" || state_available=0
+
   if update-agent-skills </dev/null >/dev/null 2>&1; then
-    return 0
+    refresh_status=0
+  else
+    refresh_status=$?
+  fi
+
+  after_state="$(_agent_skills_lock_state 2>/dev/null)" || state_available=0
+
+  if (( state_available > 0 )) && [[ "$before_state" != "$after_state" ]]; then
+    _startup_send_refresh_notification \
+      "Agent Skills Updated" \
+      "Installed or updated portable agent skill content."
+  fi
+
+  (( refresh_status == 0 )) && return 0
+
+  failure_body="Exited with status $refresh_status. Run update-agent-skills for details."
+  if (( refresh_status == 124 )); then
+    failure_body="The refresh timed out. Run update-agent-skills for details."
   fi
 
   _startup_send_refresh_notification \
     "Agent Skills Refresh Failed" \
-    "Run update-agent-skills for details." \
+    "$failure_body" \
     "critical"
   return 1
 }
@@ -435,7 +483,11 @@ background_secret_refresh() {
     updated="$(_secret_extract_refresh_count "$summary_line" "updated")"
     failed="$(_secret_extract_refresh_count "$summary_line" "failed")"
 
-    if (( refresh_status != 0 && (updated > 0 || failed > 0) )); then
+    if (( refresh_status == 0 && updated > 0 )); then
+      _startup_send_refresh_notification \
+        "Secrets Updated" \
+        "Refreshed $updated template-generated secret file(s)."
+    elif (( refresh_status != 0 && (updated > 0 || failed > 0) )); then
       _startup_send_refresh_notification \
         "Secrets Refresh Issues" \
         "Detected $stale_count stale file(s): updated $updated, failed $failed. Run init-env-secrets --all." \
