@@ -219,7 +219,7 @@ Configs that embed secrets are committed as `*.template.*` files with `{{pass://
 - A template named `foo.template.json` renders to `foo.json`; `bar.template` renders to `bar`.
 - `{{pass://...}}` placeholders are resolved with Proton Pass's `pass-cli` (not the unrelated `pass` command).
 - Rendered outputs are gitignored and never committed.
-- An interactive shell refreshes portable agent skills and stale secrets automatically in one locked background startup job. It sends one combined notification listing the work it starts, plus a separate notification for each refresh that fails; `update-dotfiles` and `stow-profile` also offer to re-render secrets.
+- An interactive shell refreshes portable agent skills and stale secrets automatically in one locked background startup job. Successful runs stay silent; each refresh that fails raises its own desktop notification. `update-dotfiles` and `stow-profile` also offer to re-render secrets.
 
 Common commands:
 
