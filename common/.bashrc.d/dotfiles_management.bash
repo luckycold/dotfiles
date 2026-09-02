@@ -85,12 +85,19 @@ send_update_notification() {
 # Run the official skills.sh CLI through Node. This also works on hosts where
 # npm's cache is mounted noexec and the generated `skills` shim cannot run.
 _run_agent_skills_cli() {
+    local -a node_runtime=()
+
     if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-        echo "Node.js and npm are required to manage agent skills." >&2
-        return 1
+        if command -v mise >/dev/null 2>&1; then
+            mise install node@latest || return 1
+            node_runtime=(mise exec node@latest --)
+        else
+            echo "Node.js and npm are required to manage agent skills." >&2
+            return 1
+        fi
     fi
 
-    DISABLE_TELEMETRY=1 npm exec --yes --package=skills@latest -- sh -c '
+    DISABLE_TELEMETRY=1 "${node_runtime[@]}" npm exec --yes --package=skills@latest -- sh -c '
         cli=$(command -v skills) || exit 127
         exec node "$(dirname "$cli")/../skills/bin/cli.mjs" "$@"
     ' sh "$@"

@@ -8,6 +8,12 @@ if [ -d "$HOME/.local/share/omarchy/bin/" ]; then
   PATH="$HOME/.local/share/omarchy/bin:$PATH"
 fi
 
+# Expose mise-managed tools in interactive and non-interactive shells without
+# requiring shell activation. The shims keep tool versions tied to mise config.
+if [ -d "$HOME/.local/share/mise/shims" ]; then
+  PATH="$HOME/.local/share/mise/shims:$PATH"
+fi
+
 # Source global definitions (cross-distro compatible)
 [ -f /etc/bashrc ] && . /etc/bashrc           # Fedora/RHEL
 [ -f /etc/bash.bashrc ] && . /etc/bash.bashrc # Debian/Ubuntu/Pop_OS
