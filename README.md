@@ -243,6 +243,35 @@ These commands default to a clone at `~/dotfiles`. Set `DOTFILES_DIR` to use a
 different clone location consistently across update, notification, profile,
 and secret tooling.
 
+### Mise on immutable systems
+
+On immutable or appliance-style systems such as SteamOS and TrueNAS, keep
+developer runtimes out of the base operating system. Install mise and Node in
+the current user's home directory instead:
+
+```bash
+curl -fsSL https://mise.run | sh
+export PATH="$HOME/.local/bin:$PATH"
+mise install node@latest
+mise reshim
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+node --version
+npm --version
+```
+
+After `common` is stowed, `.bashrc` adds the mise shim directory to `PATH` for
+both interactive and non-interactive shells. The `update-agent-skills` helper
+also falls back to `mise exec node@latest` and installs that contained Node
+runtime when mise is present but Node is not yet installed:
+
+```bash
+source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash"
+update-agent-skills
+```
+
+This setup writes only beneath `~/.local` and does not require Homebrew, a
+system package manager, or changes to the immutable root filesystem.
+
 ## AI coding tooling
 
 This repo carries a fair amount of agent/LLM configuration:

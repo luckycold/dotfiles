@@ -29,7 +29,7 @@ source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bas
 update-agent-skills
 ```
 
-That is the skills.sh (`skills`) CLI: `add luckycold/agent-skills --skill '*' --global --yes` for Codex, Claude Code, Cursor, and OpenCode. If this session already ran it, skip. If Node.js or npm is missing, report that and continue with on-disk skills. After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
+That is the skills.sh (`skills`) CLI: `add luckycold/agent-skills --skill '*' --global --yes` for Codex, Claude Code, Cursor, and OpenCode. If this session already ran it, skip. On immutable systems, use the user-local mise installation documented in the dotfiles README; `update-agent-skills` installs and runs `node@latest` through mise when Node.js or npm is absent. If neither Node.js/npm nor mise is available, report that and continue with on-disk skills. After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
 
 ## MCP aggregation
 
