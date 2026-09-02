@@ -370,10 +370,14 @@ _secret_send_refresh_notification() {
 }
 
 # Refresh portable agent skills as part of the same background startup job used
-# for stale template-generated secrets. Keep failures quiet in the terminal and
-# surface them through the existing desktop notification path.
+# for stale template-generated secrets. Keep status quiet in the terminal and
+# surface it through the existing desktop notification path.
 _agent_skills_refresh_on_startup() {
   declare -F update-agent-skills >/dev/null || return 0
+
+  _secret_send_refresh_notification \
+    "Refreshing Agent Skills" \
+    "Checking for portable agent skill updates in the background..."
 
   if update-agent-skills </dev/null >/dev/null 2>&1; then
     return 0
