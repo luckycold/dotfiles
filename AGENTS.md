@@ -45,8 +45,9 @@
 
 ## Git commits and pushes
 - When work on this repo is done, commit it and push to `origin` without asking.
+- This is an explicit authorization for this repository only. Do not treat it as push permission for any other codebase.
 - Prefer finishing the change over offering to do it later.
-- There is no harm in committing and pushing as long as the change is not sensitive.
+- This repository authorizes automatic commits and pushes only when the change is not sensitive.
 - Still do not commit secrets, credentials, or host-specific private data.
 - Do not force-push, rewrite published history, or change remotes unless Luke asked for that.
 

@@ -11,6 +11,13 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 - Prefer supported first-class configuration over custom wrappers, helper binaries, or bespoke glue unless Luke explicitly requests that implementation.
 - When authenticated tooling is needed, prefer the agent's native tools and configured MCP integrations. If neither provides a clear supported path, ask Luke to enable or authenticate the appropriate integration instead of inventing custom glue.
 
+## Git push authorization
+
+- Do not push by default. Push only when the active codebase's instructions explicitly authorize it or Luke explicitly authorizes it for the current codebase or task.
+- Treat push authorization as narrowly scoped. Never carry permission from one repository, codebase, task, or prior conversation into another.
+- A request to inspect, edit, implement, test, or commit changes does not by itself authorize a push.
+- Local commits may still be created when Luke requests them or the active codebase requires them; the push boundary remains separate unless that same authorization covers pushing.
+
 ## Skill freshness
 
 At the start of each new run — once per session, not every turn — refresh installed portable skills with the skills.sh CLI before other work.
