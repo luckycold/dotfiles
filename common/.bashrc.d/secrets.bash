@@ -359,7 +359,7 @@ _secret_extract_refresh_count() {
   fi
 }
 
-_secret_send_refresh_notification() {
+_startup_send_refresh_notification() {
   local summary="$1"
   local body="$2"
   local urgency="${3:-normal}"
@@ -369,21 +369,28 @@ _secret_send_refresh_notification() {
   fi
 }
 
+_startup_refresh_notification_body() {
+  local refresh_agent_skills="$1"
+  local stale_count="$2"
+  local body="Refreshing in the background:"
+
+  (( refresh_agent_skills > 0 )) && body+=$'\n• Agent skills'
+  (( stale_count > 0 )) && body+=$'\n• Secrets needing refresh: '"$stale_count"
+
+  printf '%s\n' "$body"
+}
+
 # Refresh portable agent skills as part of the same background startup job used
 # for stale template-generated secrets. Keep status quiet in the terminal and
 # surface it through the existing desktop notification path.
 _agent_skills_refresh_on_startup() {
   declare -F update-agent-skills >/dev/null || return 0
 
-  _secret_send_refresh_notification \
-    "Refreshing Agent Skills" \
-    "Checking for portable agent skill updates in the background..."
-
   if update-agent-skills </dev/null >/dev/null 2>&1; then
     return 0
   fi
 
-  _secret_send_refresh_notification \
+  _startup_send_refresh_notification \
     "Agent Skills Refresh Failed" \
     "Run update-agent-skills for details." \
     "critical"
@@ -395,8 +402,9 @@ background_secret_refresh() {
   export _SECRET_AUTO_REFRESH_STARTED=1
 
   (
-    local stale_count refresh_output refresh_status summary_line line
-    local updated failed
+    local stale_count=0 refresh_output refresh_status summary_line line
+    local updated failed startup_notification
+    local refresh_agent_skills=0
     local lock_file="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-startup-refresh.lock"
 
     if ! ( set -o noclobber; : > "$lock_file" ) 2>/dev/null; then
@@ -404,17 +412,26 @@ background_secret_refresh() {
     fi
     trap 'rm -f "$lock_file"' EXIT
 
-    _agent_skills_refresh_on_startup || true
+    declare -F update-agent-skills >/dev/null && refresh_agent_skills=1
 
-    command -v pass-cli >/dev/null 2>&1 || exit 0
+    if command -v pass-cli >/dev/null 2>&1; then
+      stale_count="$(_secret_count_stale_mappings)" || stale_count=0
+      [[ "$stale_count" =~ ^[0-9]+$ ]] || stale_count=0
+    fi
 
-    stale_count="$(_secret_count_stale_mappings)" || exit 0
-    [[ "$stale_count" =~ ^[0-9]+$ ]] || exit 0
+    (( refresh_agent_skills > 0 || stale_count > 0 )) || exit 0
+
+    startup_notification="$(_startup_refresh_notification_body "$refresh_agent_skills" "$stale_count")"
+
+    _startup_send_refresh_notification \
+      "Terminal Startup Refresh" \
+      "$startup_notification"
+
+    if (( refresh_agent_skills > 0 )); then
+      _agent_skills_refresh_on_startup || true
+    fi
+
     (( stale_count > 0 )) || exit 0
-
-    _secret_send_refresh_notification \
-      "Stale Secrets Detected" \
-      "Found $stale_count stale template-generated secret file(s). Refreshing in background..."
 
     refresh_output="$(init-env-secrets --all 2>&1)"
     refresh_status=$?
@@ -430,16 +447,12 @@ background_secret_refresh() {
     updated="$(_secret_extract_refresh_count "$summary_line" "updated")"
     failed="$(_secret_extract_refresh_count "$summary_line" "failed")"
 
-    if (( refresh_status == 0 )); then
-      _secret_send_refresh_notification \
-        "Secrets Updated" \
-        "Refreshed $updated template-generated secret file(s)."
-    elif (( updated > 0 || failed > 0 )); then
-      _secret_send_refresh_notification \
+    if (( refresh_status != 0 && (updated > 0 || failed > 0) )); then
+      _startup_send_refresh_notification \
         "Secrets Refresh Issues" \
         "Detected $stale_count stale file(s): updated $updated, failed $failed. Run init-env-secrets --all."
-    else
-      _secret_send_refresh_notification \
+    elif (( refresh_status != 0 )); then
+      _startup_send_refresh_notification \
         "Secrets Refresh Failed" \
         "Detected $stale_count stale file(s). Run init-env-secrets --all for details."
     fi
