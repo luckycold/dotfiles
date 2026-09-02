@@ -24,3 +24,8 @@ _darcs
 ^/COPYING
 
 \.directory
+
+# Installed and refreshed independently by the skills.sh CLI. Keep the
+# canonical source in this package without making GNU Stow own runtime copies.
+^/\.agents/skills(?:/|$)
+^/\.claude/skills(?:/|$)
