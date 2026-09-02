@@ -16,7 +16,9 @@ Use this skill when setting up, troubleshooting, or using Proton Pass from Herme
    brew install protonpass/tap/pass-cli
    pass-cli --version
    ```
-   The installed binary is `pass-cli`.
+   The installed binary is `pass-cli`. Without Homebrew, use Proton's installer (`curl -fsSL https://proton.me/download/pass-cli/install.sh | bash`), which places the binary in `~/.local/bin`.
+
+   To update an installer-based binary, stop any service that execs it (the SSH agent holds the file open and `cp` fails with `Text file busy`), then run `pass-cli update --yes` or re-run the installer. Restart `proton-pass-cli-autologin.service` afterward. Unset container/agent `PROTON_PASS_SESSION_DIR` and `PROTON_PASS_KEY_PROVIDER` before updating a desktop keyring session. Homebrew installs must use `brew upgrade pass-cli`; `pass-cli update` will not replace them.
 
 2. **Use container-safe local storage.** In Home Assistant add-ons, Docker containers, and other headless environments, avoid assuming a desktop keyring or persistent Linux kernel keyring. Set a dedicated session dir and filesystem key provider:
    ```bash
@@ -91,14 +93,14 @@ PROTON_PASS_AGENT_REASON="Authenticate Git remote" proton-pass-agent ssh-agent d
 
 The first status check can briefly report `degraded` while keys are loading. Wait for the socket with a bounded retry, require `ssh-agent daemon status` to report `running`, then verify identities with `SSH_AUTH_SOCK="<ssh-agent-socket>" ssh-add -l`. For a new Git host, compare the scanned host-key fingerprint with the provider's official documentation before adding a scoped `known_hosts` entry. Test `ssh -T` before changing the remote and pushing. Keep the socket, PID, log, vault, and remote values in host-local configuration or the private context, not in this skill.
 
-## CLI v2.1.0 syntax notes
+## CLI syntax notes (2.2.4+)
 
-- `pass-cli item list` takes the vault as a positional argument in the observed 2.1.0 CLI:
+- `pass-cli test` was removed in 2.2.4. Verify a session with `pass-cli info` (or `info --output json`). Confirm vault access with `vault list` / `share list` as needed. Login helpers and health checks must not call `test`.
+- `pass-cli item list` accepts the vault as a positional argument or `--vault-name` (both work as of 2.2.3):
   ```bash
   proton-pass-agent item list "<vault>" --output json
   ```
-- Do not use `--vault-name` with `item list` on this version; it errors with `unexpected argument '--vault-name'`. Other subcommands may still use `--vault-name`, so check `--help` per subcommand.
-- A global `item list --output json` can fail if no default vault is set. Prefer explicit positional vault names for deterministic automation.
+- A global `item list --output json` can fail if no default vault is set. Prefer an explicit vault for deterministic automation.
 - When locating credentials, use `item list "<Vault>" --filter-type login --output json` before resolving `/username` or `/password`. Recursive searches across every item type can mistake email aliases for login records because alias titles often look like account usernames; aliases correctly fail with `Field 'username' not found`.
 - When scanning item metadata for candidate SSH/host credentials, summarize only title/type/state; redact vault/share/item IDs and never print secret fields.
 - If `--output json` from `pass-cli item list` contains literal control characters and `json.loads` fails, use Hermes `execute_code`'s `json_parse()` helper instead of printing or hand-cleaning the JSON. Continue to redact IDs and secret fields in any summary.

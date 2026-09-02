@@ -149,7 +149,7 @@ verify_login_ready() {
   local i
 
   for i in $(seq 1 "$LOGIN_VERIFY_WAIT_SECONDS"); do
-    pass-cli test >/dev/null 2>&1 && return 0
+    pass-cli info >/dev/null 2>&1 && return 0
     sleep 1
   done
 
@@ -264,7 +264,7 @@ healthcheck() {
 
   echo "Running health check..."
 
-  if ! pass-cli test >/dev/null 2>&1; then
+  if ! pass-cli info >/dev/null 2>&1; then
     echo "Login check failed, re-authenticating..."
     do_login "$notify_transient"
     return

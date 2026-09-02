@@ -50,7 +50,7 @@ verify_login_ready() {
     local i
 
     for i in $(seq 1 "$LOGIN_VERIFY_WAIT_SECONDS"); do
-        if pass-cli test >/dev/null 2>&1 && has_pass_access; then
+        if pass-cli info >/dev/null 2>&1 && has_pass_access; then
             return 0
         fi
         sleep 1
@@ -104,20 +104,20 @@ for cmd in pass-cli secret-tool; do
 done
 
 # 1. Check if we are already logged in
-PASS_TEST_OUTPUT="$(pass-cli test 2>&1)"
-PASS_TEST_STATUS=$?
+PASS_INFO_OUTPUT="$(pass-cli info 2>&1)"
+PASS_INFO_STATUS=$?
 
-if [ "$PASS_TEST_STATUS" -eq 0 ] && has_pass_access; then
+if [ "$PASS_INFO_STATUS" -eq 0 ] && has_pass_access; then
     echo "✅ Already logged into Proton Pass."
     exit 0
 fi
 
-if [ "$PASS_TEST_STATUS" -eq 0 ]; then
+if [ "$PASS_INFO_STATUS" -eq 0 ]; then
     echo "⚠️ Proton Pass session is authenticated but has no vault/share access. Re-authentication required."
     exit 5
 fi
 
-if is_local_db_error "$PASS_TEST_OUTPUT"; then
+if is_local_db_error "$PASS_INFO_OUTPUT"; then
     reset_local_session
 fi
 
@@ -152,6 +152,10 @@ if [ "$LOGIN_STATUS" -ne 0 ]; then
     echo "proton-login exited with status $LOGIN_STATUS"
 
     if is_already_authenticated "$LOGIN_OUTPUT"; then
+        if verify_login_ready; then
+            echo "✅ Already logged into Proton Pass."
+            exit 0
+        fi
         echo "Client is already authenticated but verification failed. Treating as transient connectivity/session verification failure."
         exit 1
     fi

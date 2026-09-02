@@ -32,7 +32,7 @@ pass-cli login || {
   exit 1
 }
 
-pass-cli test >/dev/null 2>&1 || {
+pass-cli info >/dev/null 2>&1 || {
   echo "Proton Pass login did not verify successfully."
   read -rp "Press Enter to close..."
   exit 1
