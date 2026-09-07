@@ -124,6 +124,25 @@ _remove_legacy_agent_skills_link() {
 
 # Install or refresh Luke's portable skills for the supported local agents.
 update-agent-skills() {
+    # Preserve a contributor checkout shared with a running agent harness.
+    local shared_skills shared_repo shared_remote
+    if [ -L "$HOME/.agents/skills" ]; then
+        shared_skills=$(readlink -f "$HOME/.agents/skills") || return 1
+        shared_repo=$(dirname "$shared_skills")
+        shared_remote=$(git -C "$shared_repo" remote get-url origin 2>/dev/null)
+        if [ "$shared_skills" = "$shared_repo/skills" ] && [ -d "$shared_repo/.git" ]; then
+            case "$shared_remote" in
+                https://github.com/luckycold/agent-skills|https://github.com/luckycold/agent-skills.git|git@github.com:luckycold/agent-skills.git)
+                    if [ -n "$(git -C "$shared_repo" status --porcelain)" ]; then
+                        echo "Shared skills checkout has local changes; leaving it untouched." >&2
+                        return 1
+                    fi
+                    git -C "$shared_repo" pull --ff-only
+                    return $?
+                    ;;
+            esac
+        fi
+    fi
     _remove_legacy_agent_skills_link \
         "$HOME/.agents/skills" "dotfiles/common/.agents/skills" || return 1
     _remove_legacy_agent_skills_link \
@@ -208,7 +227,7 @@ background_dotfiles_check() {
 _dotfiles_linked_persona() {
     local dotfiles_dir="$(_dotfiles_dir)"
     local profile link target
-    for profile in personal work steamos; do
+    for profile in agent personal work steamos mac; do
         [ -d "$dotfiles_dir/$profile" ] || continue
         while IFS= read -r -d '' link; do
             target=$(readlink -n "$link" 2>/dev/null || true)
@@ -237,6 +256,10 @@ _dotfiles_restow_active() {
 }
 
 _dotfiles_refresh_secrets_noninteractive() {
+    if [ "$(_dotfiles_linked_persona)" = agent ]; then
+        echo "Agent profile: skipping bulk secret rendering; refresh only explicitly needed items."
+        return 0
+    fi
     if ! declare -F init-env-secrets >/dev/null; then
         local secrets_file
         secrets_file="$(_dotfiles_dir)/common/.bashrc.d/secrets.bash"
@@ -335,15 +358,10 @@ update-dotfiles() {
       target_profile="${profiles[$((choice - 2))]}"
     fi
 
-    _switch_dotfiles_profile "$target_profile"
+    _switch_dotfiles_profile "$target_profile" || { cd "$original_dir"; return 1; }
 
     echo "Refreshing agent skills..."
     update-agent-skills || echo "Warning: agent skill refresh failed; run update-agent-skills"
-
-    if command -v init-env-secrets &>/dev/null; then
-        echo "Refreshing template-generated secrets..."
-        init-env-secrets --all || echo "Warning: secret refresh failed; run init-env-secrets --all"
-    fi
 
     # Ask to reload bashrc
     echo -n "Reload shell configuration? (y/n): "
@@ -445,7 +463,7 @@ _switch_dotfiles_profile() {
   fi
 
   # Offer to refresh generated secrets for the new active profile.
-  if declare -F init-env-secrets >/dev/null && [ -t 0 ] && [ -t 1 ]; then
+  if [ "$target_profile" != agent ] && declare -F init-env-secrets >/dev/null && [ -t 0 ] && [ -t 1 ]; then
     echo -n "Refresh all generated secrets now? (y/N): "
     read -r refresh_secrets
 

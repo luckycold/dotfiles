@@ -22,3 +22,17 @@ persona. It does not install desktop applications or apply `root/`.
   this profile does not copy, overwrite, or publish either.
 
 Common's desktop configs are linked but dormant on a headless machine.
+
+## Updating this profile
+
+`update-dotfiles` recognizes `agent` as an active profile and skips bulk secret
+rendering, including during non-interactive updates. Interactive profile changes
+on other profiles offer one refresh, rather than running it twice.
+
+When the scoped CLI wrapper and its session directory are already provisioned,
+new agent shells select that filesystem-backed session. No login credentials are
+stored in this profile. Verify access with `pass-cli info`.
+
+`update-agent-skills` preserves a symlink to a clean contributor checkout of
+`luckycold/agent-skills` and updates it with `git pull --ff-only`. Dirty or
+diverged checkouts are not overwritten, and unrelated symlinks remain protected.
