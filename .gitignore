@@ -130,6 +130,10 @@ common/.config/cliamp/cliamp.sock.pid
 /common/.config/environment.d/mem0.conf
 /common/.codex/config.toml
 /common/.config/solaar/config.yaml
+# Rendered private context — never track, anywhere in the tree
+private-context.md
+**/private-context.md
+*.private-context.md
 /common/.agents/private-context.md
 /common/.mcporter/mcporter.json
 /common/.mcporter/credentials.json
