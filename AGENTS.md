@@ -5,7 +5,7 @@
 - Typical setup is `common` plus exactly one persona profile (`personal`, `work`, or `steamos`).
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
-- Luke-authored portable agent skills are tracked under `common/.agents/skills` and published in `luckycold/agent-skills`; `update-agent-skills` refreshes installed copies through `skills.sh`.
+- Luke-authored portable agent skills live only in `luckycold/agent-skills`. Do not track a skills tree in this repo. `update-agent-skills` installs them to `~/.agents/skills` through `skills.sh`. GNU Stow ignores `~/.agents/skills`.
 - `~/.mcporter/mcporter.json` is the canonical MCP registry. Agent harnesses connect only through `~/.local/bin/mcporter-mcp`.
 
 ## Secret templates
@@ -30,9 +30,9 @@
 
 ## Personal skills
 - `common/.agents/AGENTS.md` is Luke's canonical cross-agent working agreement and personal-skill index; Stow exposes it as `~/.agents/AGENTS.md` and tool-specific global instruction files resolve to it.
-- Luke-authored personal Agent Skills live in `common/.agents/skills/` (SKILL.md directories) and are marked with `author: Luke`.
-- Stow `common` to expose them at `~/.agents/skills/`, which Codex, Cursor, and OpenCode discover natively. Claude receives required compatibility links under `~/.claude/skills/`.
-- Do not invent a parallel skills tree. Add or edit the canonical copy under `common/.agents/skills/`.
+- Luke-authored personal Agent Skills are canonical in `luckycold/agent-skills` (`author: Luke`) and installed at `~/.agents/skills/` by `update-agent-skills`. Codex, Cursor, and OpenCode discover that directory natively. Claude receives required compatibility links under `~/.claude/skills/`.
+- Do not invent a parallel skills tree in this repo. Add or edit skills in `luckycold/agent-skills`, not under `common/.agents/skills/`.
+- `common/.stow-local-ignore` excludes `.agents/skills` so Stow never owns the runtime copies.
 - After a personal skill produces a verified reusable correction or workflow, update its canonical package before the final response by following `personal-skill-maintenance`.
 - Do not self-modify third-party or bundled skills. Do not record secrets, transient state, or inferred preferences.
 - Report skill changes and leave them uncommitted unless Luke explicitly asks for a commit.

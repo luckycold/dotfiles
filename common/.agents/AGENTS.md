@@ -40,7 +40,7 @@ That is the skills.sh (`skills`) CLI: `add luckycold/agent-skills --skill '*' --
 
 ## Dotfiles freshness
 
-Personal skills and this agreement live in the Stow `common` package under `~/dotfiles` (or `$DOTFILES_DIR`). If the CLI, prompt, notification, or git status shows that checkout is behind remote — including "Dotfiles Update Available", "Run update-dotfiles", or `behind N` — sync **before any other work**. Stale skills are worse than a delayed answer.
+This agreement is stowed from the `common` package under `~/dotfiles` (or `$DOTFILES_DIR`). Portable skills are **not** in the dotfiles tree; they are installed from `luckycold/agent-skills` into `~/.agents/skills` by `update-agent-skills`. If the CLI, prompt, notification, or git status shows that checkout is behind remote — including "Dotfiles Update Available", "Run update-dotfiles", or `behind N` — sync **before any other work**. Stale skills are worse than a delayed answer.
 
 1. Non-interactive shells do not load Luke's bash functions. In the same command, `source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash"`, then run `update-dotfiles --yes`.
 2. That fast-forwards the clone, restows `common` plus any already-linked persona (`personal` / `work` / `steamos`), and refreshes secret templates with `init-env-secrets --all` when that function is available.
