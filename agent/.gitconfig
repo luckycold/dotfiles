@@ -1,0 +1,9 @@
+# Loaded after common's XDG Git configuration.
+[commit]
+	gpgsign = false
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential

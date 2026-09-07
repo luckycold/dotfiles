@@ -158,6 +158,17 @@ stow -t ~ work
 # sudo stow -t / root
 ```
 
+For a headless agent host, use `common` plus `agent` instead:
+
+```bash
+stow -n -t ~ common agent
+stow -t ~ common agent
+```
+
+See [the agent profile](agent/README.md) for scoped-secret handling and the
+desktop-service exceptions. Do not enable the desktop Proton auto-login helper
+for this profile.
+
 ### Post-stow: Enable systemd user services
 
 After stowing `common`, enable the Proton Pass service:

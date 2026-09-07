@@ -2,7 +2,8 @@
 
 ## Deployment model
 - This repo is managed with GNU Stow profiles.
-- Typical setup is `common` plus exactly one persona profile (`personal`, `work`, or `steamos`).
+- Typical setup is `common` plus exactly one machine/persona profile (`personal`, `work`, `steamos`, or `agent`).
+- `agent` is for headless agent hosts; follow `agent/README.md` for scoped-secret and desktop-service exceptions.
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
 - Luke-authored portable agent skills live only in `luckycold/agent-skills`. Do not track a skills tree in this repo. `update-agent-skills` installs them to `~/.agents/skills` through `skills.sh`. GNU Stow ignores `~/.agents/skills`.
