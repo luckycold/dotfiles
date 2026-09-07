@@ -315,7 +315,9 @@ init-env-secrets() {
 
     mkdir -p "$(dirname "$output")"
 
-    if pass-cli inject -f -i "$template" -o "$output"; then
+    # Scope the audit reason to this invocation; retain an explicit caller reason.
+    if PROTON_PASS_AGENT_REASON="${PROTON_PASS_AGENT_REASON:-Refresh dotfiles template: ${id:0:200}}" \
+      pass-cli inject -f -i "$template" -o "$output"; then
       chmod 600 "$output" 2>/dev/null || true
       echo "Updated: $id -> $output"
       ((updated++))
