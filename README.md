@@ -23,6 +23,38 @@ sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 sudo dnf install stow git gh neovim ghostty bitwarden-cli lsof oathtool solaar
 ```
 
+##### Steam Controller on Hyprland (personal profile)
+
+Install `steam` (which includes the `steam-devices` udev rules) and the AUR
+package `lib32-extest` on Arch/Omarchy:
+
+```bash
+omarchy pkg add steam
+omarchy pkg aur add lib32-extest
+stow -n -t ~ personal
+stow -t ~ personal
+```
+
+The personal profile overrides `steam.desktop` to preload
+`/usr/lib32/libextest.so` for Steam and its launcher actions. Extest converts
+Steam's X11 mouse/keyboard emulation into uinput events that can control the
+Wayland desktop. Launch Steam from the application menu; terminal launches
+need `LD_PRELOAD=/usr/lib32/libextest.so steam`. Fully exit and reopen Steam
+once after enabling this. Keep the package installed while this override is
+in use. No global `LD_PRELOAD`, Hyprland hooks, or extra input-group membership
+are needed when `steam-devices` grants the active user access to `/dev/uinput`.
+
+This addresses desktop pointer input; game-specific Steam Input behavior still
+needs to be tested per game. OpenPuck's built-in Lizard mode is also available
+for basic desktop control independently of Steam.
+
+The desktop file is based on Arch's Steam launcher (1.0.0.87); when its actions
+change upstream, refresh this copy and retain the `Exec=env LD_PRELOAD=...`
+prefixes. To undo, unstow/remove the personal `steam.desktop` override and
+restart Steam; the system launcher then takes over.
+
+Reference: https://github.com/Supreeeme/extest
+
 ##### SteamOS
 
 SteamOS is immutable. The SteamOS bootstrap uses per-user Flatpaks and
