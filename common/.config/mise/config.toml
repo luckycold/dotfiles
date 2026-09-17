@@ -10,3 +10,6 @@ python = "latest"
 redis = "8.6.3"
 zig = "latest"
 zls = "latest"
+
+[settings.upgrade]
+auto_prune = false

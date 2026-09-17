@@ -402,11 +402,12 @@ _agent_skills_refresh_on_startup() {
   local before_state after_state refresh_status failure_body
   local state_available=1
 
-  declare -F update-agent-skills >/dev/null || return 0
+  [ "${AGENT_SKILLS_AUTO_UPDATE:-1}" = 1 ] || return 0
+  declare -F _dotfiles_auto_update_agent_skills >/dev/null || return 0
 
   before_state="$(_agent_skills_lock_state 2>/dev/null)" || state_available=0
 
-  if update-agent-skills </dev/null >/dev/null 2>&1; then
+  if _dotfiles_auto_update_agent_skills </dev/null >/dev/null 2>&1; then
     refresh_status=0
   else
     refresh_status=$?
@@ -449,6 +450,13 @@ background_secret_refresh() {
     trap 'rm -f "$lock_file"' EXIT
 
     _agent_skills_refresh_on_startup || true
+
+    # Scoped agents refresh skills, but never automatic bulk secrets.
+    [ "${DOTFILES_SCOPED_AGENT:-0}" = 1 ] && exit 0
+    if declare -F _dotfiles_bulk_secrets_allowed >/dev/null &&
+      ! _dotfiles_bulk_secrets_allowed; then
+      exit 0
+    fi
 
     if ! stale_count="$(_secret_count_stale_mappings 2>/dev/null)" ||
       [[ ! "$stale_count" =~ ^[0-9]+$ ]]; then

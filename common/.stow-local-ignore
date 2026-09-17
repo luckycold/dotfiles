@@ -25,7 +25,8 @@ _darcs
 
 \.directory
 
-# Installed and refreshed independently by the skills.sh CLI. Keep the
-# canonical source in this package without making GNU Stow own runtime copies.
+# Canonical portable skills live externally in luckycold/agent-skills, not here.
+# The skills.sh CLI installs ~/.agents/skills and compatibility links independently;
+# keep GNU Stow from owning runtime copies or legacy skills links.
 ^/\.agents/skills(?:/|$)
 ^/\.claude/skills(?:/|$)

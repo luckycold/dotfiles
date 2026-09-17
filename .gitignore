@@ -138,3 +138,4 @@ private-context.md
 /common/.mcporter/mcporter.json
 /common/.mcporter/credentials.json
 /common/.mcporter/daemon/
+/current_session_context/tool_calls/read

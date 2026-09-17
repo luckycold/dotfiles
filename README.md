@@ -203,7 +203,8 @@ for this profile.
 
 ### Post-stow: Enable systemd user services
 
-After stowing `common`, enable the Proton Pass service:
+On desktop profiles only, after stowing `common`, enable the Proton Pass service.
+Skip this section for the headless `agent` profile:
 
 ```bash
 systemctl --user daemon-reload
@@ -233,23 +234,29 @@ The desktop notification includes an action to update the relevant keyring secre
 
 The helper prompts for the vault, agent token name, and expiration, then stores the resulting token in the local keyring without printing it.
 
-The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between personal and work "profiles" to cleanly and quickly get up and running on any new computer install.
+The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between `personal`, `work`, `steamos`, and `agent` "profiles" to cleanly and quickly get up and running on any new computer install.
 
 `stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root` and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
 
-After switching profiles, refresh generated secret-backed configs:
+After switching desktop profiles, refresh generated secret-backed configs:
 
 ```bash
 init-env-secrets --all
 ```
+
+For the scoped `agent` profile, skip bulk rendering. Verify the existing scoped
+Proton session with `pass-cli info`, set a short `PROTON_PASS_AGENT_REASON`, and
+render only an explicitly authorized selector with `init-env-secrets <selector>`.
+In non-interactive shells, load `common/.bashrc.d/secrets.bash` explicitly first.
+The manual renderer is unchanged; do not use `--all` on scoped agent hosts.
 
 ## Repository layout
 
 The repo is organised as Stow packages plus a few things Stow cannot manage cleanly:
 
 - `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
-- `personal/`, `work/`, and `steamos/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`.
-- `common/.agents/AGENTS.md` and `common/.agents/skills/` - Luke's canonical cross-agent working agreement and personal [Agent Skills](https://agentskills.io). Codex, Cursor, and OpenCode discover the standard skill path directly; Claude uses relative compatibility links. Each harness keeps its required global-instruction entry point.
+- `personal/`, `work/`, `steamos/`, and `agent/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`; `agent` is for scoped, headless hosts.
+- `common/.agents/AGENTS.md` - Luke's canonical cross-agent working agreement. Portable [Agent Skills](https://agentskills.io) live only in the external [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills) repository and are installed into `~/.agents/skills`; no skills tree is tracked here. Each harness keeps its required global-instruction entry point.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
 - `bootstrap/` - host-specific setup that must be *copied* into place (not stowed) and is applied by `apply.sh` scripts (dual-boot, SDDM keyring, host audio).
@@ -262,12 +269,13 @@ Configs that embed secrets are committed as `*.template.*` files with `{{pass://
 - A template named `foo.template.json` renders to `foo.json`; `bar.template` renders to `bar`.
 - `{{pass://...}}` placeholders are resolved with Proton Pass's `pass-cli` (not the unrelated `pass` command).
 - Rendered outputs are gitignored and never committed.
-- An interactive shell refreshes portable agent skills and stale secrets automatically in one locked background startup job. No-op runs stay silent; actual content updates and refresh failures raise desktop notifications. `update-dotfiles` and `stow-profile` also offer to re-render secrets.
+- An interactive shell checks stale secrets in a locked background startup job. Skills refresh in that job by default without delaying terminal startup; set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it (see AI coding tooling). No-op runs stay silent; actual content updates and refresh failures raise desktop notifications. `update-dotfiles` and `stow-profile` also support secret refreshes.
+- Scoped agents skip automatic bulk secret rendering at startup, during `update-dotfiles`, and when switching profiles. Use only authorized manual selectors; the manual `init-env-secrets` interface is unchanged.
 
 Common commands:
 
 ```bash
-init-env-secrets --all      # render everything non-interactively
+init-env-secrets --all      # desktop profiles only: render everything non-interactively
 init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
@@ -278,8 +286,8 @@ Currently templated secrets include the Codex config, the Zed AI config, the mem
 
 `common/.bashrc.d/` is split into focused modules. The main user-facing commands:
 
-- `update-dotfiles` - pull the repo, re-render secrets, reload units; a background check also notifies when the repo is behind.
-- `stow-profile` - select `personal`, `work`, `steamos`, or the manual `mac` package; restow, reload Hyprland/systemd, and re-render secrets.
+- `update-dotfiles` - pull the repo, restow the profile, refresh allowed secrets, and reload units; a background check also notifies when the repo is behind. Skills refresh independently in the background shell-startup job, not during `update-dotfiles`. Scoped agents skip bulk secret rendering.
+- `stow-profile` - select `personal`, `work`, `steamos`, `agent`, or the manual `mac` package; restow and reload Hyprland/systemd. Secret refresh is offered only when bulk rendering is allowed, never for the scoped `agent` profile.
 - `proton-pass-login` / `netbird-login` - convenience auth helpers.
 
 These commands default to a clone at `~/dotfiles`. Set `DOTFILES_DIR` to use a
@@ -320,11 +328,12 @@ system package manager, or changes to the immutable root filesystem.
 This repo carries a fair amount of agent/LLM configuration:
 
 - `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, and OpenCode global instruction files resolve directly to it; Cursor uses an always-on user rule that loads it.
-- Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills). `update-agent-skills` installs or refreshes the full collection through the `skills.sh` CLI into `~/.agents/skills` for Codex, Claude Code, Cursor, and OpenCode. GNU Stow ignores that directory (`common/.stow-local-ignore`). Interactive shells run the refresh in the same locked background startup job as stale-secret detection, and `update-dotfiles` runs it after restowing the selected profile and before regenerating secret-backed templates.
-- `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`. Never commit the rendered private-context file. Tracked skills use placeholders and load exact values only when needed.
+- Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` installs or refreshes the full collection through the `skills.sh` CLI into `~/.agents/skills` for Codex, Claude Code, Cursor, and OpenCode. GNU Stow excludes runtime skills and compatibility links (`common/.stow-local-ignore`).
+- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. It executes `skills@latest` and installs content from the external skills repository. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command remains unchanged and does not use that timeout. `update-dotfiles` does not directly run skill updates.
+- `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`. Never commit the rendered private-context file. Portable skills use placeholders and load exact values only when needed.
 
-- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: default model, the single MCPorter aggregate bridge, and the `cursor-acp` provider.
-- `common/.config/opencode/config.json` - a separate OpenCode config holding auth/utility plugins (Codex, Anthropic, Gemini, mem0, scheduler).
+- `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.
+- `common/.config/opencode/config.json` - a separate OpenCode config listing only `@mem0/opencode-plugin` and `opencode-scheduler`.
 - `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates), each connected only to MCPorter.
 - `common/.mcporter/mcporter.template.json` - the canonical [MCPorter](https://github.com/openclaw/mcporter) MCP registry. It owns all upstream server definitions.
 - `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, Zed, and Hermes.
@@ -333,7 +342,9 @@ This repo carries a fair amount of agent/LLM configuration:
 
 Every agent connects to one stdio server named `mcporter`. MCPorter then exposes the active upstream registry with namespaced tools. Individual agent configs must not carry direct upstream MCP definitions.
 
-After stowing `common`, render the registry and verify it:
+After stowing `common` on a desktop profile, render the registry and verify it.
+Scoped agents must instead render only an authorized registry selector and use
+only the upstream services approved for their session:
 
 ```bash
 init-env-secrets --all
@@ -345,24 +356,11 @@ The shared adapter exposes `kagi-ken,context7,gh_grep,gitlab,mem0` by default. S
 
 ### Personal skill self-learning
 
-Hermes combines foreground `skill_manage` writes, a background review fork, usage metadata, and the Curator lifecycle. Only the foreground learning loop is portable across general Agent Skills implementations. This repo reproduces that part through always-on agent instructions and writable links to one canonical package: after a verified reusable workflow or correction, an agent updates only skills marked `author: Luke`.
+Hermes combines foreground `skill_manage` writes, a background review fork, usage metadata, and the Curator lifecycle. Only the foreground learning loop is portable across general Agent Skills implementations. This repo supports that part through always-on agent instructions; the writable skills are installed externally at `~/.agents/skills` from `luckycold/agent-skills`, not tracked in dotfiles. After a verified reusable workflow or correction, an agent updates only skills marked `author: Luke`.
 
-The shared setup deliberately does not imitate Hermes' background usage counters, automatic stale/archive transitions, or LLM consolidation. Those require runtime-specific hooks and provenance state that standard `SKILL.md` consumers do not expose consistently. Git diffs provide the cross-agent review and rollback layer; skill changes remain uncommitted until explicitly requested.
+The shared setup deliberately does not imitate Hermes' background usage counters, automatic stale/archive transitions, or LLM consolidation. Those require runtime-specific hooks and provenance state that standard `SKILL.md` consumers do not expose consistently. Review and version skill changes in the external `luckycold/agent-skills` repository, not in dotfiles; changes remain uncommitted until explicitly requested.
 
 Private operational context is kept out of the portable skill packages. Agents resolve approved exact values from the local Proton Pass-backed private context and must not quote or copy that rendered file into tracked documentation.
-
-### Cursor models via open-cursor (`cursor-acp`)
-
-The `cursor-acp` provider routes OpenCode through a Cursor subscription using the [`open-cursor`](https://github.com/Nomadcxx/opencode-cursor) plugin (an `@ai-sdk/openai-compatible` provider pointed at the local proxy on `127.0.0.1:32124`). Authenticate once with `cursor-agent login`.
-
-The `cursor-acp` model catalog is committed directly in `opencode.json`. This keeps the Stow-managed config self-contained and avoids runtime-generated OpenCode config overlays.
-
-To refresh the committed model list, use `open-cursor sync-models --variants --compact` as a source of truth, review the diff, then commit the updated `opencode.json`:
-
-```bash
-npx -y @rama_nigg/open-cursor@latest sync-models --variants --compact --config ~/.config/opencode/opencode.json --no-backup
-opencode models | grep cursor-acp
-```
 
 ## Other systemd user services
 

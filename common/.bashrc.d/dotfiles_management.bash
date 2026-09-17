@@ -134,6 +134,27 @@ update-agent-skills() {
         --agent codex --agent claude-code --agent cursor --agent opencode
 }
 
+# Bound background refreshes so they cannot run indefinitely.
+# Keep the manual update-agent-skills command unchanged.
+_dotfiles_auto_update_agent_skills() {
+    [ "${AGENT_SKILLS_AUTO_UPDATE:-1}" = 1 ] || return 0
+
+    local timeout_cmd
+    if command -v timeout >/dev/null 2>&1; then
+        timeout_cmd=timeout
+    elif command -v gtimeout >/dev/null 2>&1; then
+        timeout_cmd=gtimeout
+    else
+        echo "Skipping automatic agent skill refresh: timeout or gtimeout is required." >&2
+        return 0
+    fi
+
+    # Pass only the required functions; never source shell startup files here.
+    "$timeout_cmd" --kill-after=5s 120s env -u BASH_ENV bash --noprofile --norc -c \
+        "$(declare -f _run_agent_skills_cli _remove_legacy_agent_skills_link update-agent-skills)
+update-agent-skills"
+}
+
 # Background check for updates (runs once per shell session)
 background_dotfiles_check() {
     # Only check once per shell session
@@ -207,13 +228,20 @@ background_dotfiles_check() {
 
 _dotfiles_linked_persona() {
     local dotfiles_dir="$(_dotfiles_dir)"
-    local profile link target
-    for profile in personal work steamos; do
+    local profile profile_dir link target
+    for profile in agent personal work steamos; do
         [ -d "$dotfiles_dir/$profile" ] || continue
+        profile_dir=$(realpath -m -- "$dotfiles_dir/$profile" 2>/dev/null) || continue
         while IFS= read -r -d '' link; do
-            target=$(readlink -n "$link" 2>/dev/null || true)
+            target=$(readlink -n "$link" 2>/dev/null) || continue
+            # Relative symlink targets are relative to the link's parent, not CWD.
             case "$target" in
-                *"dotfiles/${profile}/"*)
+                /*) ;;
+                *) target="${link%/*}/$target" ;;
+            esac
+            target=$(realpath -m -- "$target" 2>/dev/null) || continue
+            case "$target" in
+                "$profile_dir"|"$profile_dir"/*)
                     printf '%s\n' "$profile"
                     return 0
                     ;;
@@ -236,12 +264,24 @@ _dotfiles_restow_active() {
     popd >/dev/null
 }
 
+# Also detect a linked agent profile when a noninteractive shell loads only
+# this file, without loading the agent's startup environment first.
+_dotfiles_bulk_secrets_allowed() {
+    [ "${DOTFILES_SCOPED_AGENT:-0}" != 1 ] &&
+        [ "$(_dotfiles_linked_persona)" != agent ]
+}
+
 _dotfiles_refresh_secrets_noninteractive() {
+    if ! _dotfiles_bulk_secrets_allowed; then
+        echo "Skipping bulk secret refresh for scoped agent; render only an authorized selector manually."
+        return 0
+    fi
     if ! declare -F init-env-secrets >/dev/null; then
         local secrets_file
         secrets_file="$(_dotfiles_dir)/common/.bashrc.d/secrets.bash"
+        # Suppress startup jobs only while sourcing; preserve the caller's guard state.
         # shellcheck disable=SC1090
-        [ -f "$secrets_file" ] && source "$secrets_file"
+        [ -f "$secrets_file" ] && _SECRET_AUTO_REFRESH_STARTED=1 source "$secrets_file"
     fi
     if declare -F init-env-secrets >/dev/null; then
         echo "Refreshing template-generated secrets..."
@@ -264,7 +304,8 @@ update-dotfiles() {
                 ;;
             -h|--help)
                 echo "Usage: update-dotfiles [--yes]"
-                echo "  --yes  Fast-forward, restow the active profile, refresh secrets; no prompts."
+                echo "  --yes  Fast-forward and restow the active profile; no prompts or skill updates."
+                echo "         Refresh secrets except for scoped agents; use an authorized selector manually."
                 return 0
                 ;;
             *)
@@ -337,13 +378,9 @@ update-dotfiles() {
 
     _switch_dotfiles_profile "$target_profile"
 
-    echo "Refreshing agent skills..."
-    update-agent-skills || echo "Warning: agent skill refresh failed; run update-agent-skills"
+    # Skills refresh independently in the background shell-startup job.
 
-    if command -v init-env-secrets &>/dev/null; then
-        echo "Refreshing template-generated secrets..."
-        init-env-secrets --all || echo "Warning: secret refresh failed; run init-env-secrets --all"
-    fi
+    _dotfiles_refresh_secrets_noninteractive
 
     # Ask to reload bashrc
     echo -n "Reload shell configuration? (y/n): "
@@ -445,7 +482,8 @@ _switch_dotfiles_profile() {
   fi
 
   # Offer to refresh generated secrets for the new active profile.
-  if declare -F init-env-secrets >/dev/null && [ -t 0 ] && [ -t 1 ]; then
+  if [[ "$target_profile" != agent ]] && _dotfiles_bulk_secrets_allowed &&
+    declare -F init-env-secrets >/dev/null && [ -t 0 ] && [ -t 1 ]; then
     echo -n "Refresh all generated secrets now? (y/N): "
     read -r refresh_secrets
 
