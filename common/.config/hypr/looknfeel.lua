@@ -39,3 +39,21 @@ hl.config({
 -- Keep active windows fully opaque while preserving inactive dimming.
 o.window({ tag = "default-opacity" }, { opacity = "1 override 0.9 override" })
 o.window({ tag = "terminal" }, { opacity = "1 override 0.9 override" })
+
+-- >>> omaland managed block >>>
+-- Written by Omaland. Safe to hand-edit: Omaland re-reads this block
+-- every time it opens, and only ever rewrites what's between the fences.
+hl.config({
+  decoration = {
+    dim_inactive = true,
+    dim_strength = 0.3,
+    rounding = 7,
+    rounding_power = 4.1,
+
+    glow = {
+      enabled = false,
+      range = 0,
+    },
+  },
+})
+-- <<< omaland managed block <<<
