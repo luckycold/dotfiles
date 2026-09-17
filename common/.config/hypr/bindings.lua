@@ -1,3 +1,12 @@
+-- Auto-load keybindings from installed Omarchy plugins (~/.config/omarchy/plugins/*/hypr/bindings.lua)
+local plugins_dir = os.getenv("HOME") .. "/.config/omarchy/plugins"
+local p = io.popen("find " .. plugins_dir .. " -maxdepth 3 -name 'bindings.lua' 2>/dev/null")
+if p then
+  for file in p:lines() do
+    dofile(file)
+  end
+  p:close()
+end
 -- Personal keybinding overrides. Omarchy defaults load first; unbind a default
 -- before replacing it. See: omarchy menu keybindings --print
 
