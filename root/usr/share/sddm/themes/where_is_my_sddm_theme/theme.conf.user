@@ -1,0 +1,10 @@
+[General]
+background=
+backgroundFill=#000000
+basicTextColor=#ffffff
+passwordInputBackground=#000000
+passwordInputBorderWidth=1
+passwordInputBorderColor=#ffffff
+passwordCursorColor=#ffffff
+passwordTextColor=#ffffff
+wrongPasswordBorderColor=#ffffff
