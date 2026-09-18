@@ -47,8 +47,7 @@ hl.config({
   decoration = {
     dim_inactive = true,
     dim_strength = 0.3,
-    rounding = 7,
-    rounding_power = 4.1,
+    rounding = 14,
 
     glow = {
       enabled = false,
