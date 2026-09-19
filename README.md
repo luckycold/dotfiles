@@ -382,8 +382,6 @@ The remaining Omarchy-specific pieces are:
 - `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login
 - `bootstrap/philosophia-audio/` - host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
 
-- [`bootstrap/omarchy-media-layout/`](bootstrap/omarchy-media-layout/) - opt-in adaptive widths for native and Music Assistant media widgets, with user-local cloning, tests, and reproducible apply/undo instructions
-
 Apply the personal Omarchy profile like this:
 
 ```bash
