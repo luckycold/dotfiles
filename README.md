@@ -377,6 +377,7 @@ This repo now leaves hibernation behavior to stock Omarchy. Use Omarchy's own se
 The remaining Omarchy-specific pieces are:
 
 - `common/.config/hypr/*.lua` - Omarchy 4 Hyprland overrides (bindings, input, looknfeel, monitors)
+- `personal/.config/hyprmoncfg/profiles/` - native hyprmoncfg profiles for the Framework laptop: `Docked` (Dell 4K/60 Hz through the dock, AOC 1440p/144 Hz through the eGPU) and `Stand alone`. Layouts match display identities rather than fixed connector numbers. After installing hyprmoncfg and stowing the personal profile, run `hyprmoncfg manage` to install its generated-config include, then `hyprmoncfg apply Docked` or `hyprmoncfg apply "Stand alone"`. Back up existing local profiles before stowing; generated active monitor files and plugin code are not tracked. After changing a layout, save it with hyprmoncfg and sync its profile files back here.
 - `personal/.config/hypr/autostart.lua` / `work/.config/hypr/autostart.lua` - persona autostart
 - `bootstrap/dual-omarchy-boot/` - coordinates the personal/internal and work/external Omarchy boot menus
 - `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login
