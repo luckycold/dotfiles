@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/luckycold/omarchy.music-assistant.git",
+  "branch": "feature/remote-local-playback",
+  "commit": "6af0f0296cfd84f57e81baeca9167a30eb035f81",
+  "pluginId": "io.github.manologarciadev.music-assistant",
+  "helperInstaller": "local-player/install.sh",
+  "notes": "Verified local playback/MPRIS, interactive popup/library fixes, and adaptive media width. Private runtime configuration and player identity are intentionally excluded."
+}
