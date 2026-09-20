@@ -36,14 +36,21 @@ stow -t ~ personal
 ```
 
 The personal profile launches Steam through `steam-launch`. That wrapper
-unsets `GDK_SCALE` / `GDK_DPI_SCALE`, sets `STEAM_FORCE_DESKTOPUI_SCALING`
-and `-forcedesktopscaling` from the Steam window's Hyprland monitor (or the
-focused monitor on first launch) times `STEAM_UI_SCALE_BIAS` (default 1.5),
-and preloads `/usr/lib32/libextest.so`
+unsets `GDK_SCALE` / `GDK_DPI_SCALE`, injects CEF
+`--force-device-scale-factor` from the Steam window's Hyprland monitor (or
+the focused monitor on first launch) times `STEAM_UI_SCALE_BIAS` (default 1),
+still passes `-forcedesktopscaling` and writes `config.vdf` `ScaleFactor`
+for older clients, and preloads `/usr/lib32/libextest.so`
 when that library is installed. Extest converts Steam's X11 mouse/keyboard
 emulation into uinput events that can control the Wayland desktop.
 
-Steam only applies desktop UI scale at start. `hypr/steam.lua` watches the
+Current Steam ignores `STEAM_FORCE_DESKTOPUI_SCALING` and overwrites
+`ScaleFactor` on startup. The CEF flag is patched into
+`steamwebhelper_sniper_wrap.sh` after Steam's install verifier restores that
+script, which is what actually sizes the store chrome to the compositor.
+Without it the client keeps the last docked 1440p auto-scale (~0.95) and the
+URL bar stays far smaller than Omarchy's 2x media widget.
+Steam only applies that slider at start. `hypr/steam.lua` watches the
 client window and runs `steam-launch --sync` when it lands on a different
 monitor scale, which restarts just the Steam client. It also overrides
 Omarchy's 1100x700 Steam box so the 2x UI is not packed into a 1x-era

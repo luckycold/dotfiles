@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Launch Steam at the monitor scale of its window, or the focused monitor.
-# Steam is XWayland and only reads UI scale at start, so --sync restarts the
-# client when Hyprland reports a different monitor scale. Games are left alone.
+# Current Steam sizes CEF from Accessibility UI Scale (config.vdf ScaleFactor),
+# not -forcedesktopscaling. --sync restarts the client when Hyprland reports a
+# different monitor scale. Games are left alone.
 set -euo pipefail
 
 scale_file="${XDG_RUNTIME_DIR:-/tmp}/steam-ui-scale"
@@ -55,14 +56,137 @@ resolve_scale() {
   if ! is_number "$scale"; then
     scale=1
   fi
-  # Hyprland 2x on this 2880x1920 panel is below the physical ~2.7x. A 2x
-  # Steam UI looked too big in Omarchy's 1100x700 box and still too small
-  # at 2.5 once the window used the monitor. Bias toward readable chrome.
-  local bias="${STEAM_UI_SCALE_BIAS:-1.5}"
+  # Match the compositor, not a guessed physical DPI. Valve dropped
+  # STEAM_FORCE_DESKTOPUI_SCALING; the Accessibility UI Scale slider is
+  # what actually sizes CEF chrome. Optional bias stays available.
+  local bias="${STEAM_UI_SCALE_BIAS:-1}"
   if ! is_number "$bias"; then
-    bias=1.5
+    bias=1
   fi
   awk -v scale="$scale" -v bias="$bias" 'BEGIN { printf "%g\n", scale * bias }'
+}
+
+# Steam's new UI ignores -forcedesktopscaling. The working control is
+# Settings → Accessibility → UI Scale, stored as UI.display.Current.ScaleFactor.
+# AutoScaleFactor here is still the last docked 1440p profile (~0.95), which
+# is why the URL bar stays tiny next to Omarchy's 2x media widget.
+write_steam_scale_factor() {
+  local scale="$1"
+  local config="${XDG_DATA_HOME:-$HOME/.local/share}/Steam/config/config.vdf"
+  if [[ ! -f $config ]]; then
+    return 0
+  fi
+  python3 - "$config" "$scale" <<'PY'
+import re, sys
+
+path, scale = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8", errors="replace").read()
+display = text.find('"display"')
+if display < 0:
+    sys.exit(0)
+cur = text.find('"Current"', display)
+if cur < 0:
+    sys.exit(0)
+brace = text.find("{", cur)
+if brace < 0:
+    sys.exit(0)
+depth = 0
+end = None
+for i, ch in enumerate(text[brace:], brace):
+    if ch == "{":
+        depth += 1
+    elif ch == "}":
+        depth -= 1
+        if depth == 0:
+            end = i + 1
+            break
+if end is None:
+    sys.exit(0)
+block = text[brace:end]
+scale_line = f'"ScaleFactor"\t\t"{scale}"'
+if re.search(r'"ScaleFactor"\s+"[^"]*"', block):
+    block = re.sub(r'"ScaleFactor"\s+"[^"]*"', scale_line, block, count=1)
+else:
+    block = re.sub(r"\n(\t*)}$", rf"\n\1\t{scale_line}\n\1}}", block, count=1)
+max_m = re.search(r'"MaxScaleFactor"\s+"([^"]*)"', block)
+try:
+    if max_m and float(max_m.group(1)) < float(scale):
+        block = re.sub(
+            r'"MaxScaleFactor"\s+"[^"]*"',
+            f'"MaxScaleFactor"\t\t"{scale}"',
+            block,
+            count=1,
+        )
+except ValueError:
+    pass
+open(path, "w", encoding="utf-8").write(text[:brace] + block + text[end:])
+PY
+}
+
+# Current Steam wipes ScaleFactor on startup and ignores -forcedesktopscaling.
+# CEF honors --force-device-scale-factor. Steam's updater restores the stock
+# sniper wrap during "Verifying installation", so re-apply until webhelper
+# actually starts with the flag (and bounce it if it started too early).
+steam_wrap_path() {
+  printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh"
+}
+
+ensure_webhelper_device_scale() {
+  local scale="$1"
+  local wrap
+  wrap="$(steam_wrap_path)"
+  if [[ ! -f $wrap ]]; then
+    return 0
+  fi
+  python3 - "$wrap" "$scale" <<'PY'
+import re, sys
+
+path, scale = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8", errors="replace").read()
+flag = f"--force-device-scale-factor={scale}"
+updated = re.sub(
+    r"(exec \./steamwebhelper)(?: --force-device-scale-factor=[0-9.]+)?( \"\$@\")",
+    rf"\1 {flag}\2",
+    text,
+    count=1,
+)
+if updated != text:
+    open(path, "w", encoding="utf-8").write(updated)
+PY
+}
+
+guard_webhelper_device_scale() {
+  local scale="$1"
+  local wrap
+  wrap="$(steam_wrap_path)"
+  (
+    local i cmd
+    for i in $(seq 1 80); do
+      ensure_webhelper_device_scale "$scale"
+      local have_flag=0
+      local -a stale=()
+      for cmd in /proc/[0-9]*/cmdline; do
+        [[ -r $cmd ]] || continue
+        # CEF argv0 is ./steamwebhelper. The wrap path also contains the name.
+        if grep -qaz './steamwebhelper' "$cmd"; then
+          if grep -qaz -- "--force-device-scale-factor=$scale" "$cmd"; then
+            have_flag=1
+          else
+            stale+=("${cmd#/proc/}")
+            stale[-1]="${stale[-1]%/cmdline}"
+          fi
+        fi
+      done
+      if ((have_flag)); then
+        exit 0
+      fi
+      if ((${#stale[@]})); then
+        kill "${stale[@]}" 2>/dev/null || true
+      fi
+      sleep 0.15
+    done
+  ) >/dev/null 2>&1 &
+  disown
 }
 
 wait_for_steam_exit() {
@@ -81,6 +205,9 @@ exec_steam() {
   local scale="$1"
   shift
   write_scale "$scale"
+  write_steam_scale_factor "$scale"
+  ensure_webhelper_device_scale "$scale"
+  guard_webhelper_device_scale "$scale"
 
   local cmd=(env -u GDK_SCALE -u GDK_DPI_SCALE STEAM_FORCE_DESKTOPUI_SCALING="$scale")
   if [[ -z ${LD_PRELOAD:-} && -e /usr/lib32/libextest.so ]]; then

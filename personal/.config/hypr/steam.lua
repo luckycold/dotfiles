@@ -1,9 +1,9 @@
 -- Keep the Steam client UI on the scale of the monitor it currently occupies.
--- Steam only reads -forcedesktopscaling at start, so steam-launch --sync
+-- Steam only applies Accessibility UI Scale at start, so steam-launch --sync
 -- restarts the client when that monitor scale changes.
 --
--- Omarchy's 1100x700 box is a 1x-era size. Keep a large window; steam-launch
--- applies a 1.5 UI-scale bias so 2x is not tiny in that wider client.
+-- Omarchy's 1100x700 box is a 1x-era size. Keep a large window so 2x chrome
+-- is not packed into a 1x-era box.
 
 o.window({ class = "steam", title = "^Steam$" }, {
   center = true,
@@ -24,7 +24,7 @@ local function request_sync(window)
     return
   end
   if sync_timer ~= nil then
-    sync_timer:cancel()
+    sync_timer:set_enabled(false)
   end
   sync_timer = hl.timer(function()
     sync_timer = nil
