@@ -2,6 +2,7 @@
 claude = "latest"
 codex = "latest"
 gh = "latest"
+"github:max-baz/wluma" = "latest"
 node = "latest"
 "npm:@mem0/cli" = "latest"
 "npm:@xai-official/grok" = "latest"
