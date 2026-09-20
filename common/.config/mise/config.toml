@@ -1,6 +1,7 @@
 [tools]
 claude = "latest"
 codex = "latest"
+cursor-agent = { version = "latest", bin_path = "bin", strip_components = 0, url = 'https://downloads.cursor.com/lab/{{ version }}/{{ os(macos="darwin") }}/{{ arch(x64="x64", arm64="arm64") }}/agent-cli-package.tar.gz', version_list_url = "https://cursor.com/install", version_regex = 'downloads\.cursor\.com/lab/([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[0-9a-f]+)/', postinstall = 'mkdir -p "$MISE_TOOL_INSTALL_PATH/bin" && ln -sfn ../dist-package/cursor-agent "$MISE_TOOL_INSTALL_PATH/bin/cursor-agent"' }
 gh = "latest"
 "github:max-baz/wluma" = "latest"
 node = "latest"
@@ -8,7 +9,6 @@ node = "latest"
 "npm:@xai-official/grok" = "latest"
 opencode = "latest"
 python = "latest"
-redis = "8.6.3"
 zig = "latest"
 zls = "latest"
 
