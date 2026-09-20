@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Point wluma's laptop curve at the active hyprmoncfg profile.
+set -euo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/wluma"
+active="$state_dir/eDP-1.yaml"
+
+profile="$(hyprmoncfg status 2>/dev/null | awk -F': ' '/^Active profile:/{print $2; exit}')"
+case "$profile" in
+  Docked) curve=docked ;;
+  "Stand alone") curve=standalone ;;
+  *) exit 0 ;;
+esac
+
+target="$state_dir/eDP-1.$curve.yaml"
+mkdir -p "$state_dir"
+
+if [[ -f $active && ! -L $active ]]; then
+  mv -f "$active" "$target"
+fi
+
+if [[ ! -e $target ]]; then
+  cat >"$target" <<'EOF'
+output_name: eDP-1
+entries:
+  brightness: []
+  dim: []
+  temperature: []
+EOF
+fi
+
+if [[ -L $active && $(readlink "$active") == "eDP-1.$curve.yaml" ]]; then
+  exit 0
+fi
+
+systemctl --user stop wluma.service
+ln -sfn "eDP-1.$curve.yaml" "$active"
+systemctl --user start wluma.service
