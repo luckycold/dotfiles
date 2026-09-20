@@ -55,7 +55,14 @@ resolve_scale() {
   if ! is_number "$scale"; then
     scale=1
   fi
-  printf '%s\n' "$scale"
+  # Hyprland 2x on this 2880x1920 panel is below the physical ~2.7x. A 2x
+  # Steam UI looked too big in Omarchy's 1100x700 box and too small once
+  # the window used the monitor. Bias toward the panel density.
+  local bias="${STEAM_UI_SCALE_BIAS:-1.25}"
+  if ! is_number "$bias"; then
+    bias=1.25
+  fi
+  awk -v scale="$scale" -v bias="$bias" 'BEGIN { printf "%g\n", scale * bias }'
 }
 
 wait_for_steam_exit() {
