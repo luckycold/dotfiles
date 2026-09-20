@@ -57,6 +57,7 @@ Luke-authored personal skills are canonical under `~/.agents/skills/` and have `
 - `truenas-custom-apps` for TrueNAS SCALE custom application lifecycle and ix-apps structure.
 - `proton-pass-cli` for Proton Pass CLI, scoped agent access, secret references, and headless/container authentication.
 - `tasker-automation` for Android Tasker and Tasker WebUI workflows.
+- `steam-hyprland-scaling` for Steam client HiDPI on Hyprland/Omarchy mixed-DPI.
 - `personal-skill-maintenance` when creating, correcting, consolidating, or extending Luke-authored skills.
 
 Read a skill's directly linked references only as needed. Personal skills supplement project rules; they do not override a repository's explicit constraints.
