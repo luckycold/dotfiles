@@ -37,17 +37,21 @@ stow -t ~ personal
 
 The personal profile launches Steam through `steam-launch`. That wrapper
 unsets `GDK_SCALE` / `GDK_DPI_SCALE`, sets `STEAM_FORCE_DESKTOPUI_SCALING`
-and `-forcedesktopscaling` from the focused Hyprland monitor, and preloads
-`/usr/lib32/libextest.so` when that library is installed. Extest converts
-Steam's X11 mouse/keyboard emulation into uinput events that can control the
-Wayland desktop. Do not "fix" Steam size with a global `GDK_SCALE`: that
-integer cannot be correct on mixed-DPI, and Omarchy's monitor-scaling
-keybind will persist it onto every GTK/X11 app. Launch Steam from the
-application menu or `steam-launch`; terminal launches should use the wrapper
-too. Fully exit and reopen Steam once after enabling this. Keep
-`lib32-extest` installed while this override is in use. No global
-`LD_PRELOAD`, Hyprland hooks, or extra input-group membership are needed
-when `steam-devices` grants the active user access to `/dev/uinput`.
+and `-forcedesktopscaling` from the Steam window's Hyprland monitor (or the
+focused monitor on first launch), and preloads `/usr/lib32/libextest.so`
+when that library is installed. Extest converts Steam's X11 mouse/keyboard
+emulation into uinput events that can control the Wayland desktop.
+
+Steam only applies desktop UI scale at start. `hypr/steam.lua` watches the
+client window and runs `steam-launch --sync` when it lands on a different
+monitor scale, which restarts just the Steam client. Running `steam_app_*`
+games block that restart so a match is not killed mid-session. Do not "fix"
+Steam size with a global `GDK_SCALE`: that integer cannot be correct on
+mixed-DPI, and Omarchy's monitor-scaling keybind will persist it onto every
+GTK/X11 app. Launch Steam from the application menu or `steam-launch`.
+Keep `lib32-extest` installed while this override is in use. No global
+`LD_PRELOAD` or extra input-group membership are needed when
+`steam-devices` grants the active user access to `/dev/uinput`.
 
 This addresses desktop pointer input; game-specific Steam Input behavior still
 needs to be tested per game. OpenPuck's built-in Lizard mode is also available
