@@ -1,6 +1,17 @@
 -- Keep the Steam client UI on the scale of the monitor it currently occupies.
 -- Steam only reads -forcedesktopscaling at start, so steam-launch --sync
 -- restarts the client when that monitor scale changes.
+--
+-- Omarchy's 1100x700 box is a 1x-era size. At 2x UI scale that window makes
+-- the client look slightly oversized and cramped, so take most of the monitor.
+
+o.window({ class = "steam", title = "^Steam$" }, {
+  center = true,
+  size = { "monitor_w * 0.9", "monitor_h * 0.86" },
+})
+o.window({ class = "steam", title = "^Friends List$" }, {
+  size = { "monitor_w * 0.28", "monitor_h * 0.8" },
+})
 
 local sync_timer
 

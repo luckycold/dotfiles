@@ -44,7 +44,9 @@ emulation into uinput events that can control the Wayland desktop.
 
 Steam only applies desktop UI scale at start. `hypr/steam.lua` watches the
 client window and runs `steam-launch --sync` when it lands on a different
-monitor scale, which restarts just the Steam client. Running `steam_app_*`
+monitor scale, which restarts just the Steam client. It also overrides
+Omarchy's 1100x700 Steam box so the 2x UI is not packed into a 1x-era
+window. Running `steam_app_*`
 games block that restart so a match is not killed mid-session. Do not "fix"
 Steam size with a global `GDK_SCALE`: that integer cannot be correct on
 mixed-DPI, and Omarchy's monitor-scaling keybind will persist it onto every
