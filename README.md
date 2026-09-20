@@ -35,23 +35,28 @@ stow -n -t ~ personal
 stow -t ~ personal
 ```
 
-The personal profile overrides `steam.desktop` to preload
-`/usr/lib32/libextest.so` for Steam and its launcher actions. Extest converts
+The personal profile launches Steam through `steam-launch`. That wrapper
+unsets `GDK_SCALE` / `GDK_DPI_SCALE`, sets `STEAM_FORCE_DESKTOPUI_SCALING`
+and `-forcedesktopscaling` from the focused Hyprland monitor, and preloads
+`/usr/lib32/libextest.so` when that library is installed. Extest converts
 Steam's X11 mouse/keyboard emulation into uinput events that can control the
-Wayland desktop. Launch Steam from the application menu; terminal launches
-need `LD_PRELOAD=/usr/lib32/libextest.so steam`. Fully exit and reopen Steam
-once after enabling this. Keep the package installed while this override is
-in use. No global `LD_PRELOAD`, Hyprland hooks, or extra input-group membership
-are needed when `steam-devices` grants the active user access to `/dev/uinput`.
+Wayland desktop. Do not "fix" Steam size with a global `GDK_SCALE`: that
+integer cannot be correct on mixed-DPI, and Omarchy's monitor-scaling
+keybind will persist it onto every GTK/X11 app. Launch Steam from the
+application menu or `steam-launch`; terminal launches should use the wrapper
+too. Fully exit and reopen Steam once after enabling this. Keep
+`lib32-extest` installed while this override is in use. No global
+`LD_PRELOAD`, Hyprland hooks, or extra input-group membership are needed
+when `steam-devices` grants the active user access to `/dev/uinput`.
 
 This addresses desktop pointer input; game-specific Steam Input behavior still
 needs to be tested per game. OpenPuck's built-in Lizard mode is also available
 for basic desktop control independently of Steam.
 
 The desktop file is based on Arch's Steam launcher (1.0.0.87); when its actions
-change upstream, refresh this copy and retain the `Exec=env LD_PRELOAD=...`
-prefixes. To undo, unstow/remove the personal `steam.desktop` override and
-restart Steam; the system launcher then takes over.
+change upstream, refresh this copy and keep `Exec=steam-launch`. To undo,
+unstow/remove the personal `steam.desktop` override and restart Steam; the
+system launcher then takes over.
 
 Reference: https://github.com/Supreeeme/extest
 

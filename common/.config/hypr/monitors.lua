@@ -3,10 +3,19 @@
 
 -- Preferred 170Hz on the AOC over the Thunderbolt dock exceeds link bandwidth
 -- and Hyprland drops the panel, so pin 2560x1440@120.
-hl.env("GDK_SCALE", "2")
+--
+-- GDK_SCALE is for XWayland GTK. Wayland-native GTK follows the compositor.
+-- Keep this off the one-line form that `omarchy-hyprland-monitor-scaling`
+-- rewrites; a single integer cannot match mixed 1 / 1.5 / 2 displays.
+hl.env("GDK_SCALE", tostring(2))
 
 -- Fallback first so it cannot override named outputs.
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 2 })
+hl.monitor({
+  output = "",
+  mode = "preferred",
+  position = "auto",
+  scale = 2,
+})
 
 hl.monitor({
   output = "desc:AOC Q27G3XMN 1APRBUA000024",

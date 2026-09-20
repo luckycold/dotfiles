@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Launch Steam at the focused Hyprland monitor scale.
+# Steam is XWayland with force_zero_scaling, so it needs its own UI scale.
+# A global GDK_SCALE cannot be correct on mixed-DPI and must stay unset here.
+set -euo pipefail
+
+scale="$(hyprctl monitors -j 2>/dev/null | jq -er '.[] | select(.focused == true) | .scale')" || scale=1
+if [[ ! $scale =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  scale=1
+fi
+
+cmd=(env -u GDK_SCALE -u GDK_DPI_SCALE STEAM_FORCE_DESKTOPUI_SCALING="$scale")
+if [[ -z ${LD_PRELOAD:-} && -e /usr/lib32/libextest.so ]]; then
+  cmd+=(LD_PRELOAD=/usr/lib32/libextest.so)
+fi
+
+exec "${cmd[@]}" /usr/bin/steam -forcedesktopscaling "$scale" "$@"
