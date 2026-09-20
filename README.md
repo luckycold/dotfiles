@@ -38,7 +38,7 @@ stow -t ~ personal
 The personal profile launches Steam through `steam-launch`. That wrapper
 unsets `GDK_SCALE` / `GDK_DPI_SCALE`, sets `STEAM_FORCE_DESKTOPUI_SCALING`
 and `-forcedesktopscaling` from the Steam window's Hyprland monitor (or the
-focused monitor on first launch) times `STEAM_UI_SCALE_BIAS` (default 1.25),
+focused monitor on first launch) times `STEAM_UI_SCALE_BIAS` (default 1.5),
 and preloads `/usr/lib32/libextest.so`
 when that library is installed. Extest converts Steam's X11 mouse/keyboard
 emulation into uinput events that can control the Wayland desktop.

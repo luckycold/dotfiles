@@ -3,7 +3,7 @@
 -- restarts the client when that monitor scale changes.
 --
 -- Omarchy's 1100x700 box is a 1x-era size. Keep a large window; steam-launch
--- applies a 1.25 UI-scale bias so 2x is not tiny in that wider client.
+-- applies a 1.5 UI-scale bias so 2x is not tiny in that wider client.
 
 o.window({ class = "steam", title = "^Steam$" }, {
   center = true,
