@@ -1,0 +1,5 @@
+# Framework 13 ALS is auto-detected. Docked DDC monitors are discovered on
+# hotplug. This only keeps gamma control with Omarchy nightlight.
+[[output.backlight]]
+name = "eDP-1"
+gamma = false
