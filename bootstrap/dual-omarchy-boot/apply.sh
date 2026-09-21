@@ -2,21 +2,32 @@
 
 set -euo pipefail
 
-# Coordinate two Omarchy installs that each own their own ESP. The main
-# machine firmware should keep booting the personal/internal Limine; the work
-# install is reached from a Limine menu entry instead of taking over NVRAM.
+# Coordinate two Omarchy installs that each own their own ESP. Firmware
+# should keep booting the personal/internal disk; Work is reached from a
+# Limine menu entry instead of taking over NVRAM. Each OS signs only its
+# own ESP. Do not rewrite peer boot binaries or change BootOrder unless
+# explicitly requested.
 
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 INTERNAL_ESP_GUID=${INTERNAL_ESP_GUID:-e83b9ba8-c715-42e7-91a1-42017213c4e9}
 EXTERNAL_ESP_GUID=${EXTERNAL_ESP_GUID:-1b44d6d5-a68e-450f-8763-17b9e99b09cf}
 LIMINE_EFI_PATH=${LIMINE_EFI_PATH:-/EFI/limine/limine_x64.efi}
 
 usage() {
   cat <<EOF
-Usage: sudo $0 --role personal|work
+Usage: sudo $0 --role personal|work [--update-firmware-entries] [--repair-peer]
 
 Roles:
-  personal  Keep this OS as the firmware default and add a Work OS entry.
-  work      Add a Personal OS entry and prevent this OS from taking over UEFI NVRAM.
+  personal  Add a Work OS Limine menu entry. Leaves firmware BootOrder alone.
+  work      Add a Personal OS menu entry and set SKIP_UEFI=yes.
+
+Options:
+  --update-firmware-entries  Personal only: create/reorder a named Limine
+                             NVRAM entry. Skip this on a proven install;
+                             it changes PCR 1.
+  --repair-peer              Re-copy, enroll, and sign the peer ESP with
+                             this OS's sbctl keys. Skip this on a proven
+                             dual-key setup; each OS should sign itself.
 
 Overrides:
   INTERNAL_ESP_GUID=<guid>  Default: ${INTERNAL_ESP_GUID}
@@ -199,6 +210,14 @@ EOF
   chmod 0755 "$hook"
 }
 
+install_theme_hook() {
+  local hook=/etc/boot/hooks/post.d/87-limine-theme
+
+  install -d -m 0755 /etc/boot/hooks/post.d
+  install -m 0644 "$SCRIPT_DIR/limine-theme.conf" /etc/limine-theme.conf
+  install -m 0755 "$SCRIPT_DIR/hooks/87-limine-theme" "$hook"
+}
+
 install_fallback_sync_hook() {
   local hook=/etc/boot/hooks/post.d/91-limine-sync-fallback
 
@@ -273,12 +292,20 @@ EOF
 }
 
 main() {
-  local role=
+  local role= update_firmware_entries=0 repair_peer=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --role)
         role=${2:-}
         shift 2
+        ;;
+      --update-firmware-entries)
+        update_firmware_entries=1
+        shift
+        ;;
+      --repair-peer)
+        repair_peer=1
+        shift
         ;;
       -h|--help)
         usage
@@ -331,27 +358,37 @@ main() {
 
   case "$role" in
     personal)
-      repair_limine_for_esp_guid "$EXTERNAL_ESP_GUID"
-      remove_uefi_entries_by_label 'Work OS'
-      ensure_uefi_entry 'Limine' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
-      keep_limine_first
+      if (( repair_peer == 1 )); then
+        repair_limine_for_esp_guid "$EXTERNAL_ESP_GUID"
+      fi
+      if (( update_firmware_entries == 1 )); then
+        remove_uefi_entries_by_label 'Work OS'
+        ensure_uefi_entry 'Limine' "$INTERNAL_ESP_GUID" "$LIMINE_EFI_PATH"
+        keep_limine_first
+      fi
       ;;
     work)
       set_limine_default SKIP_UEFI yes
-      repair_limine_for_esp_guid "$INTERNAL_ESP_GUID"
-      remove_uefi_entries_by_label 'Personal OS'
+      if (( repair_peer == 1 )); then
+        repair_limine_for_esp_guid "$INTERNAL_ESP_GUID"
+      fi
+      if (( update_firmware_entries == 1 )); then
+        remove_uefi_entries_by_label 'Personal OS'
+      fi
       ;;
   esac
 
+  install_theme_hook
   install_peer_hook "$title" "$protocol" "$value"
   install_default_linux_entry_hook
   install_fallback_sync_hook
 
   limine-update
 
-  # Always ensure the local Limine menu has the peer entry and is enrolled.
+  # Always ensure the local Limine menu has the peer entry, theme, and enrollment.
   /etc/boot/hooks/post.d/88-omarchy-peer-os
   /etc/boot/hooks/post.d/89-limine-default-linux-entry
+  /etc/boot/hooks/post.d/87-limine-theme
 
   if command -v limine-enroll-config >/dev/null 2>&1; then
     limine-enroll-config
@@ -381,7 +418,9 @@ Dual Omarchy boot coordination applied.
 Role: ${role}
 Peer entry: ${title}
 Peer handoff: ${protocol} ${value}
-Hook: /etc/boot/hooks/post.d/88-omarchy-peer-os
+Theme: /etc/limine-theme.conf via /etc/boot/hooks/post.d/87-limine-theme
+Firmware NVRAM changes: $( (( update_firmware_entries == 1 )) && echo yes || echo no )
+Peer ESP rewrite: $( (( repair_peer == 1 )) && echo yes || echo no )
 EOF
 }
 

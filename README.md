@@ -399,7 +399,8 @@ The remaining Omarchy-specific pieces are:
 - `personal/.config/hyprmoncfg/profiles/` - native hyprmoncfg profiles for the Framework laptop: `Docked` (Dell 4K/60 Hz through the dock, AOC 1440p/144 Hz through the eGPU) and `Stand alone`. Layouts match display identities rather than fixed connector numbers. After installing hyprmoncfg and stowing the personal profile, run `hyprmoncfg manage` to install its generated-config include, then `hyprmoncfg apply Docked` or `hyprmoncfg apply "Stand alone"`. Back up existing local profiles before stowing; generated active monitor files and plugin code are not tracked. After changing a layout, save it with hyprmoncfg and sync its profile files back here.
 - `personal/.config/wluma/config.toml` - wluma auto-brightness for the Framework ALS and docked DDC monitors. There is no pacman, Flatpak, or AUR `-bin` package; install extra `iio-sensor-proxy`, add `github:max-baz/wluma` to mise, install `root/etc/udev/rules.d/90-wluma-backlight.rules`, and enable `wluma.service`. The config only disables gamma so Omarchy nightlight keeps hyprsunset. wluma learns from Omarchy brightness keys and hyprmoncfg sliders; it does not start adjusting until those have been used a few times in different lighting. `personal/.local/bin/wluma-laptop-curve` is the hyprmoncfg `exec` on Docked and Stand alone: it points `~/.local/state/wluma/eDP-1.yaml` at a docked or standalone curve file so the laptop panel learns separately.
 - `personal/.config/hypr/autostart.lua` / `work/.config/hypr/autostart.lua` - persona autostart
-- `bootstrap/dual-omarchy-boot/` - coordinates the personal/internal and work/external Omarchy boot menus
+- `bootstrap/dual-omarchy-boot/` - coordinates the personal/internal and work/external Omarchy boot menus, reapplies the black-and-white Limine palette after `limine-update`, and documents the dual-key Secure Boot split
+- `root/etc/sddm.conf.d/zz-where-is-my-sddm.conf` and `root/usr/share/sddm/themes/where_is_my_sddm_theme/theme.conf.user` - SDDM theme selection, no autologin, and the matching black-and-white login colors
 - `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login
 - `bootstrap/philosophia-audio/` - host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
 
@@ -414,16 +415,28 @@ sudo ./bootstrap/sddm-gnome-keyring/apply.sh
 ./bootstrap/philosophia-audio/apply.sh
 ```
 
-For the external Work OS clone of this repo, apply the reciprocal boot role instead:
+For the external Work OS clone of this repo, apply the reciprocal boot role and the same system theme files:
 
 ```bash
 stow -t ~ common
 stow -t ~ work
 init-env-secrets --all
+sudo stow -t / root
+sudo ./bootstrap/sddm-gnome-keyring/apply.sh
 sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
 ```
 
-The personal role keeps the internal Limine install as the firmware default and adds a `Work OS (external drive)` Limine menu entry that chainloads the external ESP directly by partition GUID, avoiding dependence on removable-drive UEFI NVRAM entries that firmware may delete. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work OS updates rebuild the external ESP without trying to register or reorder UEFI NVRAM as the laptop default. When the peer ESP is visible, either role also re-enrolls the peer `limine.conf` checksum into that peer Limine binary and signs the main/fallback Limine loaders, preventing Secure Boot config-checksum panics after menu changes. Disk encryption remains owned by each OS's own boot artifacts after the handoff.
+Work also needs the `where-is-my-sddm-theme-git` theme package so `theme.conf.user` has a theme to overlay. Do not pass `--update-firmware-entries` or `--repair-peer` on a proven laptop: those flags rewrite NVRAM or the peer ESP.
+
+The personal role leaves firmware BootOrder alone and adds a `Work OS (external drive)` Limine menu entry that chainloads the external ESP by partition GUID. The working firmware path is the internal disk's own EFI Hard Drive / fallback loader, not a named `Limine` NVRAM entry. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work updates rebuild the external ESP without registering or reordering UEFI NVRAM. Both roles install `/etc/limine-theme.conf` and hook `87-limine-theme`, which rewrites the Limine header to the black-and-white palette after every `limine-update` (including `omarchy-refresh-limine`) and before config checksum enrollment.
+
+Secure Boot is split by design:
+
+- Each OS has its own sbctl keyset and signs only its own ESP (Limine, fallback, UKIs).
+- Personal owns the firmware-enrolled PK/KEK. Only Personal may write firmware `db`.
+- Firmware `db` must contain both public `db` certificates plus the vendor/Microsoft builtins. Copy only the peer public `db.pem` into Personal's `/var/lib/sbctl/keys/custom/db/`, then enroll from Personal with `sbctl enroll-keys --partial db --custom --microsoft --firmware-builtin`. If firmware `db` is immutable, use the documented `--ignore-immutable` plus `chattr` path on **db only**. Never enroll Work PK/KEK and never use `sbctl enroll-keys --yes-this-might-brick-my-machine`.
+- Do not change `BootOrder` or set `BootNext` to pick an OS. That is how PCR 1 bindings go stale. Use the firmware boot menu or the Limine GUID chainload entries.
+- Disk encryption stays on each OS's own LUKS header after the handoff. The working Clevis policy here is PCR `7` (Secure Boot state). PCR `1,7` is stricter and breaks across firmware-variable changes and hibernation resume.
 
 On Work OS, verify the user services that should stay enabled after stowing `common`:
 
@@ -455,7 +468,7 @@ sudo systemctl reset-failed libvirtd.service libvirtd.socket libvirtd-ro.socket 
 sudo systemctl restart libvirtd.service
 ```
 
-After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. PCR `1,7` bindings are intentionally strict and can be invalidated by boot-path changes. Once booted into the OS whose root disk should auto-unlock, check the slot and regenerate it if the binding was created on this same laptop TPM:
+After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. The working policy on this laptop is PCR `7`. Once booted into the OS whose root disk should auto-unlock, check the slot and regenerate it if the binding was created on this same laptop TPM:
 
 ```bash
 sudo clevis luks list -d <LUKS_DEVICE>
@@ -464,12 +477,12 @@ sudo clevis luks regen -q -d <LUKS_DEVICE> -s <CLEVIS_SLOT>
 
 Use `/dev/nvme0n1p2` for the internal personal OS on this Framework install. On the external Work OS, identify the root LUKS partition from inside Work OS with `lsblk -f` first, then run the same commands there.
 
-If a Clevis slot came from another laptop, do not expect `regen` to work because the old TPM cannot unseal it on this machine. Boot that OS once with the normal LUKS passphrase, then replace the foreign TPM binding from inside that OS:
+If a Clevis slot came from another laptop, or was bound to PCR `1,7` on an old named firmware entry, do not expect `regen` to work after the boot path changed. Boot that OS once with the normal LUKS passphrase, then replace the foreign or stale TPM binding from inside that OS:
 
 ```bash
 sudo clevis luks list -d <LUKS_DEVICE>
 sudo clevis luks unbind -d <LUKS_DEVICE> -s <OLD_CLEVIS_SLOT> -f
-sudo clevis luks bind -d <LUKS_DEVICE> tpm2 '{"pcr_bank":"sha256","pcr_ids":"1,7"}'
+sudo clevis luks bind -d <LUKS_DEVICE> tpm2 '{"pcr_bank":"sha256","pcr_ids":"7"}'
 sudo clevis luks list -d <LUKS_DEVICE>
 ```
 
@@ -484,13 +497,16 @@ sudo stow --adopt -t / root
 
 What this covers:
 
-- coordinate the dual-boot Limine menus
+- coordinate the dual-boot Limine menus and black-and-white Limine palette
+- stow the SDDM theme overlay and disable autologin after TPM disk unlock
 - install the SDDM PAM configuration that hooks GNOME keyring into login
+- keep Work off firmware NVRAM (`SKIP_UEFI=yes`) while Personal owns enrolled Secure Boot keys
 - disable WirePlumber's MPRIS pause-on-output-removal behavior on `philosophia`
 
 What is still a manual post-install step:
 
 - if TPM/Clevis auto-unlock stops working after reinstall or after boot-chain changes, regenerate or rebind the TPM slot after the first successful reboot
+- if Work's public `db` certificate is new, copy only that public cert to Personal and enroll firmware `db` from Personal
 
 Useful verification commands after reboot:
 
@@ -505,6 +521,7 @@ systemctl hibernate
 Important note for `root/` files:
 
 - `root/` is now reserved for files that are safe to manage directly with Stow
+- the SDDM theme overlay and autologin override live under `root/` so both personas pick them up with `sudo stow -t / root`
 - the SDDM PAM login file lives under `bootstrap/sddm-gnome-keyring/` so it is installed as a real root-owned file under `/etc/pam.d`
 - SDDM PAM files are copied into `/etc` as real root-owned files because symlinks into `/home` are not reliable for login-time PAM configuration
 

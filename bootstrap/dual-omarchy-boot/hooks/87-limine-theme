@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config=${LIMINE_CONFIG_PATH:-/boot/limine.conf}
+theme=${LIMINE_THEME_PATH:-/etc/limine-theme.conf}
+
+[[ -f $config && -f $theme ]] || exit 0
+
+python3 - "$config" "$theme" <<'PY'
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+theme_path = Path(sys.argv[2])
+
+theme: dict[str, str] = {}
+for raw in theme_path.read_text(encoding="utf-8").splitlines():
+    line = raw.strip()
+    if not line or line.startswith("#"):
+        continue
+    key, sep, value = line.partition(":")
+    if not sep:
+        continue
+    theme[key.strip()] = value.strip()
+
+if not theme:
+    raise SystemExit(0)
+
+original = config_path.read_text(encoding="utf-8")
+lines = original.splitlines(keepends=True)
+header: list[str] = []
+body: list[str] = []
+in_body = False
+for line in lines:
+    if not in_body and line.startswith("/"):
+        in_body = True
+    (body if in_body else header).append(line)
+
+header_text = "".join(header)
+for key, value in theme.items():
+    replacement = f"{key}: {value}"
+    pattern = re.compile(rf"^{re.escape(key)}:.*$", re.M)
+    if pattern.search(header_text):
+        header_text = pattern.sub(replacement, header_text)
+    else:
+        header_text = header_text.rstrip() + "\n" + replacement + "\n"
+
+header_text = re.sub(
+    r"# Terminal colors \(.*? palette\)",
+    "# Terminal colors (black and white palette)",
+    header_text,
+)
+
+if header_text and not header_text.endswith("\n"):
+    header_text += "\n"
+if body and header_text and not header_text.endswith("\n\n") and not "".join(body).startswith("\n"):
+    header_text += "\n"
+
+updated = header_text + "".join(body)
+if updated == original:
+    raise SystemExit(0)
+
+parent = config_path.parent
+fd, tmp_name = tempfile.mkstemp(prefix="limine.conf.", dir=str(parent))
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(updated)
+    os.replace(tmp_name, config_path)
+except Exception:
+    try:
+        os.unlink(tmp_name)
+    except OSError:
+        pass
+    raise
+PY
