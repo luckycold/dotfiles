@@ -137,6 +137,7 @@ private-context.md
 *.private-context.md
 /common/.agents/private-context.md
 /common/.mcporter/mcporter.json
+/common/.config/music-assistant/config.json
 /common/.mcporter/credentials.json
 /common/.mcporter/daemon/
 /current_session_context/tool_calls/read

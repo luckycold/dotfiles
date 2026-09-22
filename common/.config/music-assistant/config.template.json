@@ -1,0 +1,19 @@
+{
+  "url": "{{pass://Main/Music Assistant/url}}",
+  "token": "{{pass://Main/Music Assistant/token}}",
+  "preferredPlayerId": "{{pass://Main/Music Assistant/preferredPlayerId}}",
+  "pollIntervalMs": 2000,
+  "searchLimit": 20,
+  "recentLimit": 50,
+  "showSourceBadge": true,
+  "openWebUiPath": "",
+  "installMediaKeys": true,
+  "mprisFallback": true,
+  "localPlayer": {
+    "enabled": true,
+    "remoteId": "{{pass://Main/Music Assistant/remoteId}}",
+    "signalingUrl": "{{pass://Main/Music Assistant/signalingUrl}}",
+    "name": "Omarchy player",
+    "forceRelay": false
+  }
+}

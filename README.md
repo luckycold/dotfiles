@@ -299,7 +299,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, and the Kagi session token.
+Currently templated secrets include the Codex config, the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the Music Assistant widget config.
 
 ## Shell tooling
 
@@ -354,6 +354,7 @@ This repo carries a fair amount of agent/LLM configuration:
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.
 - `common/.config/opencode/config.json` - a separate OpenCode config listing only `@mem0/opencode-plugin` and `opencode-scheduler`.
 - `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates), each connected only to MCPorter.
+- `common/.config/music-assistant/config.template.json` - Omarchy Music Assistant widget and local-player config. `init-env-secrets` renders `~/.config/music-assistant/config.json`.
 - `common/.mcporter/mcporter.template.json` - the canonical [MCPorter](https://github.com/openclaw/mcporter) MCP registry. It owns all upstream server definitions.
 - `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, Zed, and Hermes.
 
