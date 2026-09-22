@@ -3,8 +3,8 @@
 hl.monitor({
   output = "desc:AOC Q27G3XMN 1APRBUA000024",
   mode = "2560x1440@144.00",
-  position = "-512x0",
-  scale = 1.25,
+  position = "-640x0",
+  scale = 1.33333,
   vrr = 1,
   sdr_min_luminance = 0.2,
   sdr_max_luminance = 80,
@@ -13,7 +13,7 @@ hl.monitor({
 hl.monitor({
   output = "desc:China Star Optoelectronics Technology Co. Ltd MND508ZB1-1",
   mode = "2880x1920@120.00",
-  position = "1536x192",
+  position = "1280x192",
   scale = 2,
   vrr = 1,
   sdr_min_luminance = 0.2,
@@ -24,7 +24,7 @@ hl.monitor({
   output = "desc:Dell Inc. DELL S2725QS J84BT84",
   mode = "3840x2160@60.00",
   position = "-2560x0",
-  scale = 1.875,
+  scale = 2,
   sdr_min_luminance = 0.2,
   sdr_max_luminance = 80,
 })
