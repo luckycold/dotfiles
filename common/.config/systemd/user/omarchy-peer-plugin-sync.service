@@ -1,6 +1,0 @@
-[Unit]
-Description=Sync Omarchy plugins with a mounted peer OS home
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/omarchy-peer-plugin-sync

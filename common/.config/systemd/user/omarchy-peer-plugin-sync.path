@@ -1,9 +1,0 @@
-[Unit]
-Description=Watch for a mounted peer OS home to sync Omarchy plugins
-
-[Path]
-PathChanged=/run/media/%u
-Unit=omarchy-peer-plugin-sync.service
-
-[Install]
-WantedBy=default.target
