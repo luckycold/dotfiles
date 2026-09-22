@@ -9,6 +9,10 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 - Follow each repository's existing style and architecture. Do not refactor unrelated code.
 - Inspect current state before acting. Ask only when required information is external, sensitive, destructive, or depends on a material user choice.
 - Prefer supported first-class configuration over custom wrappers, helper binaries, or bespoke glue unless Luke explicitly requests that implementation.
+- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
+- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
+- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
+- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
 - When authenticated tooling is needed, prefer the agent's native tools and configured MCP integrations. If neither provides a clear supported path, ask Luke to enable or authenticate the appropriate integration instead of inventing custom glue.
 
 ## Git push authorization
