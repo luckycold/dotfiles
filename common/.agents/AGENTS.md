@@ -58,7 +58,7 @@ Luke-authored personal skills are canonical under `~/.agents/skills/` and have `
 - `proton-pass-cli` for Proton Pass CLI, scoped agent access, secret references, and headless/container authentication.
 - `tasker-automation` for Android Tasker and Tasker WebUI workflows.
 - `steam-hyprland-scaling` for Steam client HiDPI on Hyprland/Omarchy mixed-DPI.
-- `omarchy-dual-boot-secure-boot` for dual Omarchy Limine menus, SDDM after TPM unlock, and the personal/work sbctl split.
+- `omarchy-dual-boot-secure-boot` for dual Omarchy Limine menus, SDDM after TPM unlock, the personal/work sbctl split, and installing third-party shell plugins onto a mounted peer OS home.
 - `personal-skill-maintenance` when creating, correcting, consolidating, or extending Luke-authored skills.
 
 Read a skill's directly linked references only as needed. Personal skills supplement project rules; they do not override a repository's explicit constraints.
