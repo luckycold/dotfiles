@@ -140,3 +140,8 @@ private-context.md
 /common/.mcporter/credentials.json
 /common/.mcporter/daemon/
 /current_session_context/tool_calls/read
+
+# Portable skills are canonical in luckycold/agent-skills and installed by
+# update-agent-skills; never track a copy here.
+/common/.agents/skills/
+/common/.claude/skills/
