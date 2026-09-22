@@ -75,3 +75,11 @@ if o.cmd_present("voxtype") then
   o.bind("F8", "Cancel dictation", "voxtype record cancel")
   o.bind("CTRL + F9", "Cancel dictation", "voxtype record cancel")
 end
+
+-- BEGIN Sandman lid action override
+-- Sandman manages laptop lid-close actions. Omarchy's default lid-close
+-- binding locks immediately on lid close, before Sandman can apply Do nothing
+-- or Display off, so replace it with monitor/clamshell reconciliation only.
+hl.unbind("switch:on:Lid Switch")
+o.bind("switch:on:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
+-- END Sandman lid action override
