@@ -11,7 +11,7 @@ Canonical repository: [github.com/luckycold/dotfiles](https://github.com/luckyco
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode unison
 # yay -S ...
 ```
 ##### Debian/Ubuntu
@@ -437,7 +437,45 @@ Secure Boot is split by design:
 - Personal owns the firmware-enrolled PK/KEK. Only Personal may write firmware `db`.
 - Firmware `db` must contain both public `db` certificates plus the vendor/Microsoft builtins. Copy only the peer public `db.pem` into Personal's `/var/lib/sbctl/keys/custom/db/`, then enroll from Personal with `sbctl enroll-keys --partial db --custom --microsoft --firmware-builtin`. If firmware `db` is immutable, use the documented `--ignore-immutable` plus `chattr` path on **db only**. Never enroll Work PK/KEK and never use `sbctl enroll-keys --yes-this-might-brick-my-machine`.
 - Do not change `BootOrder` or set `BootNext` to pick an OS. That is how PCR 1 bindings go stale. Use the firmware boot menu or the Limine GUID chainload entries.
-- Disk encryption stays on each OS's own LUKS header after the handoff. The working Clevis policy here is PCR `7` (Secure Boot state). PCR `1,7` is stricter and breaks across firmware-variable changes and hibernation resume.
+- Disk encryption stays on each OS's own LUKS header after the handoff. The working Clevis policy here is PCR `7` (Secure Boot state). PCR `1,7` is stricter and breaks across firmware-variable changes and hibernation resume. With the Thunderbolt dock, eGPU, and NVMe enclosure attached, PCR `7` alternates between boots as option-ROM `db` authority events come and go, so each OS keeps one Clevis PCR `7` slot per observed state (plus the passphrase slot) instead of replacing a slot that only fails in the other state.
+
+### Sharing state between Personal and Work
+
+Some state is not in this repo but should match on both installs: third-party Omarchy plugin checkouts, Bluetooth pairings, and fingerprint stubs. Sync them with Unison (official `extra`), by hand, whenever the other OS's disk is unlocked and mounted. There is deliberately no unit, timer, or wrapper for this.
+
+1. Unlock and mount the peer disk (the file manager does this; Omarchy mounts the top-level Btrfs volume under `/run/media/<user>/<uuid>/`). Set two paths for the commands below:
+
+```bash
+PEER_HOME=/run/media/$USER/<uuid>/@home/$USER
+PEER_ROOT=/run/media/$USER/<uuid>/@
+```
+
+2. Omarchy plugins. Each plugin under `~/.config/omarchy/plugins/` is a git clone. Unison copies `.git` too, so a plugin that is checked out on a branch on one side and freshly cloned on the other will have the clone's `main` win and lose the branch. Before syncing, commit or push any plugin work in progress, and check out the same branch on both sides. `shell.json` stays per OS (bar layout and idle differ).
+
+```bash
+unison -ui text -batch -auto -prefer newer \
+  ~/.config/omarchy/plugins "$PEER_HOME/.config/omarchy/plugins"
+```
+
+Missing plugins can instead be installed onto the peer home with `HOME="$PEER_HOME" omarchy plugin add <git-url> --yes` (never `--enable` from the other OS).
+
+3. Bluetooth. Both installs present the same adapter MAC, so pairings are interchangeable. A device keeps one link key per host, so pair on one OS, then sync; re-pairing on one side breaks the other until the next sync.
+
+```bash
+sudo unison -ui text -batch -auto -prefer newer -owner -group -times \
+  /var/lib/bluetooth "$PEER_ROOT/var/lib/bluetooth"
+sudo systemctl restart bluetooth
+```
+
+4. Fingerprints. The Goodix sensor is match-on-chip: the templates live on the sensor and `/var/lib/fprint/<user>/goodixmoc/<sensor-serial>/<finger>` is a stub pointing at the on-chip slot. Enroll once (`omarchy setup security fingerprint`), then sync the stubs. Do not `fprintd-delete` or re-enroll "to start clean" on one OS; that clears the slot both sides reference. Stubs for old sensor serials are harmless.
+
+```bash
+sudo unison -ui text -batch -auto -prefer newer -owner -group -times \
+  /var/lib/fprint "$PEER_ROOT/var/lib/fprint"
+fprintd-list "$USER"
+```
+
+`-prefer newer` resolves the first-run conflicts in favor of the most recent copy, which is the right answer for pairings and enrollments. Later runs use Unison's archive and only propagate real changes.
 
 On Work OS, verify the user services that should stay enabled after stowing `common`:
 
