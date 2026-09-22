@@ -49,7 +49,7 @@
 [user]
 	email = git@luckycold.aleeas.com
 	name = Luke Williams
-	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1/k1EbUEQZkYnjPiZyUZo8s2WWqE90vfyqCs3TU3Ix Main SSH Key
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO32tQi7mD2oQTVZWtr0DBqvjLFmZbG9503wHf6/RcQI Main
 [credential "https://github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential
