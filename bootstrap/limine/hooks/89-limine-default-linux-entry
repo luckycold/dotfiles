@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config=/boot/limine.conf
+[[ -f "$config" ]] || exit 0
+
+default_entry=$(awk '
+  /^\/\+/ {
+    os = substr($0, 3)
+    next
+  }
+  os && /^[[:space:]]*\/\/[^/]/ {
+    kernel = $0
+    sub(/^[[:space:]]*\/\//, "", kernel)
+    print os "/" kernel
+    exit
+  }
+' "$config")
+
+[[ -n "$default_entry" ]] || exit 0
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+awk -v default_entry="$default_entry" '
+  /^default_entry:/ {
+    if (!done) {
+      print "default_entry: " default_entry
+      done = 1
+    }
+    next
+  }
+  { print }
+  END {
+    if (!done) {
+      print "default_entry: " default_entry
+    }
+  }
+' "$config" >"$tmp"
+
+cmp -s "$tmp" "$config" || install -m 0644 "$tmp" "$config"

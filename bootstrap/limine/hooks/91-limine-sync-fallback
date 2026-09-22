@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+esp=/boot
+main="$esp/EFI/limine/limine_x64.efi"
+fallback="$esp/EFI/BOOT/BOOTX64.EFI"
+
+[[ -f "$main" ]] || exit 0
+install -D -m 0644 "$main" "$fallback"

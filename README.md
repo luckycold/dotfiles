@@ -11,7 +11,7 @@ Canonical repository: [github.com/luckycold/dotfiles](https://github.com/luckyco
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode unison
+sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode
 # yay -S ...
 ```
 ##### Debian/Ubuntu
@@ -201,10 +201,6 @@ then use GNU stow to create symlinks
 stow -t ~ common
 stow -t ~ personal
 
-# or, on the external Work OS install:
-stow -t ~ common
-stow -t ~ work
-
 # For systems with my exclusive use
 # sudo stow -t / root
 ```
@@ -278,7 +274,7 @@ The repo is organised as Stow packages plus a few things Stow cannot manage clea
 - `common/.agents/AGENTS.md` - Luke's canonical cross-agent working agreement. Portable [Agent Skills](https://agentskills.io) live only in the external [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills) repository and are installed into `~/.agents/skills`; no skills tree is tracked here. Each harness keeps its required global-instruction entry point.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
-- `bootstrap/` - host-specific setup that must be *copied* into place (not stowed) and is applied by `apply.sh` scripts (dual-boot, SDDM keyring, host audio).
+- `bootstrap/` - host-specific setup that must be *copied* into place (not stowed): Limine post hooks, SDDM keyring PAM, host audio.
 - `.github/` - GitHub Actions (see Automation).
 
 ## Secret templates (`init-env-secrets`)
@@ -400,7 +396,7 @@ The remaining Omarchy-specific pieces are:
 - `personal/.config/hyprmoncfg/profiles/` - native hyprmoncfg profiles for the Framework laptop: `Docked` (Dell 4K/60 Hz through the dock, AOC 1440p/144 Hz through the eGPU) and `Stand alone`. Layouts match display identities rather than fixed connector numbers. After installing hyprmoncfg and stowing the personal profile, run `hyprmoncfg manage` to install its generated-config include, then `hyprmoncfg apply Docked` or `hyprmoncfg apply "Stand alone"`. Back up existing local profiles before stowing; generated active monitor files and plugin code are not tracked. After changing a layout, save it with hyprmoncfg and sync its profile files back here.
 - `personal/.config/wluma/config.toml` - wluma auto-brightness for the Framework ALS and docked DDC monitors. There is no pacman, Flatpak, or AUR `-bin` package; install extra `iio-sensor-proxy`, add `github:max-baz/wluma` to mise, install `root/etc/udev/rules.d/90-wluma-backlight.rules`, and enable `wluma.service`. The config only disables gamma so Omarchy nightlight keeps hyprsunset. wluma learns from Omarchy brightness keys and hyprmoncfg sliders; it does not start adjusting until those have been used a few times in different lighting. `personal/.local/bin/wluma-laptop-curve` is the hyprmoncfg `exec` on Docked and Stand alone: it points `~/.local/state/wluma/eDP-1.yaml` at a docked or standalone curve file so the laptop panel learns separately.
 - `personal/.config/hypr/autostart.lua` / `work/.config/hypr/autostart.lua` - persona autostart
-- `bootstrap/dual-omarchy-boot/` - coordinates the personal/internal and work/external Omarchy boot menus, reapplies the black-and-white Limine palette after `limine-update`, and documents the dual-key Secure Boot split
+- `bootstrap/limine/` - Limine post hooks copied into `/etc/boot/hooks/post.d/`: `87-limine-theme` reapplies the black-and-white header palette from `/etc/limine-theme.conf` after every `limine-update` (including `omarchy-refresh-limine`) and before config checksum enrollment, `89-limine-default-linux-entry` keeps `default_entry` on the first Omarchy kernel, and `91-limine-sync-fallback` mirrors `limine_x64.efi` to `EFI/BOOT/BOOTX64.EFI`
 - `root/etc/sddm.conf.d/zz-where-is-my-sddm.conf` and `root/usr/share/sddm/themes/where_is_my_sddm_theme/theme.conf.user` - SDDM theme selection, no autologin, and the matching black-and-white login colors
 - `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login
 - `bootstrap/philosophia-audio/` - host-specific user-session bootstrap for disabling WirePlumber's headphone-removal media pause behavior on `philosophia`
@@ -411,112 +407,31 @@ Apply the personal Omarchy profile like this:
 stow -t ~ common
 stow -t ~ personal
 sudo stow -t / root
-sudo ./bootstrap/dual-omarchy-boot/apply.sh --role personal
+sudo install -m 0644 bootstrap/limine/limine-theme.conf /etc/limine-theme.conf
+sudo install -m 0755 -t /etc/boot/hooks/post.d bootstrap/limine/hooks/*
+sudo limine-update
 sudo ./bootstrap/sddm-gnome-keyring/apply.sh
 ./bootstrap/philosophia-audio/apply.sh
 ```
 
-For the external Work OS clone of this repo, apply the reciprocal boot role and the same system theme files:
+`limine-update` runs the hooks, re-enrolls the config checksum, and re-signs the loaders through sbctl. Never hand-edit the BLAKE2 hashes in `/boot/limine.conf`.
 
-```bash
-stow -t ~ common
-stow -t ~ work
-init-env-secrets --all
-sudo stow -t / root
-sudo ./bootstrap/sddm-gnome-keyring/apply.sh
-sudo ./bootstrap/dual-omarchy-boot/apply.sh --role work
-```
+Secure Boot uses this machine's own sbctl keyset; `sbctl verify` should be clean after every `limine-update`. Do not change `BootOrder` or set `BootNext` to work around a boot problem: that is how PCR 1 bindings go stale, and the working firmware path is the internal disk's own EFI Hard Drive / fallback loader, not a named `Limine` NVRAM entry.
 
-Work also needs the `where-is-my-sddm-theme-git` theme package so `theme.conf.user` has a theme to overlay. Do not pass `--update-firmware-entries` or `--repair-peer` on a proven laptop: those flags rewrite NVRAM or the peer ESP.
-
-The personal role leaves firmware BootOrder alone and adds a `Work OS (external drive)` Limine menu entry that chainloads the external ESP by partition GUID. The working firmware path is the internal disk's own EFI Hard Drive / fallback loader, not a named `Limine` NVRAM entry. The work role adds a reciprocal `Personal OS (internal drive)` menu entry and sets `SKIP_UEFI=yes` in `/etc/default/limine` so Work updates rebuild the external ESP without registering or reordering UEFI NVRAM. Both roles install `/etc/limine-theme.conf` and hook `87-limine-theme`, which rewrites the Limine header to the black-and-white palette after every `limine-update` (including `omarchy-refresh-limine`) and before config checksum enrollment.
-
-Secure Boot is split by design:
-
-- Each OS has its own sbctl keyset and signs only its own ESP (Limine, fallback, UKIs).
-- Personal owns the firmware-enrolled PK/KEK. Only Personal may write firmware `db`.
-- Firmware `db` must contain both public `db` certificates plus the vendor/Microsoft builtins. Copy only the peer public `db.pem` into Personal's `/var/lib/sbctl/keys/custom/db/`, then enroll from Personal with `sbctl enroll-keys --partial db --custom --microsoft --firmware-builtin`. If firmware `db` is immutable, use the documented `--ignore-immutable` plus `chattr` path on **db only**. Never enroll Work PK/KEK and never use `sbctl enroll-keys --yes-this-might-brick-my-machine`.
-- Do not change `BootOrder` or set `BootNext` to pick an OS. That is how PCR 1 bindings go stale. Use the firmware boot menu or the Limine GUID chainload entries.
-- Disk encryption stays on each OS's own LUKS header after the handoff. The working Clevis policy here is PCR `7` (Secure Boot state). PCR `1,7` is stricter and breaks across firmware-variable changes and hibernation resume. With the Thunderbolt dock, eGPU, and NVMe enclosure attached, PCR `7` alternates between boots as option-ROM `db` authority events come and go, so each OS keeps one Clevis PCR `7` slot per observed state (plus the passphrase slot) instead of replacing a slot that only fails in the other state.
-
-### Sharing state between Personal and Work
-
-Some state is not in this repo but should match on both installs: third-party Omarchy plugin checkouts, Bluetooth pairings, and fingerprint stubs. Sync them with Unison (official `extra`), by hand, whenever the other OS's disk is unlocked and mounted. There is deliberately no unit, timer, or wrapper for this.
-
-1. Unlock and mount the peer disk (the file manager does this; Omarchy mounts the top-level Btrfs volume under `/run/media/<user>/<uuid>/`). Set two paths for the commands below:
-
-```bash
-PEER_HOME=/run/media/$USER/<uuid>/@home/$USER
-PEER_ROOT=/run/media/$USER/<uuid>/@
-```
-
-2. Omarchy plugins. Each plugin under `~/.config/omarchy/plugins/` is a git clone. Unison copies `.git` too, so a plugin that is checked out on a branch on one side and freshly cloned on the other will have the clone's `main` win and lose the branch. Before syncing, commit or push any plugin work in progress, and check out the same branch on both sides. `shell.json` stays per OS (bar layout and idle differ).
-
-```bash
-unison -ui text -batch -auto -prefer newer \
-  ~/.config/omarchy/plugins "$PEER_HOME/.config/omarchy/plugins"
-```
-
-Missing plugins can instead be installed onto the peer home with `HOME="$PEER_HOME" omarchy plugin add <git-url> --yes` (never `--enable` from the other OS).
-
-3. Bluetooth. Both installs present the same adapter MAC, so pairings are interchangeable. A device keeps one link key per host, so pair on one OS, then sync; re-pairing on one side breaks the other until the next sync.
-
-```bash
-sudo unison -ui text -batch -auto -prefer newer -owner -group -times \
-  /var/lib/bluetooth "$PEER_ROOT/var/lib/bluetooth"
-sudo systemctl restart bluetooth
-```
-
-4. Fingerprints. The Goodix sensor is match-on-chip: the templates live on the sensor and `/var/lib/fprint/<user>/goodixmoc/<sensor-serial>/<finger>` is a stub pointing at the on-chip slot. Enroll once (`omarchy setup security fingerprint`), then sync the stubs. Do not `fprintd-delete` or re-enroll "to start clean" on one OS; that clears the slot both sides reference. Stubs for old sensor serials are harmless.
-
-```bash
-sudo unison -ui text -batch -auto -prefer newer -owner -group -times \
-  /var/lib/fprint "$PEER_ROOT/var/lib/fprint"
-fprintd-list "$USER"
-```
-
-`-prefer newer` resolves the first-run conflicts in favor of the most recent copy, which is the right answer for pairings and enrollments. Later runs use Unison's archive and only propagate real changes.
-
-On Work OS, verify the user services that should stay enabled after stowing `common`:
-
-```bash
-systemctl --user is-active proton-pass-cli-autologin.service
-systemctl --user is-active proton-pass-cli-ssh-agent.service
-```
+The working Clevis policy is PCR `7` (Secure Boot state). PCR `1,7` is stricter and breaks across firmware-variable changes and hibernation resume. With the Thunderbolt dock and eGPU attached, PCR `7` can alternate between boots as option-ROM `db` authority events come and go, so keep one Clevis PCR `7` slot per observed state (plus the passphrase slot) instead of replacing a slot that only fails in the other state.
 
 `agent-tts` and Kokoro units are intentionally not part of this repo anymore.
 
-After moving an existing Work OS install from another laptop, also check for stale TPM-bound system credentials:
-
-```bash
-systemctl --failed
-systemctl status systemd-tpm2-setup.service systemd-pcrproduct.service libvirtd.service
-```
-
-Failures from `systemd-tpm2-setup.service` or `systemd-pcrproduct.service` that mention TPM key integrity or `Failed to acquire anchor secret` are separate from the LUKS Clevis slot. They come from systemd measured-UKI/NvPCR state, not from dotfiles. The credential files live under `/var/lib/systemd/nvpcr/` and `/boot/loader/credentials/`, but the NvPCR indexes themselves are TPM-global (`0x1d10200`-`0x1d10202` for the stock systemd definitions). Do not undefine those TPM NV indexes casually on this dual-OS Framework because Personal OS sees the same TPM.
-
-If `libvirtd.service` fails with `status=243/CREDENTIALS`, check whether `/var/lib/libvirt/secrets/secrets-encryption-key` decrypts on this machine and whether any libvirt secrets need preserving before regenerating it. If there are no real libvirt secrets to preserve, back up the old key and let systemd create a new encrypted key for this host:
-
-```bash
-sudo cp -a /var/lib/libvirt/secrets/secrets-encryption-key \
-  /var/lib/libvirt/secrets/secrets-encryption-key.bak.$(date +%Y%m%d%H%M%S)
-dd if=/dev/random bs=32 count=1 status=none | \
-  sudo systemd-creds encrypt --name=secrets-encryption-key - \
-  /var/lib/libvirt/secrets/secrets-encryption-key
-sudo systemctl reset-failed libvirtd.service libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket
-sudo systemctl restart libvirtd.service
-```
-
-After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. The working policy on this laptop is PCR `7`. Once booted into the OS whose root disk should auto-unlock, check the slot and regenerate it if the binding was created on this same laptop TPM:
+After changing Secure Boot, Limine, UKI, or UEFI boot order, boot once through the final intended path before regenerating Clevis TPM bindings. Once booted, check the slot and regenerate it if the binding was created on this same laptop TPM:
 
 ```bash
 sudo clevis luks list -d <LUKS_DEVICE>
 sudo clevis luks regen -q -d <LUKS_DEVICE> -s <CLEVIS_SLOT>
 ```
 
-Use `/dev/nvme0n1p2` for the internal personal OS on this Framework install. On the external Work OS, identify the root LUKS partition from inside Work OS with `lsblk -f` first, then run the same commands there.
+Use `/dev/nvme0n1p2` for the root LUKS partition on this Framework install (confirm with `lsblk -f`).
 
-If a Clevis slot came from another laptop, or was bound to PCR `1,7` on an old named firmware entry, do not expect `regen` to work after the boot path changed. Boot that OS once with the normal LUKS passphrase, then replace the foreign or stale TPM binding from inside that OS:
+If a Clevis slot came from another laptop, or was bound to PCR `1,7` on an old named firmware entry, do not expect `regen` to work after the boot path changed. Boot once with the normal LUKS passphrase, then replace the foreign or stale TPM binding:
 
 ```bash
 sudo clevis luks list -d <LUKS_DEVICE>
@@ -536,16 +451,14 @@ sudo stow --adopt -t / root
 
 What this covers:
 
-- coordinate the dual-boot Limine menus and black-and-white Limine palette
+- keep the black-and-white Limine palette, default entry, and fallback loader in place across `limine-update`
 - stow the SDDM theme overlay and disable autologin after TPM disk unlock
 - install the SDDM PAM configuration that hooks GNOME keyring into login
-- keep Work off firmware NVRAM (`SKIP_UEFI=yes`) while Personal owns enrolled Secure Boot keys
 - disable WirePlumber's MPRIS pause-on-output-removal behavior on `philosophia`
 
 What is still a manual post-install step:
 
 - if TPM/Clevis auto-unlock stops working after reinstall or after boot-chain changes, regenerate or rebind the TPM slot after the first successful reboot
-- if Work's public `db` certificate is new, copy only that public cert to Personal and enroll firmware `db` from Personal
 
 Useful verification commands after reboot:
 
@@ -560,7 +473,7 @@ systemctl hibernate
 Important note for `root/` files:
 
 - `root/` is now reserved for files that are safe to manage directly with Stow
-- the SDDM theme overlay and autologin override live under `root/` so both personas pick them up with `sudo stow -t / root`
+- the SDDM theme overlay and autologin override live under `root/` and are applied with `sudo stow -t / root`
 - the SDDM PAM login file lives under `bootstrap/sddm-gnome-keyring/` so it is installed as a real root-owned file under `/etc/pam.d`
 - SDDM PAM files are copied into `/etc` as real root-owned files because symlinks into `/home` are not reliable for login-time PAM configuration
 
