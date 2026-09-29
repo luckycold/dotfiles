@@ -11,9 +11,8 @@ hl.config({
 -- https://wiki.hypr.land/Configuring/Layouts/Scrolling-Layout/
 hl.config({
   scrolling = {
-    -- Let mouse focus pull mostly-hidden columns into view.
-    follow_focus = true,
-    follow_min_visible = 0.0,
+    -- Keep the view still on hover; explicit focus navigation still scrolls.
+    follow_focus = false,
     -- Presets cycled by SUPER+CTRL+MINUS/EQUAL.
     explicit_column_widths = "0.25, 0.49, 0.75",
   },
