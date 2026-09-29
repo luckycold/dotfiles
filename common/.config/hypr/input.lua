@@ -11,7 +11,7 @@ hl.config({
   },
 })
 
--- Three-finger swipe scrolls window columns; four fingers switch workspaces.
+-- Three-finger swipe switches workspaces; four fingers scroll window columns.
 -- See https://wiki.hypr.land/Configuring/Advanced-and-Cool/Gestures/
-hl.gesture({ fingers = 3, direction = "horizontal", action = "scroll_move" })
-hl.gesture({ fingers = 4, direction = "horizontal", action = "workspace" })
+hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
+hl.gesture({ fingers = 4, direction = "horizontal", action = "scroll_move" })
