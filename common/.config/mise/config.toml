@@ -12,5 +12,8 @@ python = "latest"
 zig = "latest"
 zls = "latest"
 
+[settings]
+minimum_release_age = "0s"
+
 [settings.upgrade]
 auto_prune = false
