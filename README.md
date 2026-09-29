@@ -390,18 +390,20 @@ Private operational context is kept out of the portable skill packages. Agents r
 
 This repo leaves hibernation setup to stock Omarchy. Use Omarchy's own setup and removal commands for hibernation rather than host-specific wrappers or custom Limine `noresume` policy.
 
-The one exception is the Thunderbolt eGPU (RX 6600 in the TREBLEET enclosure, behind the OWC Go Dock), which does not survive hibernation. Resuming with it attached reset the machine (`Previous system reset reason [0x08000800]: an uncorrected error caused a data fabric sync flood event`), and a resume that did get through hit an amdgpu/TTM NULL dereference (`ttm_lru_bulk_move_del`) seconds later. Hibernation works without the eGPU. Sandman's idle and lid Sleep request `suspend-then-hibernate` (Sandman writes its timer to `/etc/systemd/sleep.conf.d/90-sandman.conf`), so two drop-ins keep the eGPU out of hibernation:
+The one exception is the Thunderbolt eGPU (RX 6600 in the TREBLEET enclosure, behind the OWC Go Dock), which does not survive hibernation. Resuming with it attached reset the machine (`Previous system reset reason [0x08000800]: an uncorrected error caused a data fabric sync flood event`), and a resume that did get through hit an amdgpu/TTM NULL dereference (`ttm_lru_bulk_move_del`) seconds later. Hibernation works without the eGPU. Sandman's idle and lid Sleep request `suspend-then-hibernate` (Sandman writes its timer to `/etc/systemd/sleep.conf.d/90-sandman.conf`), so three drop-ins keep the eGPU out of hibernation:
 
 - `root/etc/systemd/sleep.conf.d/95-egpu-ac.conf` - `HibernateOnACPower=no`, overriding Sandman's `yes`: on dock power, suspend-then-hibernate stays suspended. Also covers docking while suspended.
 - `root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf` - if any DRM card's PCI device reports `removable` (only the eGPU does), runs plain `systemd-sleep suspend` instead, so undocking while suspended is safe. The journal logs `Removable GPU … attached; suspending without hibernation`.
+- `root/etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf` - the same check for an explicit `systemctl hibernate` (the Omarchy menu's Hibernate and Sandman's lid Hibernate): with the eGPU attached it suspends instead. Omarchy files are untouched; this overrides systemd's own unit from `/etc`.
 
-Remaining edge cases: an explicit `systemctl hibernate` (the Omarchy menu's Hibernate) with the eGPU attached still hibernates and will crash, so unplug first. Suspend with the eGPU attached works but can wake with amdgpu display warnings and `DPIA AUX failed` errors; a reboot recovers if it hangs. A matching upstream Sandman change (branch `skip-hibernate-with-egpu`) is pending; once merged, the service drop-in is redundant but harmless.
+Remaining edge case: suspend with the eGPU attached works but can wake with amdgpu display warnings and `DPIA AUX failed` errors; a reboot recovers if it hangs. A matching upstream Sandman change is proposed in [lgse/sandman#14](https://github.com/lgse/sandman/pull/14); once merged, the suspend-then-hibernate drop-in is redundant but harmless.
 
-Install or refresh both as real root-owned copies:
+Install or refresh them as real root-owned copies:
 
 ```bash
 sudo install -Dm 0644 root/etc/systemd/sleep.conf.d/95-egpu-ac.conf /etc/systemd/sleep.conf.d/95-egpu-ac.conf
 sudo install -Dm 0644 root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf /etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf
+sudo install -Dm 0644 root/etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf /etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf
 sudo systemctl daemon-reload
 ```
 
