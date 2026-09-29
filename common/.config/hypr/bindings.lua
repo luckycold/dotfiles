@@ -35,6 +35,25 @@ o.bind("SUPER + SHIFT + J", "Swap window down", hl.dsp.window.swap({ direction =
 o.bind("SUPER + SHIFT + ALT + H", "Move workspace to left monitor", hl.dsp.workspace.move({ monitor = "l" }))
 o.bind("SUPER + SHIFT + ALT + L", "Move workspace to right monitor", hl.dsp.workspace.move({ monitor = "r" }))
 
+-- Column-width resizing for the scrolling layout (replaces the pixel-based
+-- horizontal resizes). SUPER+CTRL cycles scrolling.explicit_column_widths.
+hl.unbind("SUPER + code:20")
+hl.unbind("SUPER + code:21")
+hl.unbind("SUPER + ALT + code:20")
+hl.unbind("SUPER + ALT + code:21")
+hl.unbind("SUPER + CTRL + code:20")
+hl.unbind("SUPER + CTRL + code:21")
+
+o.bind("SUPER + code:20", "Shrink column", hl.dsp.layout("colresize -0.1"))
+o.bind("SUPER + code:21", "Expand column", hl.dsp.layout("colresize +0.1"))
+o.bind("SUPER + ALT + code:20", "Shrink column a little", hl.dsp.layout("colresize -0.05"))
+o.bind("SUPER + ALT + code:21", "Expand column a little", hl.dsp.layout("colresize +0.05"))
+o.bind("SUPER + CTRL + code:20", "Previous column width preset", hl.dsp.layout("colresize -conf"))
+o.bind("SUPER + CTRL + code:21", "Next column width preset", hl.dsp.layout("colresize +conf"))
+
+hl.unbind("SUPER + ALT + F")
+o.bind("SUPER + ALT + F", "Full width column", hl.dsp.layout("colresize 1.0"))
+
 -- Layout toggle used to live on SUPER+L; vim focus owns that key now.
 o.bind("SUPER + ALT + L", "Toggle workspace layout", "omarchy-hyprland-workspace-layout-toggle")
 
@@ -83,3 +102,5 @@ end
 hl.unbind("switch:on:Lid Switch")
 o.bind("switch:on:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
 -- END Sandman lid action override
+
+hl.bind("CTRL + SHIFT + 2", hl.dsp.global("com.t3tools.T3Code:capture-window"))
