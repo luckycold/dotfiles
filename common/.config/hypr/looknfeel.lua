@@ -11,8 +11,10 @@ hl.config({
 -- https://wiki.hypr.land/Configuring/Layouts/Scrolling-Layout/
 hl.config({
   scrolling = {
-    -- Keep the view still on hover; explicit focus navigation still scrolls.
-    follow_focus = false,
+    -- Focus bindings need follow_focus; suppress hover scrolling with the
+    -- maximum visibility threshold instead. Explicit navigation bypasses it.
+    follow_focus = true,
+    follow_min_visible = 1.0,
     -- Presets cycled by SUPER+CTRL+MINUS/EQUAL.
     explicit_column_widths = "0.25, 0.49, 0.75",
   },
