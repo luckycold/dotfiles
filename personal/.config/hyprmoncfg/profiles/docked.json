@@ -99,14 +99,14 @@
       },
       {
         "workspace": "2",
-        "output_key": "desc:Dell Inc. DELL S2725QS F889T84",
-        "output_name": "desc:Dell Inc. DELL S2725QS F889T84",
+        "output_key": "aoc|q27g3xmn|1aprbua000024",
+        "output_name": "HDMI-A-1",
         "default": true
       },
       {
         "workspace": "3",
-        "output_key": "desc:BOE NE135A1M-NY1",
-        "output_name": "desc:BOE NE135A1M-NY1",
+        "output_key": "china star optoelectronics technology co., ltd|mnd508zb1-1",
+        "output_name": "eDP-1",
         "default": true
       }
     ]
