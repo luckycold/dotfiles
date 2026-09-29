@@ -14,8 +14,13 @@ hl.config({
     -- Let mouse focus pull mostly-hidden columns into view.
     follow_focus = true,
     follow_min_visible = 0.0,
+    -- Presets cycled by SUPER+CTRL+MINUS/EQUAL.
+    explicit_column_widths = "0.25, 0.49, 0.75",
   },
 })
+
+-- First tiled window on a workspace takes most of the screen; later ones use column_width.
+o.window({ workspace = "w[t0]" }, { scrolling_width = 0.75 })
 
 hl.config({
   misc = {
