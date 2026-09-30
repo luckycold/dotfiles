@@ -398,6 +398,11 @@ The one exception is the Thunderbolt eGPU (RX 6600 in the TREBLEET enclosure, be
 
 Remaining edge case: suspend with the eGPU attached works but can wake with amdgpu display warnings and `DPIA AUX failed` errors; a reboot recovers if it hangs. A matching upstream Sandman change is proposed in [lgse/sandman#14](https://github.com/lgse/sandman/pull/14); once merged, the suspend-then-hibernate drop-in is redundant but harmless.
 
+Hyprland is kept off the eGPU entirely. Aquamarine holds every GPU it opens for the whole session, so an eGPU that drops off the bus (undock, failed resume) aborts the compositor. No monitor may hang off the eGPU; the eGPU stays available for `DRI_PRIME=1` offload.
+
+- `root/etc/udev/rules.d/60-drm-igpu.rules` - stable `/dev/dri/igpu` symlink for the iGPU (PCI `0000:c1:00.0`), because `cardN` numbers swap when the eGPU is attached and `AQ_DRM_DEVICES` splits on `:`, which rules out `/dev/dri/by-path` names.
+- `personal/.config/uwsm/env.d/30-aq-igpu-only` - sets `AQ_DRM_DEVICES=/dev/dri/igpu` when that symlink exists. Takes effect at the next login.
+
 Install or refresh them as real root-owned copies:
 
 ```bash
@@ -405,12 +410,14 @@ sudo install -Dm 0644 root/etc/systemd/sleep.conf.d/95-egpu-ac.conf /etc/systemd
 sudo install -Dm 0644 root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf /etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf
 sudo install -Dm 0644 root/etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf /etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf
 sudo systemctl daemon-reload
+sudo install -Dm 0644 root/etc/udev/rules.d/60-drm-igpu.rules /etc/udev/rules.d/60-drm-igpu.rules
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=drm --action=change
 ```
 
 The remaining Omarchy-specific pieces are:
 
 - `common/.config/hypr/*.lua` - Omarchy 4 Hyprland overrides (bindings, input, looknfeel, monitors)
-- `personal/.config/hyprmoncfg/profiles/` - native hyprmoncfg profiles for the Framework laptop: `Docked` (Dell 4K/60 Hz through the dock, AOC 1440p/144 Hz through the eGPU) and `Stand alone`. Layouts match display identities rather than fixed connector numbers. After installing hyprmoncfg and stowing the personal profile, run `hyprmoncfg manage` to install its generated-config include, then `hyprmoncfg apply Docked` or `hyprmoncfg apply "Stand alone"`. Back up existing local profiles before stowing; generated active monitor files and plugin code are not tracked. After changing a layout, save it with hyprmoncfg and sync its profile files back here.
+- `personal/.config/hyprmoncfg/profiles/` - native hyprmoncfg profiles for the Framework laptop: `Docked` (Dell 4K/60 Hz through the dock, AOC 1440p/144 Hz on a laptop USB-C port, never the eGPU) and `Stand alone`. Layouts match display identities rather than fixed connector numbers. After installing hyprmoncfg and stowing the personal profile, run `hyprmoncfg manage` to install its generated-config include, then `hyprmoncfg apply Docked` or `hyprmoncfg apply "Stand alone"`. Back up existing local profiles before stowing; generated active monitor files and plugin code are not tracked. After changing a layout, save it with hyprmoncfg and sync its profile files back here.
 - `personal/.config/wluma/config.toml` - wluma auto-brightness for the Framework ALS and docked DDC monitors. There is no pacman, Flatpak, or AUR `-bin` package; install extra `iio-sensor-proxy`, add `github:max-baz/wluma` to mise, install `root/etc/udev/rules.d/90-wluma-backlight.rules`, and enable `wluma.service`. The config only disables gamma so Omarchy nightlight keeps hyprsunset. wluma learns from Omarchy brightness keys and hyprmoncfg sliders; it does not start adjusting until those have been used a few times in different lighting. `personal/.local/bin/wluma-laptop-curve` is the hyprmoncfg `exec` on Docked and Stand alone: it points `~/.local/state/wluma/eDP-1.yaml` at a docked or standalone curve file so the laptop panel learns separately.
 - `personal/.config/hypr/autostart.lua` / `work/.config/hypr/autostart.lua` - persona autostart
 - `bootstrap/limine/` - Limine post hooks copied into `/etc/boot/hooks/post.d/`: `87-limine-theme` reapplies the black-and-white header palette from `/etc/limine-theme.conf` after every `limine-update` (including `omarchy-refresh-limine`) and before config checksum enrollment, `89-limine-default-linux-entry` keeps `default_entry` on the first Omarchy kernel, and `91-limine-sync-fallback` mirrors `limine_x64.efi` to `EFI/BOOT/BOOTX64.EFI`

@@ -1,0 +1,7 @@
+# Keep Hyprland off the Thunderbolt eGPU. Aquamarine holds every GPU it opens
+# for the whole session, so losing the eGPU (undock, failed resume) aborts the
+# compositor. Monitors must hang off the iGPU; the eGPU stays usable for
+# DRI_PRIME offload. /dev/dri/igpu comes from root/etc/udev/rules.d/60-drm-igpu.rules.
+if [ -e /dev/dri/igpu ]; then
+  export AQ_DRM_DEVICES=/dev/dri/igpu
+fi

@@ -1,0 +1,4 @@
+# Stable /dev/dri/igpu for the Framework's Radeon 880M/890M. cardN numbers swap
+# when the Thunderbolt eGPU is attached, and AQ_DRM_DEVICES cannot take
+# /dev/dri/by-path names because it splits on ':'.
+KERNEL=="card*", SUBSYSTEM=="drm", KERNELS=="0000:c1:00.0", SUBSYSTEMS=="pci", SYMLINK+="dri/igpu"
