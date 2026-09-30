@@ -78,7 +78,7 @@ Read a skill's directly linked references only as needed. Personal skills supple
 - Create a new personal skill only for a non-trivial workflow likely to recur and only when no existing skill is a natural home.
 - Make the smallest evidence-backed edit. Do not record secrets, transient state, or a durable preference inferred from one request.
 - Never self-modify third-party, bundled, system, or project-owned skills.
-- Report any skill change. Do not commit or push personal-skill changes unless Luke explicitly asks.
+- Luke gives standing permission to update and commit safe, verified personal-skill changes without waiting for confirmation. Report every changed skill and its commit. Push only where the active repository explicitly authorizes it.
 
 ## Safety
 

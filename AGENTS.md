@@ -36,7 +36,7 @@
 - `common/.stow-local-ignore` excludes `.agents/skills` so Stow never owns the runtime copies.
 - After a personal skill produces a verified reusable correction or workflow, update its canonical package before the final response by following `personal-skill-maintenance`.
 - Do not self-modify third-party or bundled skills. Do not record secrets, transient state, or inferred preferences.
-- Report skill changes and leave them uncommitted unless Luke explicitly asks for a commit.
+- Luke gives standing permission to update and commit safe, verified personal-skill changes without waiting for confirmation. Report every changed skill and its commit. Push only where the active repository explicitly authorizes it.
 - These skills can describe homelab and personal workflows. Review for hostnames, IPs, emails, and similar identifiers before committing.
 - Approved private operational values belong in the Proton Pass-backed `common/.agents/private-context.template.md`; `init-env-secrets` renders the ignored local file `~/.agents/private-context.md`. Keep tracked skills placeholder-only.
 
