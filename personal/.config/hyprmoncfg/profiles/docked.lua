@@ -30,3 +30,5 @@ hl.monitor({
 })
 
 hl.workspace_rule({ workspace = "1", monitor = "desc:Dell Inc. DELL S2725QS J84BT84", default = true })
+hl.workspace_rule({ workspace = "2", monitor = "desc:AOC Q27G3XMN 1APRBUA000024", default = true })
+hl.workspace_rule({ workspace = "3", monitor = "desc:China Star Optoelectronics Technology Co. Ltd MND508ZB1-1", default = true })
