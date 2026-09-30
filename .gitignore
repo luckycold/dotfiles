@@ -9,7 +9,6 @@ common/.config/systemd/user/9router.service
 common/.local/bin
 !common/.local/bin/
 common/.local/bin/*
-!common/.local/bin/git-ssh-sign
 !common/.local/bin/brokkr-mcp
 !common/.local/bin/mcporter-mcp
 !common/.local/bin/hibernate-inhibitor-notify

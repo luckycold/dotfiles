@@ -303,7 +303,7 @@ Currently templated secrets include the Codex config, the Zed AI config, the mem
 
 - `update-dotfiles` - pull the repo, restow the profile, refresh allowed secrets, and reload units; a background check also notifies when the repo is behind. Skills refresh independently in the background shell-startup job, not during `update-dotfiles`. Scoped agents skip bulk secret rendering.
 - `stow-profile` - select `personal`, `work`, `steamos`, `agent`, or the manual `mac` package; restow and reload Hyprland/systemd. Secret refresh is offered only when bulk rendering is allowed, never for the scoped `agent` profile.
-- `proton-pass-login` / `netbird-login` - convenience auth helpers.
+- `proton-pass-login` - convenience auth helper.
 
 These commands default to a clone at `~/dotfiles`. Set `DOTFILES_DIR` to use a
 different clone location consistently across update, notification, profile,
