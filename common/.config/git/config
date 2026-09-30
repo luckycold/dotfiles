@@ -44,6 +44,12 @@
 	helper = !/usr/bin/glab auth git-credential
 [gpg]
 	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers
+[includeIf "gitdir:~/hydra/"]
+	path = work
+[includeIf "gitdir:~/Documents/Work/"]
+	path = work
 [credential "https://origin.cursor.com/git"]
 	helper = 
 	helper = !/home/lucky/.local/bin/origin credential-helper
