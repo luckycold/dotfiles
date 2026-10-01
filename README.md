@@ -396,7 +396,9 @@ The one exception is the Thunderbolt eGPU (RX 6600 in the TREBLEET enclosure, be
 - `root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf` - if any DRM card's PCI device reports `removable` (only the eGPU does), runs plain `systemd-sleep suspend` instead, so undocking while suspended is safe. The journal logs `Removable GPU … attached; suspending without hibernation`.
 - `root/etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf` - the same check for an explicit `systemctl hibernate` (the Omarchy menu's Hibernate and Sandman's lid Hibernate): with the eGPU attached it suspends instead. Omarchy files are untouched; this overrides systemd's own unit from `/etc`.
 
-Remaining edge case: suspend with the eGPU attached works but can wake with amdgpu display warnings and `DPIA AUX failed` errors; a reboot recovers if it hangs. A matching upstream Sandman change is proposed in [lgse/sandman#14](https://github.com/lgse/sandman/pull/14); once merged, the suspend-then-hibernate drop-in is redundant but harmless.
+Docked suspend still resumes with AMD USB4 display-tunnel failures (`DPIA AUX failed`) even when all monitors use the iGPU. Until that driver path is reliable, `20-thunderbolt-sleep-guard.conf` on all four systemd sleep services skips sleep whenever `/sys/bus/thunderbolt/devices/*/device_name` exists. External Thunderbolt peripherals expose that file; the host controllers and retimers on this machine do not. This deliberately covers manual sleep and hibernation as well as idle/lid requests, and applies to any Thunderbolt peripheral, not just one dock. Undocked sleep remains available. Sandman's lock and display-off timers are unchanged. No polling daemon or resume hook is required.
+
+The older eGPU hibernation drop-ins remain useful if the docked-sleep guard is removed after a driver fix. A matching upstream Sandman change is proposed in [lgse/sandman#14](https://github.com/lgse/sandman/pull/14).
 
 Hyprland is kept off the eGPU entirely. Aquamarine holds every GPU it opens for the whole session, so an eGPU that drops off the bus (undock, failed resume) aborts the compositor. No monitor may hang off the eGPU; the eGPU stays available for `DRI_PRIME=1` offload.
 
@@ -409,6 +411,9 @@ Install or refresh them as real root-owned copies:
 sudo install -Dm 0644 root/etc/systemd/sleep.conf.d/95-egpu-ac.conf /etc/systemd/sleep.conf.d/95-egpu-ac.conf
 sudo install -Dm 0644 root/etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf /etc/systemd/system/systemd-suspend-then-hibernate.service.d/10-egpu-plain-suspend.conf
 sudo install -Dm 0644 root/etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf /etc/systemd/system/systemd-hibernate.service.d/10-egpu-plain-suspend.conf
+for kind in suspend suspend-then-hibernate hibernate hybrid-sleep; do
+  sudo install -Dm 0644 "root/etc/systemd/system/systemd-$kind.service.d/20-thunderbolt-sleep-guard.conf" "/etc/systemd/system/systemd-$kind.service.d/20-thunderbolt-sleep-guard.conf"
+done
 sudo systemctl daemon-reload
 sudo install -Dm 0644 root/etc/udev/rules.d/60-drm-igpu.rules /etc/udev/rules.d/60-drm-igpu.rules
 sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=drm --action=change

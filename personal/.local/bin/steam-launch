@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Launch Steam at the monitor scale of its window, or the focused monitor.
-# Current Steam sizes CEF from Accessibility UI Scale (config.vdf ScaleFactor),
-# not -forcedesktopscaling. --sync restarts the client when Hyprland reports a
-# different monitor scale. Games are left alone.
+# Scale the actual CEF process, and verify it after Steam updates itself.
+# --sync repairs a missing flag or a changed monitor scale. Games are left alone.
 set -euo pipefail
 
 scale_file="${XDG_RUNTIME_DIR:-/tmp}/steam-ui-scale"
@@ -37,16 +36,6 @@ steam_running() {
   hyprctl clients -j 2>/dev/null | jq -e '.[] | select(.class == "steam")' >/dev/null
 }
 
-applied_scale() {
-  if [[ -r $scale_file ]]; then
-    cat "$scale_file"
-  fi
-}
-
-write_scale() {
-  printf '%s\n' "$1" >"$scale_file"
-}
-
 resolve_scale() {
   local scale
   scale="$(steam_window_scale 2>/dev/null || true)"
@@ -56,9 +45,7 @@ resolve_scale() {
   if ! is_number "$scale"; then
     scale=1
   fi
-  # Match the compositor, not a guessed physical DPI. Valve dropped
-  # STEAM_FORCE_DESKTOPUI_SCALING; the Accessibility UI Scale slider is
-  # what actually sizes CEF chrome. Optional bias stays available.
+  # Match the compositor, not a guessed physical DPI.
   local bias="${STEAM_UI_SCALE_BIAS:-1}"
   if ! is_number "$bias"; then
     bias=1
@@ -66,67 +53,8 @@ resolve_scale() {
   awk -v scale="$scale" -v bias="$bias" 'BEGIN { printf "%g\n", scale * bias }'
 }
 
-# Steam's new UI ignores -forcedesktopscaling. The working control is
-# Settings → Accessibility → UI Scale, stored as UI.display.Current.ScaleFactor.
-# AutoScaleFactor here is still the last docked 1440p profile (~0.95), which
-# is why the URL bar stays tiny next to Omarchy's 2x media widget.
-write_steam_scale_factor() {
-  local scale="$1"
-  local config="${XDG_DATA_HOME:-$HOME/.local/share}/Steam/config/config.vdf"
-  if [[ ! -f $config ]]; then
-    return 0
-  fi
-  python3 - "$config" "$scale" <<'PY'
-import re, sys
-
-path, scale = sys.argv[1], sys.argv[2]
-text = open(path, encoding="utf-8", errors="replace").read()
-display = text.find('"display"')
-if display < 0:
-    sys.exit(0)
-cur = text.find('"Current"', display)
-if cur < 0:
-    sys.exit(0)
-brace = text.find("{", cur)
-if brace < 0:
-    sys.exit(0)
-depth = 0
-end = None
-for i, ch in enumerate(text[brace:], brace):
-    if ch == "{":
-        depth += 1
-    elif ch == "}":
-        depth -= 1
-        if depth == 0:
-            end = i + 1
-            break
-if end is None:
-    sys.exit(0)
-block = text[brace:end]
-scale_line = f'"ScaleFactor"\t\t"{scale}"'
-if re.search(r'"ScaleFactor"\s+"[^"]*"', block):
-    block = re.sub(r'"ScaleFactor"\s+"[^"]*"', scale_line, block, count=1)
-else:
-    block = re.sub(r"\n(\t*)}$", rf"\n\1\t{scale_line}\n\1}}", block, count=1)
-max_m = re.search(r'"MaxScaleFactor"\s+"([^"]*)"', block)
-try:
-    if max_m and float(max_m.group(1)) < float(scale):
-        block = re.sub(
-            r'"MaxScaleFactor"\s+"[^"]*"',
-            f'"MaxScaleFactor"\t\t"{scale}"',
-            block,
-            count=1,
-        )
-except ValueError:
-    pass
-open(path, "w", encoding="utf-8").write(text[:brace] + block + text[end:])
-PY
-}
-
-# Current Steam wipes ScaleFactor on startup and ignores -forcedesktopscaling.
-# CEF honors --force-device-scale-factor. Steam's updater restores the stock
-# sniper wrap during "Verifying installation", so re-apply until webhelper
-# actually starts with the flag (and bounce it if it started too early).
+# Keep the wrapper stock during update verification. Only patch once the
+# browser parent is running, then restart that parent to apply the CEF scale.
 steam_wrap_path() {
   printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh"
 }
@@ -143,10 +71,10 @@ import re, sys
 
 path, scale = sys.argv[1], sys.argv[2]
 text = open(path, encoding="utf-8", errors="replace").read()
-flag = f"--force-device-scale-factor={scale}"
+flag = f" --force-device-scale-factor={scale}" if scale else ""
 updated = re.sub(
-    r"(exec \./steamwebhelper)(?: --force-device-scale-factor=[0-9.]+)?( \"\$@\")",
-    rf"\1 {flag}\2",
+    r"(?m)^(exec \./steamwebhelper)(?: --force-device-scale-factor=[0-9.]+)?( \"\$@\")",
+    rf"\1{flag}\2",
     text,
     count=1,
 )
@@ -155,65 +83,86 @@ if updated != text:
 PY
 }
 
-guard_webhelper_device_scale() {
-  local scale="$1"
-  local wrap
-  wrap="$(steam_wrap_path)"
-  (
-    local i cmd
-    for i in $(seq 1 80); do
-      ensure_webhelper_device_scale "$scale"
-      local have_flag=0
-      local -a stale=()
-      for cmd in /proc/[0-9]*/cmdline; do
-        [[ -r $cmd ]] || continue
-        # CEF argv0 is ./steamwebhelper. The wrap path also contains the name.
-        if grep -qaz './steamwebhelper' "$cmd"; then
-          if grep -qaz -- "--force-device-scale-factor=$scale" "$cmd"; then
-            have_flag=1
-          else
-            stale+=("${cmd#/proc/}")
-            stale[-1]="${stale[-1]%/cmdline}"
-          fi
-        fi
-      done
-      if ((have_flag)); then
-        exit 0
-      fi
-      if ((${#stale[@]})); then
-        kill "${stale[@]}" 2>/dev/null || true
-      fi
-      sleep 0.15
-    done
-  ) >/dev/null 2>&1 &
-  disown
+# Only the browser parent has argv[0] == ./steamwebhelper. Substring matches
+# also select the container launcher and can tear down Steam's whole runtime.
+webhelper_pids() {
+  local cmd argv0
+  for cmd in /proc/[0-9]*/cmdline; do
+    [[ -O $cmd && -r $cmd ]] || continue
+    IFS= read -r -d '' argv0 <"$cmd" 2>/dev/null || continue
+    [[ $argv0 == ./steamwebhelper ]] || continue
+    cmd="${cmd#/proc/}"
+    printf '%s\n' "${cmd%/cmdline}"
+  done
 }
 
-wait_for_steam_exit() {
-  local i
-  for i in $(seq 1 25); do
-    if steam_running; then
-      sleep 0.2
-    else
+webhelper_has_scale() {
+  local pid
+  while read -r pid; do
+    if grep -Fxqz -- "--force-device-scale-factor=$1" "/proc/$pid/cmdline" 2>/dev/null; then
       return 0
     fi
+  done < <(webhelper_pids)
+  return 1
+}
+
+guard_webhelper_device_scale() {
+  local scale="$1" workspace="${2:-}" monitor="${3:-}" i pid address
+  # Updates can take far longer than the old 12-second guard. Keep this
+  # bounded and repair only the browser parent, never bwrap or its wrapper.
+  for ((i = 0; i < 180; i++)); do
+    if [[ -z $workspace ]] && steam_running; then
+      scale="$(resolve_scale)"
+    fi
+    if [[ -n $(webhelper_pids) ]]; then
+      ensure_webhelper_device_scale "$scale"
+    fi
+    if webhelper_has_scale "$scale"; then
+      address="$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.class == "steam" and .title == "Steam")][0].address // empty')"
+      if [[ -n $address ]]; then
+        if [[ -n $workspace ]]; then
+          hyprctl eval "hl.dispatch(hl.dsp.window.move({workspace=$workspace, window=\"address:$address\", follow=false}))" >/dev/null
+          # An empty workspace disappears while CEF restarts. Recreating it
+          # on the focused monitor would undo a move to a different scale.
+          if [[ -n $monitor ]]; then
+            hyprctl eval "hl.dispatch(hl.dsp.workspace.move({workspace=$workspace, monitor=$monitor}))" >/dev/null
+          fi
+        fi
+        printf '%s\n' "$scale" >"$scale_file"
+        return 0
+      fi
+    else
+      if games_running; then
+        return 0
+      fi
+      while read -r pid; do
+        kill "$pid" 2>/dev/null || true
+      done < <(webhelper_pids)
+    fi
+    sleep 1
   done
+  printf 'Steam CEF scale could not be verified within 180 seconds\n' >&2
   return 1
 }
 
 exec_steam() {
   local scale="$1"
   shift
-  write_scale "$scale"
-  write_steam_scale_factor "$scale"
-  ensure_webhelper_device_scale "$scale"
-  guard_webhelper_device_scale "$scale"
-
-  local cmd=(env -u GDK_SCALE -u GDK_DPI_SCALE STEAM_FORCE_DESKTOPUI_SCALING="$scale")
+  if ! pgrep -u "$UID" -x steam >/dev/null; then
+    ensure_webhelper_device_scale ""
+  fi
+  (
+    exec 9>"$lock_file"
+    flock 9
+    guard_webhelper_device_scale "$scale"
+  ) &
+  # The long-lived Steam process must not inherit the guard lock.
+  exec 9>&-
+  local cmd=(env -u GDK_SCALE -u GDK_DPI_SCALE -u STEAM_FORCE_DESKTOPUI_SCALING)
   if [[ -z ${LD_PRELOAD:-} && -e /usr/lib32/libextest.so ]]; then
     cmd+=(LD_PRELOAD=/usr/lib32/libextest.so)
   fi
-  exec "${cmd[@]}" /usr/bin/steam -forcedesktopscaling "$scale" "$@"
+  exec "${cmd[@]}" /usr/bin/steam "$@"
 }
 
 sync_scale() {
@@ -226,23 +175,18 @@ sync_scale() {
     return 0
   fi
 
-  local desired applied
+  local desired restore_workspace restore_monitor
   desired="$(resolve_scale)"
-  applied="$(applied_scale || true)"
-  if [[ -z $applied ]]; then
-    write_scale "$desired"
-    return 0
-  fi
-  if [[ $desired == "$applied" ]]; then
+  if webhelper_has_scale "$desired"; then
     return 0
   fi
   if games_running; then
     return 0
   fi
 
-  steam -shutdown >/dev/null 2>&1 || true
-  wait_for_steam_exit || true
-  exec_steam "$desired"
+  restore_workspace="$(hyprctl clients -j | jq -r '[.[] | select(.class == "steam" and .title == "Steam")][0].workspace.id // empty')"
+  restore_monitor="$(hyprctl clients -j | jq -r '[.[] | select(.class == "steam" and .title == "Steam")][0].monitor // empty')"
+  guard_webhelper_device_scale "$desired" "$restore_workspace" "$restore_monitor"
 }
 
 if [[ ${1:-} == --sync ]]; then

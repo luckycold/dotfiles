@@ -1,6 +1,6 @@
 -- Keep the Steam client UI on the scale of the monitor it currently occupies.
--- Steam only applies Accessibility UI Scale at start, so steam-launch --sync
--- restarts the client when that monitor scale changes.
+-- steam-launch --sync verifies the running CEF scale, repairs an update that
+-- removed the flag, and preserves the current workspace when restarting CEF.
 --
 -- Omarchy's 1100x700 box is a 1x-era size. Keep a large window so 2x chrome
 -- is not packed into a 1x-era box.
