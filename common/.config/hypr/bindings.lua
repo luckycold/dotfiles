@@ -67,6 +67,10 @@ o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
 
 -- Personal app bindings that differ from Omarchy 4 defaults.
 
+-- Super+Shift+E was the Hey email web app.
+hl.unbind("SUPER + SHIFT + E")
+o.bind("SUPER + SHIFT + E", "Proton Mail", { launch = "proton-mail" })
+
 hl.unbind("SUPER + SHIFT + M")
 o.bind("SUPER + SHIFT + M", "Music", { webapp = "https://app.music-assistant.io" })
 
