@@ -71,6 +71,8 @@ o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
 hl.unbind("SUPER + SHIFT + E")
 o.bind("SUPER + SHIFT + E", "Proton Mail", { launch = "proton-mail" })
 
+o.bind("SUPER + SHIFT + CTRL + B", "Bank", { webapp = "https://x.com/i/money" })
+
 hl.unbind("SUPER + SHIFT + M")
 o.bind("SUPER + SHIFT + M", "Music", { webapp = "https://app.music-assistant.io" })
 
