@@ -10,7 +10,7 @@ o.window("^brave-origin$", { workspace = "2 silent", no_initial_focus = true })
 o.window("^brave-teams\\.cloud\\.microsoft__.*$", {
   workspace = "3 silent",
   no_initial_focus = true,
-  scrolling_width = 2 / 3,
+  scrolling_width = 2 / 3 + 0.1,
 })
 o.window("^Beeper$", { workspace = "3 silent", no_initial_focus = true, scrolling_width = 1 / 3 })
 
