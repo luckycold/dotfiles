@@ -14,3 +14,7 @@ capturer = "none"
 [[output.ddcutil]]
 name = "DP-8"
 capturer = "none"
+
+[[output.ddcutil]]
+name = "DP-11"
+capturer = "none"
