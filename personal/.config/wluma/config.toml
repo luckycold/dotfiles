@@ -1,5 +1,16 @@
 # Framework 13 ALS is auto-detected. Docked DDC monitors are discovered on
-# hotplug. This only keeps gamma control with Omarchy nightlight.
+# hotplug. Keep gamma control with Omarchy nightlight and use ambient light only:
+# Hyprland 0.56.2 can crash in ext-image-copy-capture when an output disappears.
+# wluma 5.0.3 also rejects this compositor's wlr-screencopy DMA-BUF format.
 [[output.backlight]]
 name = "eDP-1"
 gamma = false
+capturer = "none"
+
+[[output.ddcutil]]
+name = "DP-7"
+capturer = "none"
+
+[[output.ddcutil]]
+name = "DP-8"
+capturer = "none"
