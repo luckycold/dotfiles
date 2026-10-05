@@ -1,3 +1,7 @@
+-- Omarchy's launcher already restarts the shell after a crash. Prevent a
+-- crashed PAM child from relaunching itself as a second shell instance.
+hl.env("QS_DISABLE_CRASH_HANDLER", "1")
+
 -- Extra autostart processes.
 o.launch_on_start("brave-origin")
 o.launch_on_start("beeper")
