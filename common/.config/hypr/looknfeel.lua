@@ -27,6 +27,9 @@ hl.config({
   misc = {
     -- Variable Refresh Rate off.
     vrr = 0,
+    -- Open a slow-starting app on the workspace it was launched from, even
+    -- after switching away while it loads (Omarchy disables this).
+    initial_workspace_tracking = 1,
   },
   render = {
     -- Auto-switch to HDR mode when a fullscreen app uses HDR.
