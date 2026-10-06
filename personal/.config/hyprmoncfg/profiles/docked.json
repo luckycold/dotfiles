@@ -111,5 +111,5 @@
       }
     ]
   },
-  "exec": "/home/lucky/.local/bin/wluma-laptop-curve"
+  "exec": "systemctl --user stop wluma.service; brightnessctl --class=backlight set 100%; ddcutil --mfg DEL --model 'DELL S2725QS' --skip-ddc-checks --sleep-multiplier 2 setvcp 10 100; ddcutil --mfg AOC --model Q27G3XMN --skip-ddc-checks --sleep-multiplier 2 setvcp 10 100"
 }

@@ -2,6 +2,10 @@
 # hotplug. Keep gamma control with Omarchy nightlight and use ambient light only:
 # Hyprland 0.56.2 can crash in ext-image-copy-capture when an output disappears.
 # wluma 5.0.3 also rejects this compositor's wlr-screencopy DMA-BUF format.
+# Docked displays stay bright until hypridle's screensaver/display-off timers.
+[idle.ac]
+enabled = false
+
 [[output.backlight]]
 name = "eDP-1"
 gamma = false

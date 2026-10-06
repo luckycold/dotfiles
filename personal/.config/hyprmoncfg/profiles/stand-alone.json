@@ -58,5 +58,5 @@
       }
     ]
   },
-  "exec": "/home/lucky/.local/bin/wluma-laptop-curve"
+  "exec": "systemctl --user start wluma.service"
 }
