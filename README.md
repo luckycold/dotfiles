@@ -249,7 +249,7 @@ The desktop notification includes an action to update the relevant keyring secre
 
 The helper prompts for the vault, agent token name, and expiration, then stores the resulting token in the local keyring without printing it.
 
-The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between `personal`, `work`, `steamos`, and `agent` "profiles" to cleanly and quickly get up and running on any new computer install.
+The above is a bit of a departure from the instructional video for GNU stow. It's basically using the same idea but instead of using `stow .` you can switch between `personal`, `steamos`, and `agent` "profiles" to cleanly and quickly get up and running on any new computer install.
 
 `stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root` and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
 
@@ -270,7 +270,7 @@ The manual renderer is unchanged; do not use `--all` on scoped agent hosts.
 The repo is organised as Stow packages plus a few things Stow cannot manage cleanly:
 
 - `common/` - everything shared across machines (shell, editors, terminals, Hyprland, AI tooling, systemd user units). Always stowed.
-- `personal/`, `work/`, `steamos/`, and `agent/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`; `agent` is for scoped, headless hosts.
+- `personal/`, `steamos/`, and `agent/` - mutually exclusive home-directory machine/persona profiles. Stow exactly one alongside `common`; `agent` is for scoped, headless hosts. The former `work` profile's Teams, Oneleet, and Betterbird autostart settings are included in `personal`.
 - `common/.agents/AGENTS.md` - Luke's canonical cross-agent working agreement. Portable [Agent Skills](https://agentskills.io) live only in the external [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills) repository and are installed into `~/.agents/skills`; no skills tree is tracked here. Each harness keeps its required global-instruction entry point.
 - `mac/` - macOS-only files (e.g. the iTerm2 plist, which must be hard-linked rather than symlinked).
 - `root/` - system files that are safe to manage with `sudo stow -t / root` (target `/`, not `$HOME`).
@@ -302,7 +302,7 @@ Currently templated secrets include the Codex config, the Zed AI config, the mem
 `common/.bashrc.d/` is split into focused modules. The main user-facing commands:
 
 - `update-dotfiles` - pull the repo, restow the profile, refresh allowed secrets, and reload units; a background check also notifies when the repo is behind. Skills refresh independently in the background shell-startup job, not during `update-dotfiles`. Scoped agents skip bulk secret rendering.
-- `stow-profile` - select `personal`, `work`, `steamos`, `agent`, or the manual `mac` package; restow and reload Hyprland/systemd. Secret refresh is offered only when bulk rendering is allowed, never for the scoped `agent` profile.
+- `stow-profile` - select `personal`, `steamos`, `agent`, or the manual `mac` package; restow and reload Hyprland/systemd. Secret refresh is offered only when bulk rendering is allowed, never for the scoped `agent` profile.
 - `proton-pass-login` - convenience auth helper.
 
 These commands default to a clone at `~/dotfiles`. Set `DOTFILES_DIR` to use a
@@ -428,7 +428,7 @@ The remaining Omarchy-specific pieces are:
 - `personal/.config/wluma/config.toml` - wluma auto-brightness for the Framework ALS when undocked. Install extra `iio-sensor-proxy`, install wluma through mise (`github:max-baz/wluma`), install `root/etc/udev/rules.d/90-wluma-backlight.rules`, and enable `wluma.service`. Gamma remains disabled for the laptop so Omarchy nightlight keeps hyprsunset; `capturer = "none"` avoids this compositor's capture bugs. AC idle dimming is disabled.
 - The Docked hyprmoncfg profile stops wluma, sets the laptop backlight to 100%, and sets both external monitors to 100% using native `brightnessctl` and `ddcutil` commands. DDC matches manufacturer/model rather than connector or bus number, with a sleep multiplier of 2 for reliable responses. Stand alone starts wluma again. Profile `exec` fields replace the former laptop-curve helper; standalone learned data remains local.
 - `personal/.config/hypr/hypridle.conf` - install extra `hypridle` and enable its packaged service with `systemctl --user enable --now hypridle.service`. Disable Omarchy's duplicate idle service with `omarchy plugin disable omarchy.idle`, and turn off Sandman's Displays off timer (`omarchy-shell lgse.sandman setDisplay 0`). Sandman retains lid and sleep management. Hypridle starts the screensaver at 5 minutes, turns displays off at 10 minutes, and locks at 15 minutes. Its supported command fields ignore windowed Brave wake locks while preserving fullscreen Brave and other application inhibitors; the Stay Awake indicator is also respected. Input restores display power.
-- `personal/.config/hypr/autostart.lua` / `work/.config/hypr/autostart.lua` - persona autostart
+- `personal/.config/hypr/autostart.lua` - desktop autostart, including Teams, Oneleet (`~/AppImages/oneleet.appimage`), Betterbird, Brave, Beeper, and Steam
 - `bootstrap/limine/` - Limine post hooks copied into `/etc/boot/hooks/post.d/`: `87-limine-theme` reapplies the black-and-white header palette from `/etc/limine-theme.conf` after every `limine-update` (including `omarchy-refresh-limine`) and before config checksum enrollment, `89-limine-default-linux-entry` keeps `default_entry` on the first Omarchy kernel, and `91-limine-sync-fallback` mirrors `limine_x64.efi` to `EFI/BOOT/BOOTX64.EFI`
 - `root/etc/sddm.conf.d/zz-where-is-my-sddm.conf` and `root/usr/share/sddm/themes/where_is_my_sddm_theme/theme.conf.user` - SDDM theme selection, no autologin, and the matching black-and-white login colors
 - `bootstrap/sddm-gnome-keyring/` - root-owned SDDM PAM config that unlocks the GNOME keyring on login

@@ -1,7 +1,7 @@
 # Headless agent profile
 
 Use `stow -n -t ~ common agent`, then `stow -t ~ common agent`.
-This is an alternative to `personal`, `work`, and `steamos`, not an additional
+This is an alternative to `personal` and `steamos`, not an additional
 persona. It does not install desktop applications or apply `root/`.
 
 - Preserve user-local CLI paths alongside common's Homebrew setup.

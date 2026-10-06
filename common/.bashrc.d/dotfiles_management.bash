@@ -229,7 +229,7 @@ background_dotfiles_check() {
 _dotfiles_linked_persona() {
     local dotfiles_dir="$(_dotfiles_dir)"
     local profile profile_dir link target
-    for profile in agent personal work steamos; do
+    for profile in agent personal steamos; do
         [ -d "$dotfiles_dir/$profile" ] || continue
         profile_dir=$(realpath -m -- "$dotfiles_dir/$profile" 2>/dev/null) || continue
         while IFS= read -r -d '' link; do
