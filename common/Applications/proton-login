@@ -32,6 +32,10 @@ is_network_error() {
     printf '%s\n' "$1" | grep -Eiq 'timed out|timeout|failed to connect|error resolving|network|connection refused|connection reset|connection aborted|host unreachable|temporarily unavailable'
 }
 
+is_expired_session_error() {
+    printf '%s\n' "$1" | grep -Eiq 'non-existent session|no active session|session (has (been )?)?(expired|invalidated)|invalid session'
+}
+
 reset_local_session() {
     local data_dir="$HOME/.local/share/proton-pass-cli"
     local session_dir="$data_dir/.session"
@@ -119,6 +123,17 @@ fi
 
 if is_local_db_error "$PASS_INFO_OUTPUT"; then
     reset_local_session
+elif is_expired_session_error "$PASS_INFO_OUTPUT"; then
+    # A rejected server session can still look authenticated to the local client.
+    # Clear it so login can establish a new session with the stored PAT.
+    echo "Clearing expired Proton Pass session..."
+    pass-cli logout --force >/dev/null 2>&1 || exit 1
+else
+    # Connectivity failures do not justify replacing a potentially valid session.
+    if is_network_error "$PASS_INFO_OUTPUT"; then
+        echo "Proton Pass session check failed due to a transient network/API error. Will retry."
+        exit 1
+    fi
 fi
 
 echo "🔄 Session expired or missing. Logging in..."
@@ -134,7 +149,7 @@ if [ -z "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" ]; then
 fi
 
 # 3. Log in with PAT
-LOGIN_OUTPUT="$(pass-cli login --pat "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" 2>&1)"
+LOGIN_OUTPUT="$(PROTON_PASS_PERSONAL_ACCESS_TOKEN="$PROTON_PASS_PERSONAL_ACCESS_TOKEN" pass-cli login 2>&1)"
 LOGIN_STATUS=$?
 unset PROTON_PASS_PERSONAL_ACCESS_TOKEN
 printf '%s\n' "$LOGIN_OUTPUT"
@@ -142,7 +157,7 @@ printf '%s\n' "$LOGIN_OUTPUT"
 if [ "$LOGIN_STATUS" -ne 0 ] && is_local_db_error "$LOGIN_OUTPUT"; then
     reset_local_session
     PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(extract_pat "$(lookup_keyring_secret pat)")"
-    LOGIN_OUTPUT="$(pass-cli login --pat "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" 2>&1)"
+    LOGIN_OUTPUT="$(PROTON_PASS_PERSONAL_ACCESS_TOKEN="$PROTON_PASS_PERSONAL_ACCESS_TOKEN" pass-cli login 2>&1)"
     LOGIN_STATUS=$?
     unset PROTON_PASS_PERSONAL_ACCESS_TOKEN
     printf '%s\n' "$LOGIN_OUTPUT"

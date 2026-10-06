@@ -103,6 +103,9 @@ wait_for_wifi() {
     return 0
   }
 
+  # A wired connection also satisfies the login's connectivity requirement.
+  nmcli -t -f TYPE,STATE device 2>/dev/null | grep -Eq '^(wifi|ethernet):connected$' && return 0
+
   nmcli -t -f TYPE device 2>/dev/null | grep -q '^wifi$' || {
     echo "No Wi-Fi device detected, skipping Wi-Fi wait"
     return 0
@@ -131,6 +134,8 @@ wait_for_wifi() {
 
 wait_for_network() {
   local notify_wait="${1:-1}"
+
+  ping -c1 -W1 "$NETWORK_CHECK_HOST" >/dev/null 2>&1 && return 0
 
   echo "Waiting for network..."
   [ "$notify_wait" -eq 1 ] && notify "Proton Pass" "Waiting for network (up to ${MAX_NETWORK_WAIT_SECONDS}s)..."
@@ -251,6 +256,9 @@ do_login() {
 
   if verify_login_ready; then
     [ "$notify_transient" -eq 1 ] && notify "Proton Pass" "Login verified. Ready."
+    # A live socket can belong to an agent still holding the rejected session.
+    # Reload its client after login recovery rather than trusting socket health.
+    systemctl --user stop "$SSH_AGENT_SERVICE" >/dev/null 2>&1 || return 1
     start_ssh_agent "$notify_transient" || return 1
     return 0
   fi
@@ -331,7 +339,7 @@ run_resume_healthcheck() {
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   else
-    [ "$transient_login_failures" -gt 0 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
+    [ "$transient_login_failures" -eq 1 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
     transient_login_failures=$((transient_login_failures + 1))
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   fi
@@ -423,7 +431,7 @@ main() {
         echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
         last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
       else
-        [ "$transient_login_failures" -gt 0 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
+        [ "$transient_login_failures" -eq 1 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
         transient_login_failures=$((transient_login_failures + 1))
         last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
       fi
