@@ -75,7 +75,7 @@ o.bind("SUPER + SHIFT + CTRL + B", "Bank", { webapp = "https://x.com/i/money" })
 o.bind("SUPER + SHIFT + CTRL + X", "X Chat", { webapp = "https://x.com/i/chat" })
 
 hl.unbind("SUPER + SHIFT + M")
-o.bind("SUPER + SHIFT + M", "Music", { webapp = "https://app.music-assistant.io" })
+o.bind("SUPER + SHIFT + M", "Monarch Money", { webapp = "https://app.monarch.com" })
 
 hl.unbind("SUPER + SHIFT + G")
 o.bind("SUPER + SHIFT + G", "Beeper", { launch = "beeper", focus = "beeper" })
