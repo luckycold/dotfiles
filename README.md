@@ -105,7 +105,7 @@ curl -fsSL https://opencode.ai/install | bash
 brew install steipete/tap/mcporter
 ```
 
-Without Homebrew, MCPorter can be installed with `npm install -g mcporter` when Node.js 24 or newer is available.
+With mise and Node.js 24 or newer, install MCPorter with `mise use -g npm:mcporter@latest`. Without mise or Homebrew, use `npm install -g mcporter`.
 
 ###### Voxtype
 Voxtype is recommended for local voice-to-text, but it is intentionally not
