@@ -253,6 +253,8 @@ The above is a bit of a departure from the instructional video for GNU stow. It'
 
 `stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root` and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
 
+The switch checks the complete Stow plan before changing links and applies it in one invocation. If local files conflict, it aborts without removing the active profile. Back up and reconcile those files before retrying; it never adopts or overwrites them automatically. Desktop switches also report Hyprland configuration errors after reloading.
+
 After switching desktop profiles, refresh generated secret-backed configs:
 
 ```bash

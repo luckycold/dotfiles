@@ -415,6 +415,9 @@ _skip_dotfiles_profile() {
 _switch_dotfiles_profile() {
   local target_profile="$1"
   local dotfiles_dir
+  local dir
+  local -a stow_args=(--no-folding -t "$HOME")
+  local -a inactive_profiles=()
   dotfiles_dir="$(_dotfiles_dir)"
 
   if [ ! -d "$dotfiles_dir" ]; then
@@ -431,40 +434,47 @@ _switch_dotfiles_profile() {
     return 1
   fi
 
-  # Unstow all non-common profiles (any directory that isn't common or hidden)
-  echo "(Unstowing existing profiles...)"
+  if [[ -n "$target_profile" && "$target_profile" != "none" && "$target_profile" != "common" && ! -d "$target_profile" ]]; then
+    echo "Error: Profile directory '$target_profile' not found." >&2
+    popd >/dev/null
+    return 1
+  fi
+
+  # Plan the whole switch together so a conflict cannot remove active links.
+  # Disable folding to keep shared directories stable while switching profiles.
   for dir in */; do
     dir="${dir%/}"
     _skip_dotfiles_profile "$dir" && continue
-    stow -D -t ~ "$dir" 2>/dev/null
+    [[ "$dir" == "$target_profile" ]] && continue
+    inactive_profiles+=("$dir")
   done
-
-  # Always restow common
-  if [ -d "common" ]; then
-    echo "Restowing 'common' profile..."
-    stow -R -t ~ common
+  if (( ${#inactive_profiles[@]} )); then
+    stow_args+=(-D "${inactive_profiles[@]}")
   fi
 
-  # Stow the target profile if specified and not "none"
-  if [[ -n "$target_profile" && "$target_profile" != "none" ]]; then
-    if [[ "$target_profile" == "common" ]]; then
-      echo "Note: 'common' is always included, no additional profile selected."
-    elif [ -d "$target_profile" ]; then
-      echo "Restowing '$target_profile' profile..."
-      if stow -R -t ~ "$target_profile"; then
-        echo "Profile '$target_profile' stowed successfully."
-      else
-        echo "Error stowing profile '$target_profile'." >&2
-        popd >/dev/null
-        return 1
-      fi
-    else
-      echo "Error: Profile directory '$target_profile' not found." >&2
-      popd >/dev/null
-      return 1
-    fi
-  else
+  if [ -d "common" ]; then
+    stow_args+=(-S common)
+  fi
+  if [[ -n "$target_profile" && "$target_profile" != "none" && "$target_profile" != "common" ]]; then
+    stow_args+=(-S "$target_profile")
+  fi
+
+  echo "Checking profile switch for conflicts..."
+  if ! stow -n "${stow_args[@]}"; then
+    echo "Profile switch aborted; existing links are unchanged." >&2
+    popd >/dev/null
+    return 1
+  fi
+  if ! stow "${stow_args[@]}"; then
+    echo "Error applying profile switch." >&2
+    popd >/dev/null
+    return 1
+  fi
+
+  if [[ -z "$target_profile" || "$target_profile" == "none" || "$target_profile" == "common" ]]; then
     echo "Only 'common' profile is now active."
+  else
+    echo "Profile '$target_profile' stowed successfully."
   fi
 
   popd >/dev/null
@@ -472,7 +482,15 @@ _switch_dotfiles_profile() {
   # Reload Hyprland configuration if applicable
   if command -v hyprctl &>/dev/null && pgrep -x Hyprland &>/dev/null; then
     echo "Reloading Hyprland configuration..."
-    hyprctl reload >/dev/null 2>&1
+    if ! hyprctl reload; then
+      echo "Profile applied, but Hyprland could not reload." >&2
+      return 1
+    fi
+    local config_errors
+    if ! config_errors=$(hyprctl configerrors 2>&1) || [[ -n "$config_errors" ]]; then
+      printf 'Profile applied, but Hyprland reported errors:\n%s\n' "$config_errors" >&2
+      return 1
+    fi
   fi
 
   # Reload systemd user units if applicable
