@@ -101,10 +101,11 @@
       }
     },
     "netbox": {
-      "command": "sh",
+      "command": "uvx",
       "args": [
-        "-lc",
-        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+        "--from",
+        "git+https://github.com/netboxlabs/netbox-mcp-server.git",
+        "netbox-mcp-server"
       ],
       "lifecycle": "keep-alive",
       "env": {
@@ -113,10 +114,11 @@
       }
     },
     "netbox-dev": {
-      "command": "sh",
+      "command": "uvx",
       "args": [
-        "-lc",
-        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+        "--from",
+        "git+https://github.com/netboxlabs/netbox-mcp-server.git",
+        "netbox-mcp-server"
       ],
       "lifecycle": "keep-alive",
       "env": {
@@ -125,10 +127,11 @@
       }
     },
     "netbox-stg": {
-      "command": "sh",
+      "command": "uvx",
       "args": [
-        "-lc",
-        "docker image inspect netbox-mcp-server:latest >/dev/null 2>&1 || docker build -t netbox-mcp-server:latest https://github.com/netboxlabs/netbox-mcp-server.git; exec docker run --rm -i -e NETBOX_URL -e NETBOX_TOKEN netbox-mcp-server:latest"
+        "--from",
+        "git+https://github.com/netboxlabs/netbox-mcp-server.git",
+        "netbox-mcp-server"
       ],
       "lifecycle": "keep-alive",
       "env": {

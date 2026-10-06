@@ -10,6 +10,7 @@ node = "latest"
 "npm:mcporter" = "latest"
 opencode = "latest"
 python = "latest"
+uv = "latest"
 zig = "latest"
 zls = "latest"
 

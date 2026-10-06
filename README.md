@@ -370,6 +370,8 @@ mcporter --config ~/.mcporter/mcporter.json list
 
 The shared adapter exposes `kagi-ken,context7,gh_grep,gitlab,mem0` by default. Set `MCPORTER_SERVERS` locally to a comma-separated subset or to include work servers (Brokkr, Bridge, NetBox, Gravwell, and the others in the registry). OAuth state stays local under MCPorter's data directory and must not be committed.
 
+Authenticate OAuth-backed servers with `mcporter --config ~/.mcporter/mcporter.json config login <server>`. This avoids the keep-alive authentication error in MCPorter 0.14.2's direct `auth` command. NetBox uses the upstream Python server through `uvx`, installed with mise, so it does not require Docker access.
+
 ### Personal skill self-learning
 
 Hermes combines foreground `skill_manage` writes, a background review fork, usage metadata, and the Curator lifecycle. Only the foreground learning loop is portable across general Agent Skills implementations. This repo supports that part through always-on agent instructions; the writable skills are installed externally at `~/.agents/skills` from `luckycold/agent-skills`, not tracked in dotfiles. After a verified reusable workflow or correction, an agent updates only skills marked `author: Luke`.

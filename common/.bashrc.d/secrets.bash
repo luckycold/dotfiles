@@ -174,7 +174,7 @@ _secret_select_records() {
   echo "Available secrets:"
   for record in "${_SECRET_DISCOVERED_RECORDS[@]}"; do
     IFS=$'\t' read -r id template output <<< "$record"
-    ((i++))
+    ((i+=1))
     printf '  %d) %s -> %s\n' "$i" "$id" "$output"
   done
 
@@ -303,13 +303,13 @@ init-env-secrets() {
 
     if [ ! -f "$template" ]; then
       echo "Template not found: $template" >&2
-      ((failed++))
+      ((failed+=1))
       continue
     fi
 
     if (( force == 0 )) && (( retry_mode == 0 )) && [ -f "$output" ] && ! [ "$template" -nt "$output" ]; then
       echo "Skipped (up to date): $id"
-      ((skipped++))
+      ((skipped+=1))
       continue
     fi
 
@@ -318,10 +318,10 @@ init-env-secrets() {
     if pass-cli inject -f -i "$template" -o "$output"; then
       chmod 600 "$output" 2>/dev/null || true
       echo "Updated: $id -> $output"
-      ((updated++))
+      ((updated+=1))
     else
       echo "Failed: $id" >&2
-      ((failed++))
+      ((failed+=1))
     fi
   done
 
@@ -341,7 +341,7 @@ _secret_count_stale_mappings() {
     IFS=$'\t' read -r id template output <<< "$record"
 
     if [ ! -f "$output" ] || [ "$template" -nt "$output" ]; then
-      ((stale++))
+      ((stale+=1))
     fi
   done <<< "$discovered"
 
