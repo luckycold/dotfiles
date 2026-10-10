@@ -4,6 +4,7 @@ model_reasoning_effort = "high"
 [mcp_servers.mcporter]
 command = "sh"
 args = ["-lc", "exec \"$HOME/.local/bin/mcporter-mcp\""]
+env_vars = ["MCPORTER_CONFIG", "MCPORTER_SERVERS", "MCPORTER_DAEMON_DIR", "DOTFILES_SCOPED_AGENT"]
 enabled = true
 
 [features]
