@@ -372,6 +372,8 @@ mcporter --config ~/.mcporter/mcporter.json list
 
 The shared adapter exposes `kagi-ken,context7,gh_grep,gitlab,mem0` by default. Set `MCPORTER_SERVERS` locally to a comma-separated subset or to include work servers (Brokkr, Bridge, NetBox, Gravwell, and the others in the registry). OAuth state stays local under MCPorter's data directory and must not be committed.
 
+On a desktop with Cua Driver installed, include `cua-driver` in the host's `MCPORTER_SERVERS` to expose desktop tools through the same bridge. The driver daemon needs the desktop session environment and explicit approval before attaching to an existing browser profile.
+
 Authenticate OAuth-backed servers with `mcporter --config ~/.mcporter/mcporter.json config login <server>`. This avoids the keep-alive authentication error in MCPorter 0.14.2's direct `auth` command. NetBox uses the upstream Python server through `uvx`, installed with mise, so it does not require Docker access.
 
 ### Personal skill self-learning

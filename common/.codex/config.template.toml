@@ -1,4 +1,4 @@
-model = "gpt-5.4"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 
 [mcp_servers.mcporter]
@@ -10,4 +10,3 @@ enabled = true
 multi_agent = true
 apps = true
 steer = true
-rmcp_client = true
