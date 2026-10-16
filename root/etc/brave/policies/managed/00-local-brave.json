@@ -4,5 +4,5 @@
   "BraveWalletDisabled": true,
   "PasswordManagerEnabled": false,
   "DefaultSearchProviderEnabled": true,
-  "DefaultSearchProviderSearchURL": "https://kagi.com/search?q={searchTerms}"
+  "DefaultSearchProviderSearchURL": "https://www.google.com/search?q={searchTerms}"
 }
