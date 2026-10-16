@@ -9,6 +9,7 @@ node = "latest"
 "npm:@xai-official/grok" = "latest"
 "npm:mcporter" = "latest"
 opencode = "latest"
+"pypi:keepercommander" = { version = "latest", uvx_args = "--python 3.12" }
 python = "latest"
 uv = "latest"
 zig = "latest"
