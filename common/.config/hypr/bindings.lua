@@ -72,7 +72,9 @@ hl.unbind("SUPER + SHIFT + E")
 o.bind("SUPER + SHIFT + E", "Proton Mail", { launch = "proton-mail" })
 
 o.bind("SUPER + SHIFT + CTRL + B", "Bank", { webapp = "https://x.com/i/money" })
-o.bind("SUPER + SHIFT + CTRL + X", "X Chat", { webapp = "https://x.com/i/chat" })
+-- Super+Shift+C was the Hey calendar web app.
+hl.unbind("SUPER + SHIFT + C")
+o.bind("SUPER + SHIFT + C", "X Chat", { webapp = "https://x.com/i/chat" })
 
 hl.unbind("SUPER + SHIFT + M")
 o.bind("SUPER + SHIFT + M", "Monarch Money", { webapp = "https://app.monarch.com" })
