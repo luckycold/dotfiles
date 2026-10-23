@@ -45,7 +45,7 @@ execution-policy option applies to that PowerShell process only; it does not
 change the machine's execution policy. A managed policy may still block scripts.
 
 For a friend using the same journal, make a local copy of the `.cmd` with the
-empty `-DataSourceId ''` argument filled in. Keep that private copy out of Git.
+empty `$journal=''` value filled in. Keep that private copy out of Git.
 The friend still completes their own browser login once; future shortcut
 launches reuse the saved credentials and query the journal afresh. When updating
 the `.ps1`, update the launcher's pinned commit and expected hash together.
