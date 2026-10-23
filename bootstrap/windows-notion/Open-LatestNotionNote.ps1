@@ -32,8 +32,10 @@ function Ensure-NotionCli {
             throw 'Install Microsoft App Installer from the Store window, then run this script again.'
         }
         Write-Host 'Installing the official Notion CLI...'
+        $ErrorActionPreference = 'Continue'
         & winget.exe install --id Notion.ntn --exact --source winget --scope user --silent `
             --accept-package-agreements --accept-source-agreements --disable-interactivity
+        $ErrorActionPreference = 'Stop'
         if ($LASTEXITCODE -ne 0) { throw "Notion CLI installation failed (exit $LASTEXITCODE)." }
         # WinGet updates PATH for new terminals; refresh this process too.
         $env:Path = @(
@@ -85,7 +87,9 @@ function Connect-Notion {
     if (-not $url) { throw 'Notion did not return a login link. Run ntn login and try again.' }
     Write-Host 'In the browser, sign in and verify the code shown above before approving.'
     Start-Process -FilePath $url
+    $ErrorActionPreference = 'Continue'
     & $script:NotionCommand login poll
+    $ErrorActionPreference = 'Stop'
     if ($LASTEXITCODE -ne 0) {
         throw 'Login was not completed. Try again; Notion CLI requires full workspace membership.'
     }
