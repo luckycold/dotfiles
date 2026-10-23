@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+# The official CLI keeps authentication in the desktop keyring.
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+trap 'notify-send "Notion daily note" "Could not find the latest entry. Check your connection and ntn login."' ERR
+
+# Keep the private journal identifier outside the dotfiles repository.
+read -r data_source < "${XDG_CONFIG_HOME:-$HOME/.config}/notion/daily-journal-id"
+[[ $data_source =~ ^[0-9a-fA-F-]{36}$ ]]
+
+query=$(jq -n --arg today "$(date +%F)" '{
+  filter: {property: "Date", date: {on_or_before: $today}},
+  sorts: [{property: "Date", direction: "descending"}],
+  page_size: 1
+}')
+page_id=$(timeout 30s ntn api "v1/data_sources/$data_source/query" --data "$query" |
+  jq -er '.results[0].id | select(type == "string" and test("^[0-9a-fA-F-]{36}$"))')
+url="https://www.notion.so/${page_id//-/}"
+
+if [[ ${1:-} == --print ]]; then
+  printf '%s\n' "$url"
+else
+  exec omarchy-launch-webapp "$url"
+fi

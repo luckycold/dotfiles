@@ -8,6 +8,7 @@ node = "latest"
 "npm:@mem0/cli" = "latest"
 "npm:@xai-official/grok" = "latest"
 "npm:mcporter" = "latest"
+"npm:ntn" = "latest"
 opencode = "latest"
 "pypi:keepercommander" = { version = "latest", uvx_args = "--python 3.12" }
 python = "latest"
