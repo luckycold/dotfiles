@@ -4,23 +4,17 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 
 ## Core preferences
 
-- Prefer functional programming where practical: pure functions, immutability, composition, and explicit data flow.
-- Satisfy the type checker. Ask Luke before choosing a complicated, brittle workaround.
-- Follow each repository's existing style and architecture. Do not refactor unrelated code.
 - Inspect current state before acting. Ask only when required information is external, sensitive, destructive, or depends on a material user choice.
 - Prefer supported first-class configuration over custom wrappers, helper binaries, or bespoke glue unless Luke explicitly requests that implementation.
 - Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
-- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
-- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
-- Before writing custom wrappers, helper binaries, systemd units, or other glue, ask Luke whether a simpler maintained package can be installed instead.
 - When authenticated tooling is needed, prefer the agent's native tools and configured MCP integrations. If neither provides a clear supported path, ask Luke to enable or authenticate the appropriate integration instead of inventing custom glue.
 
-## Git push authorization
+## Git push and merge
 
-- Do not push by default. Push only when the active codebase's instructions explicitly authorize it or Luke explicitly authorizes it for the current codebase or task.
-- Treat push authorization as narrowly scoped. Never carry permission from one repository, codebase, task, or prior conversation into another.
-- A request to inspect, edit, implement, test, or commit changes does not by itself authorize a push.
-- Local commits may still be created when Luke requests them or the active codebase requires them; the push boundary remains separate unless that same authorization covers pushing.
+- Do not push by default. Push only when Luke explicitly authorizes it for the current repository or task, or when this agreement or the active repository's instructions grant it.
+- Push permission is narrowly scoped. Never carry it from one repository, task, or prior conversation into another. A request to inspect, edit, implement, test, or commit is not by itself permission to push.
+- Standing grant: commit and push safe, verified personal-skill updates to `luckycold/agent-skills` without asking each time, once `python3 scripts/check-public-safety.py` passes. Report every changed skill and its pushed commit.
+- Never merge a pull request Luke is reviewing; he merges his own PRs. Never force-push or rewrite published history unless Luke explicitly authorizes it.
 
 ## Skill freshness
 
@@ -33,7 +27,7 @@ source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bas
 update-agent-skills
 ```
 
-That fast-forwards the `~/.local/share/agent-skills` git clone (`git pull --ff-only`) and relinks `~/.agents/skills/<skill>` and `~/.claude/skills/<skill>` for Codex, Claude Code, Cursor, and OpenCode. `update-dotfiles --yes` runs it too. If this session already ran it, skip. If the fast-forward fails (dirty or diverged clone), report it and continue with the on-disk skills; do not reset. Only where git is unavailable does it fall back to the skills.sh CLI (Node.js, or mise's `node@latest`). After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
+That runs the skills.sh (`skills`) CLI, `add luckycold/agent-skills --skill '*' --global --yes`, for Codex, Claude Code, Cursor, and OpenCode: real copies in `~/.agents/skills/<skill>` and `~/.claude/skills/<skill>` links to them. When nothing changed upstream it only checks the remote and prints one line. `update-dotfiles --yes` runs it too. If this session already ran it, skip. It needs Node.js 22.20+ and npm, or mise (it also looks in `~/.local/share/agent-tools/bin`); if neither is available it says so, and you continue with the on-disk skills. After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
 
 ## MCP aggregation
 
@@ -47,23 +41,14 @@ That fast-forwards the `~/.local/share/agent-skills` git clone (`git pull --ff-o
 This agreement is stowed from the `common` package under `~/dotfiles` (or `$DOTFILES_DIR`). Portable skills are **not** in the dotfiles tree; they are installed from `luckycold/agent-skills` into `~/.agents/skills` by `update-agent-skills`. If the CLI, prompt, notification, or git status shows that checkout is behind remote — including "Dotfiles Update Available", "Run update-dotfiles", or `behind N` — sync **before any other work**. Stale skills are worse than a delayed answer.
 
 1. Non-interactive shells do not load Luke's bash functions. In the same command, `source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash"`, then run `update-dotfiles --yes`.
-2. That fast-forwards the clone, restows `common` plus any already-linked persona (`personal` / `steamos` / `agent`), and refreshes secret templates with `init-env-secrets --all` when that function is available.
+2. That fast-forwards the dotfiles checkout, restows `common` plus any already-linked persona (`personal` / `steamos` / `agent`), refreshes secret templates with `init-env-secrets --all` when allowed, and runs `update-agent-skills`.
 3. Re-read `~/.agents/AGENTS.md` and the skills this task needs.
 
 Do not `git reset --hard`, stash unrelated work, or force-push. If a fast-forward fails, report the divergence and continue only with whatever skill copies are already on disk.
 
 ## Personal skills
 
-Luke-authored personal skills are canonical under `~/.agents/skills/` and have `author: Luke` in `SKILL.md`. Load the relevant skill before acting:
-
-- `infrastructure-hygiene` for Luke's Home Assistant, TrueNAS, Proxmox, LAN, DNS, reverse-proxy, container, and infrastructure-maintenance work.
-- `direct-action-preferences` for infrastructure, authentication, OAuth/OIDC, networking, and configuration tasks where read-only discovery should precede questions.
-- `truenas-custom-apps` for TrueNAS SCALE custom application lifecycle and ix-apps structure.
-- `proton-pass-cli` for Proton Pass CLI, scoped agent access, secret references, and headless/container authentication.
-- `steam-hyprland-scaling` for Steam client HiDPI on Hyprland/Omarchy mixed-DPI.
-- `personal-skill-maintenance` when creating, correcting, consolidating, or extending Luke-authored skills.
-
-Read a skill's directly linked references only as needed. Personal skills supplement project rules; they do not override a repository's explicit constraints.
+Luke-authored skills are installed in `~/.agents/skills/` from `luckycold/agent-skills` and have `author: Luke` in `SKILL.md`. Load the relevant skill before acting on Luke's infrastructure, authentication, automation, or agent-maintenance work. They supplement project rules; they do not override a repository's explicit constraints. Use `personal-skill-maintenance` when creating, correcting, consolidating, or extending them.
 
 ## Private context
 
@@ -73,13 +58,17 @@ Read a skill's directly linked references only as needed. Personal skills supple
 
 ## Self-learning
 
-- After using a Luke-authored skill, update its canonical package before the final response when a verified reusable correction, user correction, or repeatable workflow would improve future runs.
+- After using a Luke-authored skill, update it in `luckycold/agent-skills` before the final response when a verified reusable correction, user correction, or repeatable workflow would improve future runs. Pushing follows the standing grant above.
 - Create a new personal skill only for a non-trivial workflow likely to recur and only when no existing skill is a natural home.
 - Make the smallest evidence-backed edit. Do not record secrets, transient state, or a durable preference inferred from one request.
 - Never self-modify third-party, bundled, system, or project-owned skills.
-- Luke gives standing permission to update and commit safe, verified personal-skill changes without waiting for confirmation. Report every changed skill and its commit. Push only where the active repository explicitly authorizes it.
+- Always name every created or updated skill and its commit in the final response.
 
-## Safety
+## Safety and the public skills repository
 
-- Never commit credentials, tokens, private keys, session material, or host-specific secrets.
-- Before committing personal skills, review new hostnames, IP addresses, emails, device identifiers, and infrastructure topology with Luke.
+`luckycold/agent-skills` is public. It holds portable procedures, not Luke's live environment values.
+
+- Never commit credentials, tokens, private keys, session material, recovery data, secret-manager IDs, auth files, or rendered private context, in any repository.
+- In `luckycold/agent-skills`, never commit private hostnames, private domains, RFC1918 addresses, emails, MAC or device IDs, account aliases, or detailed live topology. Use placeholders such as `<nas-ssh-target>`.
+- Run `python3 scripts/check-public-safety.py` there before every commit. It includes `scripts/check_skill_size.py`, which fails any `skills/*/SKILL.md` over 200 lines and warns above 100; move detail into linked `references/`. Treat a failure as blocking; fix or generalize the content rather than weakening the check.
+- Before committing new hostnames, IP addresses, emails, device identifiers, or infrastructure topology to any other repository, review them with Luke.
