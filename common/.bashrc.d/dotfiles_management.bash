@@ -563,9 +563,17 @@ _dotfiles_linked_persona() {
     return 1
 }
 
+# Live state directories that the repo adds a single file to (for example
+# ~/.grok/AGENTS.md). Create them first, so a folding `stow -R` links only the
+# file and never turns the whole directory into a link into the checkout.
+_dotfiles_live_state_dirs=(.grok)
+
 _dotfiles_restow_active() {
     local dotfiles_dir="$(_dotfiles_dir)"
-    local persona
+    local persona dir
+    for dir in "${_dotfiles_live_state_dirs[@]}"; do
+        [ -e "$HOME/$dir" ] || [ -L "$HOME/$dir" ] || mkdir -p "$HOME/$dir" || return 1
+    done
     pushd "$dotfiles_dir" >/dev/null || return 1
     echo "Restowing 'common' profile..."
     stow -R -t ~ common || { popd >/dev/null; return 1; }
