@@ -12,8 +12,8 @@ persona. It does not install desktop applications or apply `root/`.
   `PROTON_PASS_AGENT_REASON`, and render only the required selector. Never print
   generated files or commit them. The manual renderer remains unchanged.
 - Use the existing scoped Proton session. Do not enable the desktop keyring
-  auto-login services on a headless host; their helper requires desktop keyring
-  provisioning and currently passes a token in argv.
+  auto-login services on a headless host; their helper needs a desktop
+  keyring (`secret-tool`) and desktop notifications.
 - Resolve GitHub's credential helper through PATH.
 - Disable inherited personal SSH commit signing until an authorized signing
   identity is provisioned for the agent. Do not export a private key for this.
@@ -21,6 +21,11 @@ persona. It does not install desktop applications or apply `root/`.
   this profile does not copy, overwrite, or publish either.
 
 Common's desktop configs are linked but dormant on a headless machine.
+
+MCP servers come from the MCPorter registry: render only an authorized
+selector for `~/.mcporter/mcporter.json`, then use the `mcporter` CLI or the
+`mcporter-mcp` bridge. Dotfiles ship no Codex config; a host's
+`~/.codex/config.toml` is local and never touched by stow or `update-dotfiles`.
 
 ## Updates
 

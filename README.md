@@ -36,29 +36,20 @@ stow -t ~ personal
 ```
 
 The personal profile launches Steam through `steam-launch`. That wrapper
-unsets `GDK_SCALE` / `GDK_DPI_SCALE`, injects CEF
-`--force-device-scale-factor` from the Steam window's Hyprland monitor (or
-the focused monitor on first launch) times `STEAM_UI_SCALE_BIAS` (default 1),
-still passes `-forcedesktopscaling` and writes `config.vdf` `ScaleFactor`
-for older clients, and preloads `/usr/lib32/libextest.so`
-when that library is installed. Extest converts Steam's X11 mouse/keyboard
-emulation into uinput events that can control the Wayland desktop.
+unsets `GDK_SCALE`, `GDK_DPI_SCALE`, and `STEAM_FORCE_DESKTOPUI_SCALING`, and
+preloads `/usr/lib32/libextest.so` when that library is installed. Extest
+converts Steam's X11 mouse/keyboard emulation into uinput events that can
+control the Wayland desktop. `hypr/steam.lua` only overrides Omarchy's
+1100x700 Steam box so the 2x UI is not packed into a 1x-era window.
 
-Current Steam ignores `STEAM_FORCE_DESKTOPUI_SCALING` and overwrites
-`ScaleFactor` on startup. The CEF flag is patched into
-`steamwebhelper_sniper_wrap.sh` after Steam's install verifier restores that
-script, which is what actually sizes the store chrome to the compositor.
-Without it the client keeps the last docked 1440p auto-scale (~0.95) and the
-URL bar stays far smaller than Omarchy's 2x media widget.
-Steam only applies that slider at start. `hypr/steam.lua` watches the
-client window and runs `steam-launch --sync` when it lands on a different
-monitor scale, which restarts just the Steam client. It also overrides
-Omarchy's 1100x700 Steam box so the 2x UI is not packed into a 1x-era
-window. Running `steam_app_*`
-games block that restart so a match is not killed mid-session. Do not "fix"
-Steam size with a global `GDK_SCALE`: that integer cannot be correct on
-mixed-DPI, and Omarchy's monitor-scaling keybind will persist it onto every
-GTK/X11 app. Launch Steam from the application menu or `steam-launch`.
+Set the client size with Steam's own Accessibility UI Scale slider. The old
+CEF scale restarter (patching `--force-device-scale-factor` into
+`steamwebhelper_sniper_wrap.sh` and restarting `./steamwebhelper`) was
+withdrawn: the restart hit pre-exec children and CEF aborted with
+`g_pipe_pid == getpid()`. `steam-launch --sync` now exits without touching
+Steam. Do not "fix" Steam size with a global `GDK_SCALE`: that integer cannot
+be correct on mixed-DPI, and Omarchy's monitor-scaling keybind will persist it
+onto every GTK/X11 app. Launch Steam from the application menu or `steam-launch`.
 Keep `lib32-extest` installed while this override is in use. No global
 `LD_PRELOAD` or extra input-group membership are needed when
 `steam-devices` grants the active user access to `/dev/uinput`.
@@ -297,7 +288,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the Music Assistant widget config.
+Currently templated secrets include the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the Music Assistant widget config.
 
 ## Shell tooling
 
@@ -346,7 +337,7 @@ system package manager, or changes to the immutable root filesystem.
 
 This repo carries a fair amount of agent/LLM configuration:
 
-- `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, and OpenCode global instruction files resolve directly to it; Cursor uses an always-on user rule that loads it.
+- `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, OpenCode, and Grok CLI (`common/.grok/AGENTS.md`) global instruction files resolve directly to it; Grok CLI also loads skills from `~/.claude/skills`. Cursor uses an always-on rule that loads it, `common/.cursor/rules/personal-skill-learning.mdc` (stowed to `~/.cursor/rules`). Cursor reads `.cursor/rules` per project, so that file applies only when `~` is the open workspace; for global coverage, paste a User Rule in Cursor's settings that points at `~/.agents/AGENTS.md`.
 - Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` installs them with the official [skills.sh](https://skills.sh/docs/cli) CLI: `skills add luckycold/agent-skills --skill '*' --global --yes --agent codex --agent claude-code --agent cursor --agent opencode`. That writes real copies to `~/.agents/skills/<skill>` (read by Codex, Cursor, and OpenCode), links `~/.claude/skills/<skill>` to them for Claude Code, and records them in `~/.agents/.skill-lock.json`. The CLI version is pinned in `dotfiles_management.bash` (Renovate proposes bumps; `AGENT_SKILLS_CLI_VERSION` overrides it on one host), and it runs with telemetry off and no prompts.
 - A run first compares the repository's upstream commit (`git ls-remote`) with the last sync in `~/.local/state/agent-skills/last-sync`. When nothing changed and every installed skill is still in place it prints one line and changes nothing. Otherwise it reinstalls the collection; skills deleted upstream are copied aside and removed with `skills remove`. Entries from other sources (`cua-driver`, Claude's `synced/` and `.trash/`) stay untouched.
 - Hosts still on the old git-clone layout (`~/.local/share/agent-skills` with per-skill links) are migrated on the next run: the links and the clone move to `~/.local/state/agent-skills/replaced-<timestamp>/`, and nothing is deleted. If the install fails, the links are put back. A git checkout at `~/.agents` itself is refused with a hint.
@@ -355,14 +346,19 @@ This repo carries a fair amount of agent/LLM configuration:
 
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.
 - `common/.config/opencode/config.json` - a separate OpenCode config listing only `@mem0/opencode-plugin` and `opencode-scheduler`.
-- `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates), each connected only to MCPorter.
+- `common/.config/zed/settings.template.json` - Zed AI config (templated; see Secret templates), connected only to MCPorter.
+- `common/.codex/AGENTS.md` - the only tracked Codex file. There is no Codex config template: `~/.codex/config.toml` is host-local and stow, `init-env-secrets`, and `update-dotfiles` never create or modify it (see Universal MCP aggregation).
 - `common/.config/music-assistant/config.template.json` - Omarchy Music Assistant widget and local-player config. `init-env-secrets` renders `~/.config/music-assistant/config.json`.
 - `common/.mcporter/mcporter.template.json` - the canonical [MCPorter](https://github.com/openclaw/mcporter) MCP registry. It owns all upstream server definitions.
-- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, and Zed.
+- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by OpenCode, Zed, and any client registered by hand.
 
 ### Universal MCP aggregation
 
-Every agent connects to one stdio server named `mcporter`. MCPorter then exposes the active upstream registry with namespaced tools. Individual agent configs must not carry direct upstream MCP definitions.
+MCPorter is the primary MCP config path. Upstream servers are defined once, in `~/.mcporter/mcporter.json` (rendered from `common/.mcporter/mcporter.template.json`), and agents either call them with the `mcporter` CLI (`mcporter list`, `mcporter call <server.tool> key=value`) or connect to the one stdio bridge, `mcporter-mcp`, named `mcporter`. Add, change, or remove servers with `mcporter config add|remove|get|list|doctor` (OAuth with `mcporter config login`), keeping credentials as Proton Pass placeholders in the template. The tracked OpenCode and Zed configs do that. Individual agent configs must not carry direct upstream MCP definitions.
+
+Codex has no tracked config. An existing `~/.codex/config.toml` stays as it is (earlier renders already point at the bridge). On a host without one, register the bridge with `codex mcp add mcporter -- "$HOME/.local/bin/mcporter-mcp"` and keep any further settings local.
+
+Rollout from the old Codex template: pulling this change leaves a dangling `~/.codex/config.template.toml` link where `common` was stowed. `update-dotfiles` and `stow-profile` both restow (`stow -R`), which removes it. A shell still running the older `stow-profile` (`stow -S`) leaves it; remove it with `[ -L ~/.codex/config.template.toml ] && [ ! -e ~/.codex/config.template.toml ] && rm ~/.codex/config.template.toml`. A real `~/.codex/config.template.toml` file (a local override) is no longer rendered and can be deleted by hand. None of this touches `~/.codex/config.toml`; where `~/.codex` was folded into the repo, the file stays ignored at `common/.codex/config.toml`.
 
 After stowing `common` on a desktop profile, render the registry and verify it.
 Scoped agents must instead render only an authorized registry selector and use
