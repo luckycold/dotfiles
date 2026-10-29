@@ -34,9 +34,18 @@ secret rendering for scoped agents. Manual targeted rendering remains available:
 
 Automatic agent skill updates run in the locked background shell-startup job
 by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0`
-to disable them. The job fast-forwards the `~/.local/share/agent-skills` git
-clone and relinks `~/.agents/skills`; only hosts without git fall back to npm's
-`skills@latest`. Each automatic update has a 120-second timeout, with forced
-termination after a further 5 seconds; it is skipped if neither `timeout` nor
-`gtimeout` is installed. `update-dotfiles --yes` also runs
+to disable them. Both run the pinned skills.sh CLI (`skills add
+luckycold/agent-skills --global --yes`), using Node.js from `PATH` or mise
+(including `~/.local/share/agent-tools/bin/mise`); a host with neither gets a
+hint and keeps its installed skills. Each automatic update has a 120-second
+timeout, with forced termination after a further 5 seconds; it is skipped if
+neither `timeout` nor `gtimeout` is installed. `update-dotfiles --yes` also runs
 `update-agent-skills`, the explicit command, which has no automatic timeout.
+
+Agents connect over non-interactive SSH, so they should run
+`source ~/dotfiles/common/.bashrc.d/dotfiles_management.bash && update-dotfiles --yes`.
+Sourcing the file in a non-interactive shell no longer starts the background
+`git fetch`, and both fetches share a lock, so the old "cannot lock ref" race
+and the `_DOTFILES_CHECKED=1` workaround are gone. If git reports "dubious
+ownership", `update-dotfiles` says so and suggests a `chown` instead of
+failing silently.

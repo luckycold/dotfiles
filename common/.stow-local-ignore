@@ -26,7 +26,7 @@ _darcs
 \.directory
 
 # Canonical portable skills live externally in luckycold/agent-skills, not here.
-# update-agent-skills links ~/.agents/skills and Claude compatibility links independently;
+# The skills.sh CLI installs ~/.agents/skills and compatibility links independently;
 # keep GNU Stow from owning runtime copies or legacy skills links.
 ^/\.agents/skills(?:/|$)
 ^/\.claude/skills(?:/|$)
