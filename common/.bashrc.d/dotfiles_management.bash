@@ -787,11 +787,13 @@ _switch_dotfiles_profile() {
     stow_args+=(-D "${inactive_profiles[@]}")
   fi
 
+  # Restow (-R) rather than stow (-S): it also removes links left dangling by
+  # files deleted from the repo, such as a retired template.
   if [ -d "common" ]; then
-    stow_args+=(-S common)
+    stow_args+=(-R common)
   fi
   if [[ -n "$target_profile" && "$target_profile" != "none" && "$target_profile" != "common" ]]; then
-    stow_args+=(-S "$target_profile")
+    stow_args+=(-R "$target_profile")
   fi
 
   echo "Checking profile switch for conflicts..."
