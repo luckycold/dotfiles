@@ -370,7 +370,16 @@ _startup_send_refresh_notification() {
 }
 
 _agent_skills_lock_state() {
-  local lock_file
+  local lock_file clone_dir
+
+  # Git-clone installs: the checkout's HEAD identifies the installed content.
+  if declare -F _agent_skills_clone_dir >/dev/null; then
+    clone_dir="$(_agent_skills_clone_dir)"
+    if [ -d "$clone_dir/.git" ] || [ -f "$clone_dir/.git" ]; then
+      git -C "$clone_dir" rev-parse HEAD
+      return
+    fi
+  fi
 
   if [ -n "${XDG_STATE_HOME-}" ]; then
     lock_file="$XDG_STATE_HOME/skills/.skill-lock.json"

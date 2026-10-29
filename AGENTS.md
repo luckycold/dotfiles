@@ -6,7 +6,7 @@
 - `agent` is for headless agent hosts; follow `agent/README.md` for scoped-secret and desktop-service exceptions.
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
-- Luke-authored portable agent skills live only in `luckycold/agent-skills`. Do not track a skills tree in this repo. `update-agent-skills` installs them to `~/.agents/skills` through `skills.sh`. GNU Stow ignores `~/.agents/skills`.
+- Luke-authored portable agent skills live only in `luckycold/agent-skills`. Do not track a skills tree in this repo. `update-agent-skills` keeps a git clone at `~/.local/share/agent-skills` and links `~/.agents/skills/<skill>` into it (skills.sh only where git is missing). GNU Stow ignores `~/.agents/skills`.
 - `~/.mcporter/mcporter.json` is the canonical MCP registry. Agent harnesses connect only through `~/.local/bin/mcporter-mcp`.
 
 ## Secret templates

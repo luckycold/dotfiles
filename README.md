@@ -303,7 +303,7 @@ Currently templated secrets include the Codex config, the Zed AI config, the mem
 
 `common/.bashrc.d/` is split into focused modules. The main user-facing commands:
 
-- `update-dotfiles` - pull the repo, restow the profile, refresh allowed secrets, and reload units; a background check also notifies when the repo is behind. Skills refresh independently in the background shell-startup job, not during `update-dotfiles`. Scoped agents skip bulk secret rendering.
+- `update-dotfiles` - pull the repo, restow the profile, refresh allowed secrets, and reload units; a background check also notifies when the repo is behind. `update-dotfiles --yes` also runs `update-agent-skills`. Scoped agents skip bulk secret rendering.
 - `stow-profile` - select `personal`, `steamos`, `agent`, or the manual `mac` package; restow and reload Hyprland/systemd. Secret refresh is offered only when bulk rendering is allowed, never for the scoped `agent` profile.
 - `proton-pass-login` - convenience auth helper.
 
@@ -328,9 +328,10 @@ npm --version
 ```
 
 After `common` is stowed, `.bashrc` adds the mise shim directory to `PATH` for
-both interactive and non-interactive shells. The `update-agent-skills` helper
-also falls back to `mise exec node@latest` and installs that contained Node
-runtime when mise is present but Node is not yet installed:
+both interactive and non-interactive shells. `update-agent-skills` normally
+needs only git. Where git is unavailable it falls back to the skills.sh CLI,
+using `mise exec node@latest` (installing that contained Node runtime) when
+mise is present but Node is not yet installed:
 
 ```bash
 source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash"
@@ -345,8 +346,8 @@ system package manager, or changes to the immutable root filesystem.
 This repo carries a fair amount of agent/LLM configuration:
 
 - `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, and OpenCode global instruction files resolve directly to it; Cursor uses an always-on user rule that loads it.
-- Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` installs or refreshes the full collection through the `skills.sh` CLI into `~/.agents/skills` for Codex, Claude Code, Cursor, and OpenCode. GNU Stow excludes runtime skills and compatibility links (`common/.stow-local-ignore`).
-- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. It executes `skills@latest` and installs content from the external skills repository. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command remains unchanged and does not use that timeout. `update-dotfiles` does not directly run skill updates.
+- Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` keeps a git clone at `~/.local/share/agent-skills` (override with `AGENT_SKILLS_DIR`), fast-forwards it with `git pull --ff-only`, and idempotently links `~/.agents/skills/<skill>` into the clone plus `~/.claude/skills/<skill>` to `../../.agents/skills/<skill>`. It replaces only links into old managed locations (the vendored dotfiles trees, other agent-skills checkouts) and skills.sh copies listed in `.skill-lock.json`, which it moves to `~/.local/state/agent-skills/replaced-*`. Other entries, such as `cua-driver`, Claude's `synced/` and `.trash/`, stay untouched. A dirty or diverged clone is reported and left as is. With `AGENT_SKILLS_DIR=~/.agents` (a clone at `~/.agents`, as on the box) only the Claude links are managed. Hosts without git fall back to the skills.sh copy install. GNU Stow excludes runtime skills and compatibility links (`common/.stow-local-ignore`).
+- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command does not use that timeout. `update-dotfiles --yes` runs `update-agent-skills` after restowing; a skills failure is reported with a nonzero exit but does not undo the dotfiles update. There is no timer: refresh happens on interactive shell startup, on `update-dotfiles --yes`, or when an agent runs it at session start.
 - `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`. Never commit the rendered private-context file. Portable skills use placeholders and load exact values only when needed.
 
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.

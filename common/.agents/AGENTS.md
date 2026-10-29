@@ -24,7 +24,7 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 
 ## Skill freshness
 
-At the start of each new run — once per session, not every turn — refresh installed portable skills with the skills.sh CLI before other work.
+At the start of each new run — once per session, not every turn — refresh installed portable skills before other work.
 
 Non-interactive shells do not load Luke's bash functions. In the same command:
 
@@ -33,7 +33,7 @@ source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bas
 update-agent-skills
 ```
 
-That is the skills.sh (`skills`) CLI: `add luckycold/agent-skills --skill '*' --global --yes` for Codex, Claude Code, Cursor, and OpenCode. If this session already ran it, skip. On immutable systems, use the user-local mise installation documented in the dotfiles README; `update-agent-skills` installs and runs `node@latest` through mise when Node.js or npm is absent. If neither Node.js/npm nor mise is available, report that and continue with on-disk skills. After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
+That fast-forwards the `~/.local/share/agent-skills` git clone (`git pull --ff-only`) and relinks `~/.agents/skills/<skill>` and `~/.claude/skills/<skill>` for Codex, Claude Code, Cursor, and OpenCode. `update-dotfiles --yes` runs it too. If this session already ran it, skip. If the fast-forward fails (dirty or diverged clone), report it and continue with the on-disk skills; do not reset. Only where git is unavailable does it fall back to the skills.sh CLI (Node.js, or mise's `node@latest`). After a refresh that changed files, re-read `~/.agents/AGENTS.md` and the skills this task needs.
 
 ## MCP aggregation
 

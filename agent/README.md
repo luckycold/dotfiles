@@ -34,9 +34,9 @@ secret rendering for scoped agents. Manual targeted rendering remains available:
 
 Automatic agent skill updates run in the locked background shell-startup job
 by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0`
-to disable them. The job downloads and executes npm's `skills@latest` package
-(and installs Node.js through mise if needed). Each automatic update has a
-120-second timeout, with forced termination after a further 5 seconds; it is
-skipped if neither `timeout` nor `gtimeout` is installed. `update-dotfiles`
-does not directly update skills. `update-agent-skills` remains the explicit
-manual command and is not subject to the automatic timeout.
+to disable them. The job fast-forwards the `~/.local/share/agent-skills` git
+clone and relinks `~/.agents/skills`; only hosts without git fall back to npm's
+`skills@latest`. Each automatic update has a 120-second timeout, with forced
+termination after a further 5 seconds; it is skipped if neither `timeout` nor
+`gtimeout` is installed. `update-dotfiles --yes` also runs
+`update-agent-skills`, the explicit command, which has no automatic timeout.
