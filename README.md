@@ -288,7 +288,7 @@ init-env-secrets -l         # list templated secrets and their status
 init-env-secrets -r         # interactively retry/select and re-render
 ```
 
-Currently templated secrets include the Codex config, the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the Music Assistant widget config.
+Currently templated secrets include the Zed AI config, the mem0 `environment.d` key, the OpenCode mem0 token, the Linear MCP token, the Kagi session token, and the Music Assistant widget config.
 
 ## Shell tooling
 
@@ -343,14 +343,19 @@ This repo carries a fair amount of agent/LLM configuration:
 
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.
 - `common/.config/opencode/config.json` - a separate OpenCode config listing only `@mem0/opencode-plugin` and `opencode-scheduler`.
-- `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates), each connected only to MCPorter.
+- `common/.config/zed/settings.template.json` - Zed AI config (templated; see Secret templates), connected only to MCPorter.
+- `common/.codex/AGENTS.md` - the only tracked Codex file. There is no Codex config template: `~/.codex/config.toml` is host-local and stow, `init-env-secrets`, and `update-dotfiles` never create or modify it (see Universal MCP aggregation).
 - `common/.config/music-assistant/config.template.json` - Omarchy Music Assistant widget and local-player config. `init-env-secrets` renders `~/.config/music-assistant/config.json`.
 - `common/.mcporter/mcporter.template.json` - the canonical [MCPorter](https://github.com/openclaw/mcporter) MCP registry. It owns all upstream server definitions.
-- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, and Zed.
+- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by OpenCode, Zed, and any client registered by hand.
 
 ### Universal MCP aggregation
 
-Every agent connects to one stdio server named `mcporter`. MCPorter then exposes the active upstream registry with namespaced tools. Individual agent configs must not carry direct upstream MCP definitions.
+MCPorter is the primary MCP config path. Upstream servers are defined once, in `~/.mcporter/mcporter.json` (rendered from `common/.mcporter/mcporter.template.json`), and agents either call them with the `mcporter` CLI (`mcporter list`, `mcporter call <server.tool> key=value`) or connect to the one stdio bridge, `mcporter-mcp`, named `mcporter`. The tracked OpenCode and Zed configs do that. Individual agent configs must not carry direct upstream MCP definitions.
+
+Codex has no tracked config. An existing `~/.codex/config.toml` stays as it is (earlier renders already point at the bridge). On a host without one, register the bridge with `codex mcp add mcporter -- "$HOME/.local/bin/mcporter-mcp"` and keep any further settings local.
+
+Rollout from the old Codex template: pulling this change leaves a dangling `~/.codex/config.template.toml` link where `common` was stowed. `update-dotfiles`' restow (`stow -R`) removes it; `stow-profile` (`stow -S`) does not, so remove it with `[ -L ~/.codex/config.template.toml ] && [ ! -e ~/.codex/config.template.toml ] && rm ~/.codex/config.template.toml`. A real `~/.codex/config.template.toml` file (a local override) is no longer rendered and can be deleted by hand. None of this touches `~/.codex/config.toml`; where `~/.codex` was folded into the repo, the file stays ignored at `common/.codex/config.toml`.
 
 After stowing `common` on a desktop profile, render the registry and verify it.
 Scoped agents must instead render only an authorized registry selector and use

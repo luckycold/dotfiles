@@ -22,6 +22,11 @@ persona. It does not install desktop applications or apply `root/`.
 
 Common's desktop configs are linked but dormant on a headless machine.
 
+MCP servers come from the MCPorter registry: render only an authorized
+selector for `~/.mcporter/mcporter.json`, then use the `mcporter` CLI or the
+`mcporter-mcp` bridge. Dotfiles ship no Codex config; a host's
+`~/.codex/config.toml` is local and never touched by stow or `update-dotfiles`.
+
 ## Updates
 
 `update-dotfiles --yes` (also `-y` or `--non-interactive`) fast-forwards and
