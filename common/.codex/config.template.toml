@@ -10,4 +10,3 @@ enabled = true
 [features]
 multi_agent = true
 apps = true
-steer = true
