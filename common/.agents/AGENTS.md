@@ -32,8 +32,8 @@ That runs the skills.sh (`skills`) CLI, `add luckycold/agent-skills --skill '*' 
 ## MCP aggregation
 
 - `~/.mcporter/mcporter.json` is the canonical MCP registry. Render it from `common/.mcporter/mcporter.template.json` with `init-env-secrets`.
-- Codex, OpenCode, and Zed should connect only to `~/.local/bin/mcporter-mcp`. Do not duplicate upstream MCP server definitions in those clients.
-- Add or change servers in the mcporter template. Keep credentials as Proton Pass placeholders, never literal values.
+- The mcporter CLI is the primary way to hook up MCP servers through config files: `mcporter config add|remove|list|get|doctor` (and `mcporter config login` for OAuth). Agent clients such as Codex, OpenCode, and Zed connect only to `~/.local/bin/mcporter-mcp`; do not add upstream MCP server definitions to their own configs.
+- For a server every host should have, also add it to the mcporter template so the next render keeps it. Keep credentials as Proton Pass placeholders, never literal values.
 - The default bridge set is `kagi-ken,context7,gh_grep,gitlab,mem0`. Override per host with `MCPORTER_SERVERS`. Set `"imports": []` in the registry so mcporter does not re-import the client configs it now fronts.
 
 ## Dotfiles freshness
