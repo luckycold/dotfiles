@@ -179,7 +179,6 @@ install_opencode() {
 
 install_flatpaks() {
   flatpak install --user --noninteractive flathub \
-    com.bitwarden.desktop \
     com.brave.Browser \
     com.github.tchx84.Flatseal \
     com.github.vladimiry.ElectronMail \

@@ -38,7 +38,7 @@ That is the skills.sh (`skills`) CLI: `add luckycold/agent-skills --skill '*' --
 ## MCP aggregation
 
 - `~/.mcporter/mcporter.json` is the canonical MCP registry. Render it from `common/.mcporter/mcporter.template.json` with `init-env-secrets`.
-- Codex, OpenCode, Zed, and Hermes should connect only to `~/.local/bin/mcporter-mcp`. Do not duplicate upstream MCP server definitions in those clients.
+- Codex, OpenCode, and Zed should connect only to `~/.local/bin/mcporter-mcp`. Do not duplicate upstream MCP server definitions in those clients.
 - Add or change servers in the mcporter template. Keep credentials as Proton Pass placeholders, never literal values.
 - The default bridge set is `kagi-ken,context7,gh_grep,gitlab,mem0`. Override per host with `MCPORTER_SERVERS`. Set `"imports": []` in the registry so mcporter does not re-import the client configs it now fronts.
 
@@ -56,11 +56,10 @@ Do not `git reset --hard`, stash unrelated work, or force-push. If a fast-forwar
 
 Luke-authored personal skills are canonical under `~/.agents/skills/` and have `author: Luke` in `SKILL.md`. Load the relevant skill before acting:
 
-- `infrastructure-hygiene` for Luke's Hermes, Home Assistant, TrueNAS, Proxmox, LAN, DNS, reverse-proxy, container, and infrastructure-maintenance work.
+- `infrastructure-hygiene` for Luke's Home Assistant, TrueNAS, Proxmox, LAN, DNS, reverse-proxy, container, and infrastructure-maintenance work.
 - `direct-action-preferences` for infrastructure, authentication, OAuth/OIDC, networking, and configuration tasks where read-only discovery should precede questions.
 - `truenas-custom-apps` for TrueNAS SCALE custom application lifecycle and ix-apps structure.
 - `proton-pass-cli` for Proton Pass CLI, scoped agent access, secret references, and headless/container authentication.
-- `tasker-automation` for Android Tasker and Tasker WebUI workflows.
 - `steam-hyprland-scaling` for Steam client HiDPI on Hyprland/Omarchy mixed-DPI.
 - `personal-skill-maintenance` when creating, correcting, consolidating, or extending Luke-authored skills.
 

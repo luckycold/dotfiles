@@ -11,7 +11,7 @@ Canonical repository: [github.com/luckycold/dotfiles](https://github.com/luckyco
 #### For Linux
 ##### Arch
 ```bash
-sudo pacman -S yay stow bitwarden-cli git github-cli ghostty neovim bitwarden lsof oath-toolkit solaar opencode
+sudo pacman -S yay stow git github-cli ghostty neovim lsof oath-toolkit solaar opencode
 # yay -S ...
 ```
 ##### Debian/Ubuntu
@@ -20,7 +20,7 @@ sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 ```
 ##### Fedora
 ```bash
-sudo dnf install stow git gh neovim ghostty bitwarden-cli lsof oathtool solaar
+sudo dnf install stow git gh neovim ghostty lsof oathtool solaar
 ```
 
 ##### Steam Controller on Hyprland (personal profile)
@@ -85,7 +85,7 @@ and run:
 ./bootstrap/steamos/apply.sh
 ```
 
-It installs Brave, Bitwarden, Proton Pass, Obsidian, ElectronMail, Zed,
+It installs Brave, Proton Pass, Obsidian, ElectronMail, Zed,
 Flatseal, and Solaar as per-user Flatpaks. Stow, Neovim, GitHub CLI, Lazygit,
 Proton Pass CLI, and OpenCode are installed below `~/.local` (OpenCode uses
 `~/.opencode`). Stow comes from Arch's prebuilt package and is extracted into
@@ -148,7 +148,7 @@ flatpak install io.github.pwr_solaar.solaar
 #### For Mac (Mostly for work)
 ```bash
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install stow git neovim iterm2 karabiner-elements aerospace bitwarden bitwarden-cli lsof opencode
+brew install stow git neovim iterm2 karabiner-elements aerospace lsof opencode
 ```
 
 ##### Caveat for Mac
@@ -354,7 +354,7 @@ This repo carries a fair amount of agent/LLM configuration:
 - `common/.codex/config.template.toml`, `common/.config/zed/settings.template.json` - Codex CLI and Zed AI configs (templated; see Secret templates), each connected only to MCPorter.
 - `common/.config/music-assistant/config.template.json` - Omarchy Music Assistant widget and local-player config. `init-env-secrets` renders `~/.config/music-assistant/config.json`.
 - `common/.mcporter/mcporter.template.json` - the canonical [MCPorter](https://github.com/openclaw/mcporter) MCP registry. It owns all upstream server definitions.
-- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, Zed, and Hermes.
+- `common/.local/bin/mcporter-mcp` - the aggregate stdio adapter used by Codex, OpenCode, and Zed.
 
 ### Universal MCP aggregation
 
@@ -378,9 +378,9 @@ Authenticate OAuth-backed servers with `mcporter --config ~/.mcporter/mcporter.j
 
 ### Personal skill self-learning
 
-Hermes combines foreground `skill_manage` writes, a background review fork, usage metadata, and the Curator lifecycle. Only the foreground learning loop is portable across general Agent Skills implementations. This repo supports that part through always-on agent instructions; the writable skills are installed externally at `~/.agents/skills` from `luckycold/agent-skills`, not tracked in dotfiles. After a verified reusable workflow or correction, an agent updates only skills marked `author: Luke`.
+This repo supports a foreground learning loop through always-on agent instructions. The writable skills are installed externally at `~/.agents/skills` from `luckycold/agent-skills`, not tracked in dotfiles. After a verified reusable workflow or correction, an agent updates only skills marked `author: Luke`.
 
-The shared setup deliberately does not imitate Hermes' background usage counters, automatic stale/archive transitions, or LLM consolidation. Those require runtime-specific hooks and provenance state that standard `SKILL.md` consumers do not expose consistently. Review and version skill changes in the external `luckycold/agent-skills` repository, not in dotfiles; changes remain uncommitted until explicitly requested.
+The shared setup deliberately has no background usage counters, automatic stale/archive transitions, or LLM consolidation. Those require runtime-specific hooks and provenance state that standard `SKILL.md` consumers do not expose consistently. Review and version skill changes in the external `luckycold/agent-skills` repository, not in dotfiles; changes remain uncommitted until explicitly requested.
 
 Private operational context is kept out of the portable skill packages. Agents resolve approved exact values from the local Proton Pass-backed private context and must not quote or copy that rendered file into tracked documentation.
 
