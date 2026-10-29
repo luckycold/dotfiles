@@ -36,29 +36,20 @@ stow -t ~ personal
 ```
 
 The personal profile launches Steam through `steam-launch`. That wrapper
-unsets `GDK_SCALE` / `GDK_DPI_SCALE`, injects CEF
-`--force-device-scale-factor` from the Steam window's Hyprland monitor (or
-the focused monitor on first launch) times `STEAM_UI_SCALE_BIAS` (default 1),
-still passes `-forcedesktopscaling` and writes `config.vdf` `ScaleFactor`
-for older clients, and preloads `/usr/lib32/libextest.so`
-when that library is installed. Extest converts Steam's X11 mouse/keyboard
-emulation into uinput events that can control the Wayland desktop.
+unsets `GDK_SCALE`, `GDK_DPI_SCALE`, and `STEAM_FORCE_DESKTOPUI_SCALING`, and
+preloads `/usr/lib32/libextest.so` when that library is installed. Extest
+converts Steam's X11 mouse/keyboard emulation into uinput events that can
+control the Wayland desktop. `hypr/steam.lua` only overrides Omarchy's
+1100x700 Steam box so the 2x UI is not packed into a 1x-era window.
 
-Current Steam ignores `STEAM_FORCE_DESKTOPUI_SCALING` and overwrites
-`ScaleFactor` on startup. The CEF flag is patched into
-`steamwebhelper_sniper_wrap.sh` after Steam's install verifier restores that
-script, which is what actually sizes the store chrome to the compositor.
-Without it the client keeps the last docked 1440p auto-scale (~0.95) and the
-URL bar stays far smaller than Omarchy's 2x media widget.
-Steam only applies that slider at start. `hypr/steam.lua` watches the
-client window and runs `steam-launch --sync` when it lands on a different
-monitor scale, which restarts just the Steam client. It also overrides
-Omarchy's 1100x700 Steam box so the 2x UI is not packed into a 1x-era
-window. Running `steam_app_*`
-games block that restart so a match is not killed mid-session. Do not "fix"
-Steam size with a global `GDK_SCALE`: that integer cannot be correct on
-mixed-DPI, and Omarchy's monitor-scaling keybind will persist it onto every
-GTK/X11 app. Launch Steam from the application menu or `steam-launch`.
+Set the client size with Steam's own Accessibility UI Scale slider. The old
+CEF scale restarter (patching `--force-device-scale-factor` into
+`steamwebhelper_sniper_wrap.sh` and restarting `./steamwebhelper`) was
+withdrawn: the restart hit pre-exec children and CEF aborted with
+`g_pipe_pid == getpid()`. `steam-launch --sync` now exits without touching
+Steam. Do not "fix" Steam size with a global `GDK_SCALE`: that integer cannot
+be correct on mixed-DPI, and Omarchy's monitor-scaling keybind will persist it
+onto every GTK/X11 app. Launch Steam from the application menu or `steam-launch`.
 Keep `lib32-extest` installed while this override is in use. No global
 `LD_PRELOAD` or extra input-group membership are needed when
 `steam-devices` grants the active user access to `/dev/uinput`.

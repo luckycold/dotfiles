@@ -1,9 +1,6 @@
--- Keep the Steam client UI on the scale of the monitor it currently occupies.
--- steam-launch --sync verifies the running CEF scale, repairs an update that
--- removed the flag, and preserves the current workspace when restarting CEF.
---
--- Omarchy's 1100x700 box is a 1x-era size. Keep a large window so 2x chrome
--- is not packed into a 1x-era box.
+-- Omarchy's 1100x700 box is a 1x-era size. Keep a large Steam window so 2x
+-- chrome is not packed into it. Scale itself comes from Steam's UI Scale
+-- slider; the CEF scale restarter was withdrawn (see steam-launch).
 
 o.window({ class = "steam", title = "^Steam$" }, {
   center = true,
@@ -12,39 +9,3 @@ o.window({ class = "steam", title = "^Steam$" }, {
 o.window({ class = "steam", title = "^Friends List$" }, {
   size = { "monitor_w * 0.28", "monitor_h * 0.8" },
 })
-
-local sync_timer
-
-local function is_steam(window)
-  return window ~= nil and window.class == "steam"
-end
-
-local function request_sync(window)
-  if window ~= nil and not is_steam(window) then
-    return
-  end
-  if sync_timer ~= nil then
-    sync_timer:set_enabled(false)
-  end
-  sync_timer = hl.timer(function()
-    sync_timer = nil
-    hl.exec_cmd((os.getenv("HOME") or "") .. "/.local/bin/steam-launch --sync")
-  end, { timeout = 400, type = "oneshot" })
-end
-
-hl.on("window.open", request_sync)
-hl.on("window.active", function(window)
-  request_sync(window)
-end)
-hl.on("window.move_to_workspace", function(window)
-  request_sync(window)
-end)
-hl.on("workspace.move_to_monitor", function()
-  request_sync()
-end)
-hl.on("monitor.layout_changed", function()
-  request_sync()
-end)
-hl.on("hyprland.start", function()
-  request_sync()
-end)
