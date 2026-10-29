@@ -9,4 +9,9 @@ if ! command -v mcporter >/dev/null 2>&1; then
   exit 127
 fi
 
+if [ ! -f "$config" ]; then
+  printf '%s\n' "mcporter-mcp: $config is not rendered; run init-env-secrets (scoped agents: their authorized selector)" >&2
+  exit 78
+fi
+
 exec mcporter --config "$config" serve --stdio --servers "$servers"

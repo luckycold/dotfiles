@@ -147,6 +147,9 @@ iTerm2's settings do not support symlinks. Stow the manually selected `mac`
 package for its other items, then hard-link the ignored plist separately:
 
 ```bash
+# Create directories that tools also write state into, so Stow links files
+# inside them instead of folding the whole directory into this checkout.
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -t ~ common
 stow -t ~ mac
 ln ~/dotfiles/mac/Library/Preferences/com.googlecode.iterm2.plist ~/Library/Preferences/com.googlecode.iterm2.plist
@@ -189,6 +192,9 @@ cd dotfiles
 then use GNU stow to create symlinks
 
 ```bash
+# Create directories that tools also write state into, so Stow links files
+# inside them instead of folding the whole directory into this checkout.
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -t ~ common
 stow -t ~ personal
 
@@ -199,6 +205,7 @@ stow -t ~ personal
 For a headless agent host, use `common` plus `agent` instead:
 
 ```bash
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -n -t ~ common agent
 stow -t ~ common agent
 ```
@@ -244,7 +251,7 @@ The above is a bit of a departure from the instructional video for GNU stow. It'
 
 `stow-profile` is home-directory only: it stows `common` plus one home profile and deliberately excludes `root` and any future `*-root` packages. Apply root-target packages explicitly with `sudo stow -t / ...`.
 
-The switch checks the complete Stow plan before changing links and applies it in one invocation. If local files conflict, it aborts without removing the active profile. Back up and reconcile those files before retrying; it never adopts or overwrites them automatically. Desktop switches also report Hyprland configuration errors after reloading.
+The switch checks the complete Stow plan before changing links and applies it in one invocation. It restows (`stow -R`) `common` and the chosen profile, so links left dangling by files removed from the repo are cleaned up, like `update-dotfiles`' restow. If local files conflict, it aborts without removing the active profile. Back up and reconcile those files before retrying; it never adopts or overwrites them automatically. Desktop switches also report Hyprland configuration errors after reloading.
 
 After switching desktop profiles, refresh generated secret-backed configs:
 
@@ -319,10 +326,11 @@ npm --version
 ```
 
 After `common` is stowed, `.bashrc` adds the mise shim directory to `PATH` for
-both interactive and non-interactive shells. `update-agent-skills` normally
-needs only git. Where git is unavailable it falls back to the skills.sh CLI,
-using `mise exec node@latest` (installing that contained Node runtime) when
-mise is present but Node is not yet installed:
+both interactive and non-interactive shells. `update-agent-skills` runs the
+skills.sh CLI with the first Node.js 22.20+ it finds: on `PATH`, then the node
+mise resolves (it also looks for mise in `~/.local/share/agent-tools/bin`), then
+a `node@latest` it installs with mise. With neither Node.js nor mise it prints a
+hint and leaves the installed skills as they are:
 
 ```bash
 source "${DOTFILES_DIR:-$HOME/dotfiles}/common/.bashrc.d/dotfiles_management.bash"
@@ -336,9 +344,11 @@ system package manager, or changes to the immutable root filesystem.
 
 This repo carries a fair amount of agent/LLM configuration:
 
-- `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, and OpenCode global instruction files resolve directly to it. Cursor documents User Rules only in its settings UI and reads `.cursor/rules` per project, so `common/.cursor/rules/personal-skill-learning.mdc` (stowed to `~/.cursor/rules`) applies only when `~` is the open workspace; paste a User Rule that points at `~/.agents/AGENTS.md` for global coverage. Grok CLI reads global rules from `~/.grok/AGENTS.md`, which this repo does not provide; it does load skills from `~/.claude/skills`.
-- Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` keeps a git clone at `~/.local/share/agent-skills` (override with `AGENT_SKILLS_DIR`), fast-forwards it with `git pull --ff-only`, and idempotently links `~/.agents/skills/<skill>` into the clone plus `~/.claude/skills/<skill>` to `../../.agents/skills/<skill>`. It replaces only links into old managed locations (the vendored dotfiles trees, other agent-skills checkouts) and skills.sh copies listed in `.skill-lock.json`, which it moves to `~/.local/state/agent-skills/replaced-*`. Other entries, such as `cua-driver`, Claude's `synced/` and `.trash/`, stay untouched. A dirty or diverged clone is reported and left as is. With `AGENT_SKILLS_DIR=~/.agents` (a clone at `~/.agents`, as on the box) only the Claude links are managed. Hosts without git fall back to the skills.sh copy install. GNU Stow excludes runtime skills and compatibility links (`common/.stow-local-ignore`).
-- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command does not use that timeout. `update-dotfiles --yes` runs `update-agent-skills` after restowing; a skills failure is reported with a nonzero exit but does not undo the dotfiles update. There is no timer: refresh happens on interactive shell startup, on `update-dotfiles --yes`, or when an agent runs it at session start.
+- `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, OpenCode, and Grok CLI (`common/.grok/AGENTS.md`) global instruction files resolve directly to it; Grok CLI also loads skills from `~/.claude/skills`. Cursor uses an always-on rule that loads it, `common/.cursor/rules/personal-skill-learning.mdc` (stowed to `~/.cursor/rules`). Cursor reads `.cursor/rules` per project, so that file applies only when `~` is the open workspace; for global coverage, paste a User Rule in Cursor's settings that points at `~/.agents/AGENTS.md`.
+- Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` installs them with the official [skills.sh](https://skills.sh/docs/cli) CLI: `skills add luckycold/agent-skills --skill '*' --global --yes --agent codex --agent claude-code --agent cursor --agent opencode`. That writes real copies to `~/.agents/skills/<skill>` (read by Codex, Cursor, and OpenCode), links `~/.claude/skills/<skill>` to them for Claude Code, and records them in `~/.agents/.skill-lock.json`. The CLI version is pinned in `dotfiles_management.bash` (Renovate proposes bumps; `AGENT_SKILLS_CLI_VERSION` overrides it on one host), and it runs with telemetry off and no prompts.
+- A run first compares the repository's upstream commit (`git ls-remote`) with the last sync in `~/.local/state/agent-skills/last-sync`. When nothing changed and every installed skill is still in place it prints one line and changes nothing; when GitHub cannot be reached it keeps the installed skills and exits 0. Otherwise it installs that exact commit (`luckycold/agent-skills#<sha>`); skills deleted upstream are copied aside and removed with `skills remove`. The stamp is written only after a clean run, so anything left undone is retried. Entries from other sources (`cua-driver`, Claude's `synced/` and `.trash/`) stay untouched. Without Node.js it prints a hint and exits 69; `update-dotfiles --yes` and the startup job treat that as a warning, not a failure.
+- Hosts still on the old git-clone layout (`~/.local/share/agent-skills` with per-skill links) are migrated on the next run: the links and the clone move to `~/.local/state/agent-skills/replaced-<timestamp>/`, and nothing is deleted. If the install fails or is interrupted (the startup job's timeout), the links are put back and any partial copies move to `replaced-<timestamp>/partial/`. A clone whose origin is not `luckycold/agent-skills` is reported and left alone. A git checkout at `~/.agents`, or a `~/.agents` or `~/.claude` that Stow folded into a link to this checkout, is refused with the commands to fix it.
+- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command does not use that timeout. `update-dotfiles --yes` runs the restow, secret refresh, and `update-agent-skills` from the file it just pulled (in a fresh `bash`), so a changed updater takes effect on the same run. A restow conflict or skills failure is reported with a nonzero exit but neither skips the other steps nor undoes the dotfiles update. There is no timer: refresh happens on interactive shell startup, on `update-dotfiles --yes`, or when an agent runs it at session start. Concurrent runs wait on a lock (`flock`, or a `mkdir` lock where `flock` is missing, as on macOS).
 - `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`. Never commit the rendered private-context file. Portable skills use placeholders and load exact values only when needed.
 
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.
@@ -351,11 +361,11 @@ This repo carries a fair amount of agent/LLM configuration:
 
 ### Universal MCP aggregation
 
-MCPorter is the primary MCP config path. Upstream servers are defined once, in `~/.mcporter/mcporter.json` (rendered from `common/.mcporter/mcporter.template.json`), and agents either call them with the `mcporter` CLI (`mcporter list`, `mcporter call <server.tool> key=value`) or connect to the one stdio bridge, `mcporter-mcp`, named `mcporter`. The tracked OpenCode and Zed configs do that. Individual agent configs must not carry direct upstream MCP definitions.
+MCPorter is the primary MCP config path. Upstream servers are defined once, in `~/.mcporter/mcporter.json` (rendered from `common/.mcporter/mcporter.template.json`), and agents either call them with the `mcporter` CLI (`mcporter list`, `mcporter call <server.tool> key=value`) or connect to the one stdio bridge, `mcporter-mcp`, named `mcporter`. Add, change, or remove servers with `mcporter config add|remove|get|list|doctor` (OAuth with `mcporter config login`), keeping credentials as Proton Pass placeholders in the template. The tracked OpenCode and Zed configs do that. Individual agent configs must not carry direct upstream MCP definitions.
 
 Codex has no tracked config. An existing `~/.codex/config.toml` stays as it is (earlier renders already point at the bridge). On a host without one, register the bridge with `codex mcp add mcporter -- "$HOME/.local/bin/mcporter-mcp"` and keep any further settings local.
 
-Rollout from the old Codex template: pulling this change leaves a dangling `~/.codex/config.template.toml` link where `common` was stowed. `update-dotfiles`' restow (`stow -R`) removes it; `stow-profile` (`stow -S`) does not, so remove it with `[ -L ~/.codex/config.template.toml ] && [ ! -e ~/.codex/config.template.toml ] && rm ~/.codex/config.template.toml`. A real `~/.codex/config.template.toml` file (a local override) is no longer rendered and can be deleted by hand. None of this touches `~/.codex/config.toml`; where `~/.codex` was folded into the repo, the file stays ignored at `common/.codex/config.toml`.
+Rollout from the old Codex template: pulling this change leaves a dangling `~/.codex/config.template.toml` link where `common` was stowed. `update-dotfiles` and `stow-profile` both restow (`stow -R`), which removes it. A shell still running the older `stow-profile` (`stow -S`) leaves it; remove it with `[ -L ~/.codex/config.template.toml ] && [ ! -e ~/.codex/config.template.toml ] && rm ~/.codex/config.template.toml`. A real `~/.codex/config.template.toml` file (a local override) is no longer rendered and can be deleted by hand. None of this touches `~/.codex/config.toml`; where `~/.codex` was folded into the repo, the file stays ignored at `common/.codex/config.toml`.
 
 After stowing `common` on a desktop profile, render the registry and verify it.
 Scoped agents must instead render only an authorized registry selector and use
@@ -440,6 +450,7 @@ The remaining Omarchy-specific pieces are:
 Apply the personal Omarchy profile like this:
 
 ```bash
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -t ~ common
 stow -t ~ personal
 sudo stow -t / root

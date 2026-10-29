@@ -45,6 +45,18 @@
       "depNameTemplate": "jenslys/opencode-gemini-auth",
       "versioningTemplate": "semver",
       "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^common/\\.bashrc\\.d/dotfiles_management\\.bash$/"
+      ],
+      "matchStrings": [
+        "_AGENT_SKILLS_CLI_PIN=(?<currentValue>\\S+) # renovate: datasource=npm depName=skills"
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "skills",
+      "versioningTemplate": "semver"
     }
   ]
 }

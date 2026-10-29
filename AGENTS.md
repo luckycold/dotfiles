@@ -6,7 +6,7 @@
 - `agent` is for headless agent hosts; follow `agent/README.md` for scoped-secret and desktop-service exceptions.
 - Use dry runs before changes: `stow -n -t ~ common`.
 - `root/` is for system-level files (target `/`), not `$HOME`.
-- Luke-authored portable agent skills live only in `luckycold/agent-skills`. Do not track a skills tree in this repo. `update-agent-skills` keeps a git clone at `~/.local/share/agent-skills` and links `~/.agents/skills/<skill>` into it (skills.sh only where git is missing). GNU Stow ignores `~/.agents/skills`.
+- Luke-authored portable agent skills live only in `luckycold/agent-skills`. Do not track a skills tree in this repo. `update-agent-skills` installs them into `~/.agents/skills` (and `~/.claude/skills` links) with the pinned skills.sh CLI; `update-dotfiles --yes` runs it. GNU Stow ignores `~/.agents/skills`.
 - `~/.mcporter/mcporter.json` is the canonical MCP registry. Agent harnesses connect only through `~/.local/bin/mcporter-mcp`.
 
 ## Secret templates
@@ -36,7 +36,7 @@
 - `common/.stow-local-ignore` excludes `.agents/skills` so Stow never owns the runtime copies.
 - After a personal skill produces a verified reusable correction or workflow, update its canonical package before the final response by following `personal-skill-maintenance`.
 - Do not self-modify third-party or bundled skills. Do not record secrets, transient state, or inferred preferences.
-- Luke gives standing permission to update and commit safe, verified personal-skill changes without waiting for confirmation. Report every changed skill and its commit. Push only where the active repository explicitly authorizes it.
+- Luke gives standing permission to update and commit safe, verified personal-skill changes without waiting for confirmation. Report every changed skill and its commit. Pushing follows `common/.agents/AGENTS.md`, which grants direct pushes to `luckycold/agent-skills` once its safety check passes.
 - These skills can describe homelab and personal workflows. Review for hostnames, IPs, emails, and similar identifiers before committing.
 - Approved private operational values belong in the Proton Pass-backed `common/.agents/private-context.template.md`; `init-env-secrets` renders the ignored local file `~/.agents/private-context.md`. Keep tracked skills placeholder-only.
 
