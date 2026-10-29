@@ -1,6 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/openclaw/mcporter/main/mcporter.schema.json",
   "mcpServers": {
+    "cua-driver": {
+      "command": "cua-driver",
+      "args": ["mcp"],
+      "lifecycle": "keep-alive"
+    },
     "kagi-ken": {
       "command": "npx",
       "args": [
