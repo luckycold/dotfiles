@@ -13,7 +13,7 @@ This is the canonical cross-agent guidance for Luke's environments. Project-spec
 
 - Do not push by default. Push only when Luke explicitly authorizes it for the current repository or task, or when this agreement or the active repository's instructions grant it.
 - Push permission is narrowly scoped. Never carry it from one repository, task, or prior conversation into another. A request to inspect, edit, implement, test, or commit is not by itself permission to push.
-- Standing grant: commit and push safe, verified personal-skill updates to `luckycold/agent-skills` without asking each time, once `python3 scripts/check-public-safety.py` passes. Report every changed skill and its pushed commit.
+- Standing grant for `luckycold/agent-skills` only: commit and push skill updates straight to `main`, without asking and without a pull request, as long as `python3 scripts/check-public-safety.py` (which includes the 200-line `SKILL.md` check) passes before each push. Report every changed skill and its pushed commit. Every other repository, including dotfiles, keeps its own rules.
 - Never merge a pull request Luke is reviewing; he merges his own PRs. Never force-push or rewrite published history unless Luke explicitly authorizes it.
 
 ## Skill freshness
