@@ -218,45 +218,64 @@ _agent_skills_managed_target() {
     return 1
 }
 
-# Move per-skill links into old managed locations to $1/<dir>-links and print
-# "moved-path<TAB>backup-path" for each. skills.sh needs real directories there.
-_agent_skills_move_old_links() {
-    local backup_dir="$1" dir kind path
+# Print the per-skill links that still point into old managed locations.
+_agent_skills_old_links() {
+    local kind path
     for kind in agents claude; do
-        dir="$HOME/.$kind/skills"
-        [ -d "$dir" ] || continue
-        for path in "$dir"/* "$dir"/.[!.]*; do
+        for path in "$HOME/.$kind/skills"/* "$HOME/.$kind/skills"/.[!.]*; do
             [ -L "$path" ] || continue
-            _agent_skills_managed_target "$(readlink "$path")" || continue
-            mkdir -p "$backup_dir/$kind-links" || return 1
-            mv -- "$path" "$backup_dir/$kind-links/" || return 1
-            printf '%s\t%s\n' "$path" "$backup_dir/$kind-links/${path##*/}"
+            _agent_skills_managed_target "$(readlink "$path")" && printf '%s\n' "$path"
         done
     done
 }
 
-# Undo _agent_skills_move_old_links after a failed install.
-_agent_skills_restore_links() {
-    local moved backup
-    while IFS=$'\t' read -r moved backup; do
-        [ -n "$moved" ] || continue
-        if [ -e "$moved" ] || [ -L "$moved" ]; then
-            echo "Left $backup in place; $moved exists again." >&2
-        else
-            mv -- "$backup" "$moved"
-        fi
-    done
+# Move per-skill links into old managed locations to $1/<dir>-links and print
+# "moved-path<TAB>backup-path" for each. skills.sh needs real directories there.
+_agent_skills_move_old_links() {
+    local backup_dir="$1" kind path
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        kind="${path#"$HOME"/.}"
+        kind="${kind%%/*}"
+        mkdir -p "$backup_dir/$kind-links" || return 1
+        mv -- "$path" "$backup_dir/$kind-links/" || return 1
+        printf '%s\t%s\n' "$path" "$backup_dir/$kind-links/${path##*/}"
+    done <<< "$(_agent_skills_old_links)"
 }
 
-# Move the 5f71da0 clone aside once nothing links into it any more.
+# Undo _agent_skills_move_old_links ($2) after a failed or interrupted
+# install. Anything skills.sh already wrote in a link's place is a partial copy
+# of upstream content; it moves to $1/partial/ so the old link can go back.
+_agent_skills_restore_links() {
+    local backup_dir="$1" moved backup partial
+    while IFS=$'\t' read -r moved backup; do
+        [ -n "$moved" ] && { [ -e "$backup" ] || [ -L "$backup" ]; } || continue
+        if [ -e "$moved" ] || [ -L "$moved" ]; then
+            partial="$backup_dir/partial/${moved#"$HOME"/}"
+            mkdir -p "${partial%/*}" && mv -- "$moved" "$partial" || {
+                echo "Left $backup in place; could not move $moved aside." >&2
+                continue
+            }
+        fi
+        mv -- "$backup" "$moved"
+    done <<< "$2"
+    rmdir "$backup_dir"/*-links "$backup_dir" 2>/dev/null
+    return 0
+}
+
+# Move the 5f71da0 clone aside once nothing links into it any more. A clone
+# with another origin is reported and left alone; it never forces a reinstall.
 _agent_skills_retire_old_clone() {
     local backup_dir="$1" clone_dir origin path
     clone_dir="$(_agent_skills_old_clone_dir)"
     [ -e "$clone_dir" ] || return 0
-    origin=$(git -C "$clone_dir" remote get-url origin 2>/dev/null) || return 0
+    origin=$(git -C "$clone_dir" remote get-url origin 2>/dev/null)
     case "$origin" in
-        *github.com[:/]luckycold/agent-skills | *github.com[:/]luckycold/agent-skills.git) ;;
-        *) return 0 ;;
+        *github.com[:/]luckycold/agent-skills | *github.com[:/]luckycold/agent-skills.git | \
+            *github.com[:/]luckycold/agent-skills/ | *github.com[:/]luckycold/agent-skills.git/) ;;
+        *)
+            echo "Leaving $clone_dir in place: it is not a luckycold/agent-skills clone (origin: ${origin:-none}). Remove it by hand if it is unused."
+            return 0 ;;
     esac
     for path in "$HOME"/.agents/skills/* "$HOME"/.claude/skills/*; do
         [ -L "$path" ] || continue
@@ -271,17 +290,63 @@ _agent_skills_retire_old_clone() {
     echo "Moved the old agent-skills git clone to $backup_dir/agent-skills-clone"
 }
 
-# skills.sh would write into a git checkout at ~/.agents (the box layout).
+# Refuse layouts where skills.sh would write into a git checkout: a folded
+# ~/.agents or ~/.claude (a link into the dotfiles tree, left by a plain
+# `stow common` on a host without them), or a clone at ~/.agents (the box).
 _agent_skills_check_home() {
-    local top
+    local dotfiles_real dir real top
     if [ -L "$HOME/.agents/skills" ]; then
         echo "update-agent-skills: ~/.agents/skills is a link ($(readlink "$HOME/.agents/skills")); move it aside first." >&2
         return 1
     fi
+    dotfiles_real=$(cd "$(_dotfiles_dir)" 2>/dev/null && pwd -P)
+    for dir in .agents .claude; do
+        real=$(cd "$HOME/$dir" 2>/dev/null && pwd -P) || continue
+        case "$real" in
+            "$dotfiles_real" | "$dotfiles_real"/*)
+                [ -n "$dotfiles_real" ] || continue
+                echo "update-agent-skills: ~/$dir resolves into the dotfiles checkout ($real); skills.sh would write into it." >&2
+                echo "  Unfold it: rm ~/$dir && mkdir ~/$dir && (cd \"$(_dotfiles_dir)\" && stow -R -t ~ common), then re-run." >&2
+                return 1 ;;
+        esac
+    done
     top=$(git -C "$HOME/.agents" rev-parse --show-toplevel 2>/dev/null) || return 0
     [ "$top" = "$(cd "$HOME/.agents" && pwd -P)" ] || return 0
     echo "update-agent-skills: ~/.agents is a git checkout; skills.sh would write into it." >&2
-    echo "  Move it aside (keep ~/.agents/AGENTS.md from dotfiles), then re-run." >&2
+    echo "  Migrate once: mv ~/.agents ~/.agents.pre-skills-sh && mkdir ~/.agents &&" >&2
+    echo "    (cd \"$(_dotfiles_dir)\" && stow -R -t ~ common) && init-env-secrets --all && update-agent-skills" >&2
+    echo "  (scoped agents: render only their authorized selector instead of --all)." >&2
+    return 1
+}
+
+# Hold the updater lock until the calling subshell exits: flock where it
+# exists, otherwise (macOS) an atomic mkdir lock that is reclaimed when the
+# process that took it is gone.
+_agent_skills_take_lock() {
+    local lock="$1" waited=0 owner
+    if command -v flock >/dev/null 2>&1; then
+        exec 9>>"$lock" || return 1
+        flock -w 300 9 && return 0
+    else
+        until mkdir "$lock.d" 2>/dev/null; do
+            owner=$(cat "$lock.d/pid" 2>/dev/null)
+            if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+                rm -rf "$lock.d"
+                continue
+            fi
+            if [ "$waited" -ge 300 ]; then
+                echo "update-agent-skills: another refresh is still running." >&2
+                return 1
+            fi
+            sleep 1
+            waited=$((waited + 1))
+        done
+        echo "${BASHPID:-$$}" >"$lock.d/pid"
+        # shellcheck disable=SC2064 # expand the path now
+        trap "rm -rf '$lock.d'" EXIT
+        return 0
+    fi
+    echo "update-agent-skills: another refresh is still running." >&2
     return 1
 }
 
@@ -305,21 +370,22 @@ _agent_skills_stamp_file() {
     printf '%s\n' "$(_agent_skills_state_dir)/last-sync"
 }
 
-# Succeeds when the last sync matches $1 (upstream HEAD) and every skill it
-# installed is still a real directory, so no network install is needed.
+# Succeeds when the last complete sync is still in place: same source and CLI,
+# the same upstream commit $1 (not compared when $1 is empty because GitHub
+# could not be reached), every skill it installed still a real directory, and
+# no links left from an older layout. Then no network install is needed.
 _agent_skills_current() {
     local head="$1" stamp key value name
     local want_source want_cli
     stamp="$(_agent_skills_stamp_file)"
     want_source="$(_agent_skills_source)"
     want_cli="${AGENT_SKILLS_CLI_VERSION:-$_AGENT_SKILLS_CLI_PIN}"
-    [ -n "$head" ] && [ -f "$stamp" ] || return 1
-    [ -e "$(_agent_skills_old_clone_dir)" ] && return 1
-    [ -f "$(_agent_skills_lock_file)" ] || return 1
+    [ -f "$stamp" ] && [ -f "$(_agent_skills_lock_file)" ] || return 1
+    [ -z "$(_agent_skills_old_links)" ] || return 1
     while read -r key value; do
         case "$key" in
             source) [ "$value" = "$want_source" ] || return 1 ;;
-            head) [ "$value" = "$head" ] || return 1 ;;
+            head) [ -z "$head" ] || [ "$value" = "$head" ] || return 1 ;;
             cli) [ "$value" = "$want_cli" ] || return 1 ;;
             skill)
                 name="$value"
@@ -357,14 +423,22 @@ for (const n of Object.keys(locked).sort())
 process.exit(ok ? 0 : 1);' "$1" "$(_agent_skills_lock_file)" "$(_agent_skills_source)"
 }
 
+# Exit status of update-agent-skills when Node.js is unavailable: a skipped
+# refresh (installed skills kept), which callers report without failing.
+_AGENT_SKILLS_NO_NODE=69
+
 # Install or refresh Luke's portable skills through skills.sh. Idempotent: a
 # run with nothing new upstream does one `git ls-remote` and prints one line.
 update-agent-skills() (
-    local source state_dir backup_dir head moved classes name status=0
+    local source state_dir backup_dir head moved="" classes kind name status=0
     local -a retired=()
     source="$(_agent_skills_source)"
     state_dir="$(_agent_skills_state_dir)"
     backup_dir="$state_dir/replaced-$(date +%Y%m%d-%H%M%S)"
+
+    mkdir -p "$state_dir" || exit 1
+    # One updater at a time (startup job vs update-dotfiles), before any change.
+    _agent_skills_take_lock "$state_dir/update.lock" || exit 1
 
     _remove_legacy_agent_skills_link \
         "$HOME/.agents/skills" "dotfiles/common/.agents/skills" || exit 1
@@ -372,37 +446,39 @@ update-agent-skills() (
         "$HOME/.claude/skills" "dotfiles/common/.claude/skills" || exit 1
     _agent_skills_check_home || exit 1
 
-    mkdir -p "$state_dir" || exit 1
-    # One updater at a time (startup job vs update-dotfiles).
-    if command -v flock >/dev/null 2>&1; then
-        exec 9>>"$state_dir/update.lock" || exit 1
-        flock -w 300 9 || { echo "update-agent-skills: another refresh is still running." >&2; exit 1; }
-    fi
-
     head="$(_agent_skills_remote_head)"
     if _agent_skills_current "$head"; then
-        echo "Agent skills are current ($source@${head:0:7})."
+        if [ -n "$head" ]; then
+            echo "Agent skills are current ($source@${head:0:7})."
+        else
+            echo "Could not reach $source; keeping the installed agent skills."
+        fi
         exit 0
     fi
 
-    _AGENT_SKILLS_NODE_PATH="$(_agent_skills_node_path)" || exit 1
+    _AGENT_SKILLS_NODE_PATH="$(_agent_skills_node_path)" || exit "$_AGENT_SKILLS_NO_NODE"
 
+    # Put old links back if the install is interrupted; the startup job's
+    # timeout sends TERM to the whole process group.
+    trap '_agent_skills_restore_links "$backup_dir" "$moved"; exit 143' TERM INT HUP
     moved="$(_agent_skills_move_old_links "$backup_dir")" || {
-        _agent_skills_restore_links <<< "$moved"
+        _agent_skills_restore_links "$backup_dir" "$moved"
         exit 1
     }
     [ -n "$moved" ] && echo "Moved $(wc -l <<< "$moved") old skill links to $backup_dir"
 
-    echo "Installing agent skills from $source with skills.sh..."
-    if ! _run_agent_skills_cli add "$source" --skill '*' --global --yes --json \
+    # Install the commit just checked, so the stamp names what is on disk.
+    echo "Installing agent skills from $source${head:+@${head:0:7}} with skills.sh..."
+    if ! _run_agent_skills_cli add "$source${head:+#$head}" --skill '*' --global --yes --json \
         --agent codex --agent claude-code --agent cursor --agent opencode \
         >"$state_dir/last-add.json" 2>"$state_dir/last-add.log" ||
         ! classes="$(_agent_skills_classify "$state_dir/last-add.json")"; then
         echo "update-agent-skills: skills.sh install failed; see $state_dir/last-add.log" >&2
         tail -n 5 "$state_dir/last-add.log" >&2
-        _agent_skills_restore_links <<< "$moved"
+        _agent_skills_restore_links "$backup_dir" "$moved"
         exit 1
     fi
+    trap - TERM INT HUP
 
     _agent_skills_retire_old_clone "$backup_dir" || status=1
 
@@ -424,10 +500,15 @@ update-agent-skills() (
         fi
     fi
 
-    {
-        printf 'source %s\nhead %s\ncli %s\n' "$source" "$head" "${AGENT_SKILLS_CLI_VERSION:-$_AGENT_SKILLS_CLI_PIN}"
-        sed -n 's/^installed /skill /p' <<< "$classes"
-    } >"$state_dir/last-sync.tmp" && mv -f "$state_dir/last-sync.tmp" "$(_agent_skills_stamp_file)"
+    # Stamp only a clean sync, so anything left undone is retried next run.
+    if [ "$status" -eq 0 ]; then
+        {
+            printf 'source %s\nhead %s\ncli %s\n' "$source" "$head" "${AGENT_SKILLS_CLI_VERSION:-$_AGENT_SKILLS_CLI_PIN}"
+            sed -n 's/^installed /skill /p' <<< "$classes"
+        } >"$state_dir/last-sync.tmp" && mv -f "$state_dir/last-sync.tmp" "$(_agent_skills_stamp_file)"
+    else
+        rm -f "$(_agent_skills_stamp_file)"
+    fi
 
     echo "Installed $(grep -c '^installed ' <<< "$classes") agent skills from $source${head:+@${head:0:7}}."
     exit "$status"
@@ -448,11 +529,14 @@ _dotfiles_auto_update_agent_skills() {
         return 0
     fi
 
-    # Pass only the required functions; never source shell startup files here.
+    # Pass only the required functions and settings (including unexported
+    # AGENT_SKILLS_* overrides); never source shell startup files here.
     # shellcheck disable=SC2046 # one function name per word
     "$timeout_cmd" --kill-after=5s 120s env -u BASH_ENV bash --noprofile --norc -c \
         "_AGENT_SKILLS_CLI_PIN=$_AGENT_SKILLS_CLI_PIN
-$(declare -f $(declare -F | awk '$3 ~ /^(_agent_skills_|_run_agent_skills_cli$|_remove_legacy_agent_skills_link$|update-agent-skills$)/ {print $3}'))
+_AGENT_SKILLS_NO_NODE=$_AGENT_SKILLS_NO_NODE
+$(declare -p AGENT_SKILLS_CLI_VERSION AGENT_SKILLS_SOURCE DOTFILES_DIR 2>/dev/null)
+$(declare -f _dotfiles_dir $(declare -F | awk '$3 ~ /^(_agent_skills_|_run_agent_skills_cli$|_remove_legacy_agent_skills_link$|update-agent-skills$)/ {print $3}'))
 update-agent-skills"
 }
 
@@ -463,7 +547,7 @@ _dotfiles_git_check_owner() {
     err=$(git -C "$dir" rev-parse --git-dir 2>&1 >/dev/null) && return 0
     case "$err" in
         *"dubious ownership"*)
-            echo "Error: git refuses $dir: it is owned by $(stat -c %U "$dir" 2>/dev/null || echo another user), not $(id -un)." >&2
+            echo "Error: git refuses $dir: it is owned by $(stat -c %U "$dir" 2>/dev/null || stat -f %Su "$dir" 2>/dev/null || echo another user), not $(id -un)." >&2
             echo "  Fix: chown -R $(id -un): $dir (or re-clone it as $(id -un)). Do not add safe.directory '*'." >&2
             ;;
         *) printf '%s\n' "$err" >&2 ;;
@@ -563,10 +647,12 @@ _dotfiles_linked_persona() {
     return 1
 }
 
-# Live state directories that the repo adds a single file to (for example
-# ~/.grok/AGENTS.md). Create them first, so a folding `stow -R` links only the
-# file and never turns the whole directory into a link into the checkout.
-_dotfiles_live_state_dirs=(.grok)
+# Live state directories that the repo adds a few files to (for example
+# ~/.grok/AGENTS.md) while tools write their own state there (skills.sh into
+# ~/.agents, Claude Code into ~/.claude). Create them first, so a folding
+# `stow -R` links only the files and never turns the whole directory into a
+# link into the checkout.
+_dotfiles_live_state_dirs=(.agents .claude .grok)
 
 _dotfiles_restow_active() {
     local dotfiles_dir="$(_dotfiles_dir)"
@@ -610,13 +696,42 @@ _dotfiles_refresh_secrets_noninteractive() {
 }
 
 # update-dotfiles --yes also refreshes skills. A failure is reported but does
-# not undo the dotfiles update.
+# not undo the dotfiles update; a host without Node.js only gets a warning.
 _dotfiles_update_agent_skills_noninteractive() {
+    local status=0
     echo "Refreshing agent skills..."
-    if ! update-agent-skills; then
-        echo "Warning: agent skill refresh failed; run update-agent-skills for details." >&2
-        return 1
+    update-agent-skills || status=$?
+    case "$status" in
+        0) ;;
+        "$_AGENT_SKILLS_NO_NODE")
+            echo "Warning: agent skills were not refreshed (no Node.js); the installed skills stay in use." >&2 ;;
+        *)
+            echo "Warning: agent skill refresh failed; run update-agent-skills for details." >&2
+            return 1 ;;
+    esac
+}
+
+# Steps after a fast-forward: restow, secrets, skills. A restow conflict is
+# reported but does not skip the other steps.
+_dotfiles_post_update_noninteractive() {
+    local status=0
+    if ! (cd "$(_dotfiles_dir)" && _dotfiles_restow_active); then
+        echo "Warning: restow failed; resolve the conflicts above, then run update-dotfiles --yes again." >&2
+        status=1
     fi
+    (cd "$(_dotfiles_dir)" && _dotfiles_refresh_secrets_noninteractive)
+    _dotfiles_update_agent_skills_noninteractive || status=1
+    return "$status"
+}
+
+# Run the post-update steps from the file on disk, not from the definitions
+# this shell loaded before the pull, so an updated updater takes effect at once.
+_dotfiles_post_update_from_disk() {
+    env -u BASH_ENV DOTFILES_DIR="$(_dotfiles_dir)" \
+        DOTFILES_SCOPED_AGENT="${DOTFILES_SCOPED_AGENT:-0}" \
+        bash --noprofile --norc -c "$(declare -p AGENT_SKILLS_CLI_VERSION AGENT_SKILLS_SOURCE AGENT_SKILLS_AUTO_UPDATE 2>/dev/null)
+"'source "$1" && _dotfiles_post_update_noninteractive' \
+        bash "$(_dotfiles_dir)/common/.bashrc.d/dotfiles_management.bash"
 }
 
 # Manual update command (includes profile management after update).
@@ -662,10 +777,8 @@ update-dotfiles() {
     if [ "$local_head" = "$remote_head" ]; then
         echo "Already up to date!"
         if [ "$noninteractive" -eq 1 ]; then
-            _dotfiles_restow_active || { cd "$original_dir"; return 1; }
-            _dotfiles_refresh_secrets_noninteractive
             cd "$original_dir" || return 1
-            _dotfiles_update_agent_skills_noninteractive
+            _dotfiles_post_update_from_disk
             return $?
         fi
         cd "$original_dir"
@@ -679,10 +792,8 @@ update-dotfiles() {
             cd "$original_dir"
             return 1
         fi
-        _dotfiles_restow_active || { cd "$original_dir"; return 1; }
-        _dotfiles_refresh_secrets_noninteractive
         cd "$original_dir" || return 1
-        _dotfiles_update_agent_skills_noninteractive || return 1
+        _dotfiles_post_update_from_disk || return 1
         echo "Update complete. Re-read ~/.agents/AGENTS.md and any skills this task needs."
         return 0
     fi

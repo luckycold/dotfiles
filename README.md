@@ -147,6 +147,9 @@ iTerm2's settings do not support symlinks. Stow the manually selected `mac`
 package for its other items, then hard-link the ignored plist separately:
 
 ```bash
+# Create directories that tools also write state into, so Stow links files
+# inside them instead of folding the whole directory into this checkout.
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -t ~ common
 stow -t ~ mac
 ln ~/dotfiles/mac/Library/Preferences/com.googlecode.iterm2.plist ~/Library/Preferences/com.googlecode.iterm2.plist
@@ -189,6 +192,9 @@ cd dotfiles
 then use GNU stow to create symlinks
 
 ```bash
+# Create directories that tools also write state into, so Stow links files
+# inside them instead of folding the whole directory into this checkout.
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -t ~ common
 stow -t ~ personal
 
@@ -199,6 +205,7 @@ stow -t ~ personal
 For a headless agent host, use `common` plus `agent` instead:
 
 ```bash
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -n -t ~ common agent
 stow -t ~ common agent
 ```
@@ -339,9 +346,9 @@ This repo carries a fair amount of agent/LLM configuration:
 
 - `common/.agents/AGENTS.md` - canonical cross-agent instructions and personal-skill routing. Codex, Claude, OpenCode, and Grok CLI (`common/.grok/AGENTS.md`) global instruction files resolve directly to it; Grok CLI also loads skills from `~/.claude/skills`. Cursor uses an always-on rule that loads it, `common/.cursor/rules/personal-skill-learning.mdc` (stowed to `~/.cursor/rules`). Cursor reads `.cursor/rules` per project, so that file applies only when `~` is the open workspace; for global coverage, paste a User Rule in Cursor's settings that points at `~/.agents/AGENTS.md`.
 - Luke-authored portable skills live only in [`luckycold/agent-skills`](https://github.com/luckycold/agent-skills), not a tracked dotfiles skills tree. `update-agent-skills` installs them with the official [skills.sh](https://skills.sh/docs/cli) CLI: `skills add luckycold/agent-skills --skill '*' --global --yes --agent codex --agent claude-code --agent cursor --agent opencode`. That writes real copies to `~/.agents/skills/<skill>` (read by Codex, Cursor, and OpenCode), links `~/.claude/skills/<skill>` to them for Claude Code, and records them in `~/.agents/.skill-lock.json`. The CLI version is pinned in `dotfiles_management.bash` (Renovate proposes bumps; `AGENT_SKILLS_CLI_VERSION` overrides it on one host), and it runs with telemetry off and no prompts.
-- A run first compares the repository's upstream commit (`git ls-remote`) with the last sync in `~/.local/state/agent-skills/last-sync`. When nothing changed and every installed skill is still in place it prints one line and changes nothing. Otherwise it reinstalls the collection; skills deleted upstream are copied aside and removed with `skills remove`. Entries from other sources (`cua-driver`, Claude's `synced/` and `.trash/`) stay untouched.
-- Hosts still on the old git-clone layout (`~/.local/share/agent-skills` with per-skill links) are migrated on the next run: the links and the clone move to `~/.local/state/agent-skills/replaced-<timestamp>/`, and nothing is deleted. If the install fails, the links are put back. A git checkout at `~/.agents` itself is refused with a hint.
-- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command does not use that timeout. `update-dotfiles --yes` runs `update-agent-skills` after restowing; a skills failure is reported with a nonzero exit but does not undo the dotfiles update. There is no timer: refresh happens on interactive shell startup, on `update-dotfiles --yes`, or when an agent runs it at session start. Concurrent runs wait on a lock.
+- A run first compares the repository's upstream commit (`git ls-remote`) with the last sync in `~/.local/state/agent-skills/last-sync`. When nothing changed and every installed skill is still in place it prints one line and changes nothing; when GitHub cannot be reached it keeps the installed skills and exits 0. Otherwise it installs that exact commit (`luckycold/agent-skills#<sha>`); skills deleted upstream are copied aside and removed with `skills remove`. The stamp is written only after a clean run, so anything left undone is retried. Entries from other sources (`cua-driver`, Claude's `synced/` and `.trash/`) stay untouched. Without Node.js it prints a hint and exits 69; `update-dotfiles --yes` and the startup job treat that as a warning, not a failure.
+- Hosts still on the old git-clone layout (`~/.local/share/agent-skills` with per-skill links) are migrated on the next run: the links and the clone move to `~/.local/state/agent-skills/replaced-<timestamp>/`, and nothing is deleted. If the install fails or is interrupted (the startup job's timeout), the links are put back and any partial copies move to `replaced-<timestamp>/partial/`. A clone whose origin is not `luckycold/agent-skills` is reported and left alone. A git checkout at `~/.agents`, or a `~/.agents` or `~/.claude` that Stow folded into a link to this checkout, is refused with the commands to fix it.
+- Automatic skills refresh runs in the locked background interactive-shell startup job by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0` to disable it. Automatic refresh has a 120-second timeout plus a 5-second kill grace and is skipped if neither `timeout` nor `gtimeout` is available. The manual `update-agent-skills` command does not use that timeout. `update-dotfiles --yes` runs the restow, secret refresh, and `update-agent-skills` from the file it just pulled (in a fresh `bash`), so a changed updater takes effect on the same run. A restow conflict or skills failure is reported with a nonzero exit but neither skips the other steps nor undoes the dotfiles update. There is no timer: refresh happens on interactive shell startup, on `update-dotfiles --yes`, or when an agent runs it at session start. Concurrent runs wait on a lock (`flock`, or a `mkdir` lock where `flock` is missing, as on macOS).
 - `common/.agents/private-context.template.md` - Proton Pass reference for private hostnames, domains, topology, and privileged connection values. `init-env-secrets` renders the ignored, mode-`0600` `~/.agents/private-context.md`. Never commit the rendered private-context file. Portable skills use placeholders and load exact values only when needed.
 
 - `common/.config/opencode/opencode.json` - the main [OpenCode](https://opencode.ai) config: automatic compaction/pruning settings and the single local MCPorter aggregate bridge. It defines no default model or custom provider.
@@ -443,6 +450,7 @@ The remaining Omarchy-specific pieces are:
 Apply the personal Omarchy profile like this:
 
 ```bash
+mkdir -p ~/.agents ~/.claude ~/.grok
 stow -t ~ common
 stow -t ~ personal
 sudo stow -t / root

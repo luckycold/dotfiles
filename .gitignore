@@ -139,3 +139,8 @@ private-context.md
 # update-agent-skills; never track a copy here.
 /common/.agents/skills/
 /common/.claude/skills/
+# Tool state that lands here if ~/.agents, ~/.claude or ~/.grok was folded into
+# a link to this tree; update-agent-skills refuses that layout.
+/common/.agents/.skill-lock.json
+/common/.grok/*
+!/common/.grok/AGENTS.md

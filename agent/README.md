@@ -42,7 +42,8 @@ by default, without delaying terminal startup. Set `AGENT_SKILLS_AUTO_UPDATE=0`
 to disable them. Both run the pinned skills.sh CLI (`skills add
 luckycold/agent-skills --global --yes`), using Node.js from `PATH` or mise
 (including `~/.local/share/agent-tools/bin/mise`); a host with neither gets a
-hint and keeps its installed skills. Each automatic update has a 120-second
+hint, keeps its installed skills, and `update-dotfiles --yes` reports a warning
+rather than a failure. Each automatic update has a 120-second
 timeout, with forced termination after a further 5 seconds; it is skipped if
 neither `timeout` nor `gtimeout` is installed. `update-dotfiles --yes` also runs
 `update-agent-skills`, the explicit command, which has no automatic timeout.

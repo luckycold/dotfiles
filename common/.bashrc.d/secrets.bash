@@ -422,6 +422,8 @@ _agent_skills_refresh_on_startup() {
   fi
 
   (( refresh_status == 0 )) && return 0
+  # No Node.js: the refresh was skipped and the installed skills stay in use.
+  (( refresh_status == ${_AGENT_SKILLS_NO_NODE:-69} )) && return 0
 
   failure_body="Exited with status $refresh_status. Run update-agent-skills for details."
   if (( refresh_status == 124 )); then
