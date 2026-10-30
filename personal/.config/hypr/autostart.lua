@@ -10,7 +10,6 @@ o.launch_on_start("brave-origin")
 o.launch_on_start(home .. "/AppImages/oneleet.appimage --password-store=gnome-libsecret")
 o.launch_on_start("betterbird")
 o.launch_on_start("beeper")
-o.launch_on_start("steam-launch")
 
 -- Workspace and scrolling_width are applied only when a window opens:
 -- these rules survive monitor-triggered reloads but still allow manual moves.
@@ -50,11 +49,3 @@ hl.on("window.open", function(window)
     hl.dispatch(hl.dsp.focus({ workspace = previous_workspace }))
   end
 end)
-
-o.window("^steam$", {
-  workspace = "9 silent",
-  no_initial_focus = true,
-  suppress_event = "activate activatefocus",
-})
-
-require("hypr.steam")

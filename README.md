@@ -23,47 +23,12 @@ sudo apt install stow git gh neovim ghostty lsof oathtool solaar opencode
 sudo dnf install stow git gh neovim ghostty lsof oathtool solaar
 ```
 
-##### Steam Controller on Hyprland (personal profile)
+##### Steam on Hyprland (personal profile)
 
-Install `steam` (which includes the `steam-devices` udev rules) and the AUR
-package `lib32-extest` on Arch/Omarchy:
-
-```bash
-omarchy pkg add steam
-omarchy pkg aur add lib32-extest
-stow -n -t ~ personal
-stow -t ~ personal
-```
-
-The personal profile launches Steam through `steam-launch`. That wrapper
-unsets `GDK_SCALE`, `GDK_DPI_SCALE`, and `STEAM_FORCE_DESKTOPUI_SCALING`, and
-preloads `/usr/lib32/libextest.so` when that library is installed. Extest
-converts Steam's X11 mouse/keyboard emulation into uinput events that can
-control the Wayland desktop. `hypr/steam.lua` only overrides Omarchy's
-1100x700 Steam box so the 2x UI is not packed into a 1x-era window.
-
-Set the client size with Steam's own Accessibility UI Scale slider. The old
-CEF scale restarter (patching `--force-device-scale-factor` into
-`steamwebhelper_sniper_wrap.sh` and restarting `./steamwebhelper`) was
-withdrawn: the restart hit pre-exec children and CEF aborted with
-`g_pipe_pid == getpid()`. `steam-launch --sync` now exits without touching
-Steam. Do not "fix" Steam size with a global `GDK_SCALE`: that integer cannot
-be correct on mixed-DPI, and Omarchy's monitor-scaling keybind will persist it
-onto every GTK/X11 app. Launch Steam from the application menu or `steam-launch`.
-Keep `lib32-extest` installed while this override is in use. No global
-`LD_PRELOAD` or extra input-group membership are needed when
-`steam-devices` grants the active user access to `/dev/uinput`.
-
-This addresses desktop pointer input; game-specific Steam Input behavior still
-needs to be tested per game. OpenPuck's built-in Lizard mode is also available
-for basic desktop control independently of Steam.
-
-The desktop file is based on Arch's Steam launcher (1.0.0.87); when its actions
-change upstream, refresh this copy and keep `Exec=steam-launch`. To undo,
-unstow/remove the personal `steam.desktop` override and restart Steam; the
-system launcher then takes over.
-
-Reference: https://github.com/Supreeeme/extest
+Launch Steam from the application menu using the package-provided
+`/usr/share/applications/steam.desktop`. The personal profile provides no
+Steam launcher wrapper, desktop-entry override, or autostart.
+Use Steam's Accessibility UI Scale slider to adjust the client size.
 
 ##### SteamOS
 
