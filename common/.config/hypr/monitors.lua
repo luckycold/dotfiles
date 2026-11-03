@@ -2,8 +2,11 @@
 -- Shared with Omarchy while hyprmoncfg manages displays.
 hl.monitor({ output = "eDP-1", mode = "preferred", position = "1280x192", scale = 2 })
 -- END hyprmoncfg wake settings
--- See https://wiki.hypr.land/Configuring/Basics/Monitors/
--- List current monitors and supported resolutions with: hyprctl monitors all
+-- Hyprland monitor docs: https://wiki.hypr.land/Configuring/Basics/Monitors/
+-- To list monitors and their modes, run: hyprctl monitors all
+-- (Worded differently from Omarchy's shipped template on purpose: the
+-- Omarchy 4.5 monitors.lua migration rewrites any file containing those exact
+-- lines, writing through the Stow symlink into this repo.)
 
 -- Preferred 170Hz on the AOC over the Thunderbolt dock exceeds link bandwidth
 -- and Hyprland drops the panel, so pin 2560x1440@120.
