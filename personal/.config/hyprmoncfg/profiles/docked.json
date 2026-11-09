@@ -19,7 +19,7 @@
       "x": -640,
       "y": 0,
       "scale": 1.33333,
-      "vrr": 1,
+      "vrr": 0,
       "transform": 0,
       "bitdepth": 8,
       "cm": "srgb",

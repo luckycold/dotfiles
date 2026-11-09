@@ -115,6 +115,17 @@ if o.cmd_present("voxtype") then
   o.bind("CTRL + F9", "Cancel dictation", "voxtype record cancel")
 end
 
+
+hl.bind("CTRL + SHIFT + 2", hl.dsp.global("com.t3tools.T3Code:capture-window"))
+
+
+-- Dictation keys from before Alt + Space and Right Alt became the defaults.
+-- Remove these lines to give the keys back to applications.
+if o.dictation_installed and o.dictation_installed() then
+  o.bind("SUPER + CTRL + X", "Toggle dictation", "omarchy-dictation toggle")
+  o.bind_hold("F9", "Start dictation (push-to-talk)", "omarchy-dictation start", "Stop dictation (push-to-talk)", "omarchy-dictation stop")
+end
+
 -- BEGIN Sandman lid action override
 -- Sandman manages laptop lid-close actions. Omarchy's default lid-close
 -- binding locks immediately on lid close, before Sandman can apply Do nothing
@@ -122,5 +133,3 @@ end
 hl.unbind("switch:on:Lid Switch")
 o.bind("switch:on:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
 -- END Sandman lid action override
-
-hl.bind("CTRL + SHIFT + 2", hl.dsp.global("com.t3tools.T3Code:capture-window"))
