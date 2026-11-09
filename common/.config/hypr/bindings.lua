@@ -55,6 +55,9 @@ hl.unbind("SUPER + ALT + F")
 o.bind("SUPER + ALT + F", "Full width column", hl.dsp.layout("colresize 1.0"))
 
 -- Layout toggle used to live on SUPER+L; vim focus owns that key now.
+-- Omarchy 4.5 stable also binds SUPER+ALT+L to "Cycle workspace layout back".
+-- Unbind that default so the two actions do not cancel each other.
+hl.unbind("SUPER + ALT + L")
 o.bind("SUPER + ALT + L", "Toggle workspace layout", "omarchy-hyprland-workspace-layout-toggle")
 
 -- Super+D was Walker in Omarchy 3. Omarchy 4's app launcher is the apps menu
@@ -89,8 +92,12 @@ o.bind("SUPER + SHIFT + G", "Beeper", { launch = "beeper", focus = "beeper" })
 hl.unbind("SUPER + SHIFT + SLASH")
 o.bind("SUPER + SHIFT + SLASH", "Passwords", { launch = "proton-pass", focus = "proton-pass" })
 
+-- Omarchy 4.5 stable binds SUPER+SHIFT+T to Activity (btop) as well.
+hl.unbind("SUPER + SHIFT + T")
 o.bind("SUPER + SHIFT + T", "Activity", { tui = "btop" })
 
+-- Omarchy 4.5 stable binds SUPER+SHIFT+I to "Switch input language back".
+hl.unbind("SUPER + SHIFT + I")
 o.bind("SUPER + SHIFT + I", "Install package", "omarchy-launch-floating-terminal-with-presentation omarchy-pkg-install")
 o.bind("SUPER + ALT + I", "Install aur package",
   "omarchy-launch-floating-terminal-with-presentation omarchy-pkg-aur-install")
