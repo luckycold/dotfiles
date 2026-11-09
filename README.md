@@ -202,6 +202,19 @@ journalctl --user -u proton-pass-cli-autologin.service -f
 journalctl --user -u proton-pass-cli-ssh-agent.service -f
 ```
 
+If SSH authentication or Git signing fails, check the services and loaded keys:
+
+```bash
+systemctl --user status proton-pass-cli-autologin.service proton-pass-cli-ssh-agent.service
+SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock" ssh-add -l
+```
+
+A socket file alone does not mean the agent is running. If the login service is
+stopped, start it with `systemctl --user start proton-pass-cli-autologin.service`.
+It uses the stored token to restore the session and start the SSH agent. Wait for
+`ssh-add -l` to list the keys before retrying the signed commit; keep Git signing
+enabled.
+
 The systemd login uses a Proton Pass agent token stored in the local keyring. Create one from an authenticated interactive `pass-cli` session with access to the vault containing SSH keys, store it, then restart the service.
 
 The desktop notification includes an action to update the relevant keyring secret. Manual fallback:
