@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# hyprmoncfg profile hook for display brightness.
+#
+# hyprmoncfg runs a profile's "exec" directly (split with shell quoting rules,
+# no shell), so ";" chains in the profile are passed to the first program as
+# arguments. Keep the chain here and point the profile at this script.
+#
+#   dock-brightness docked      stop wluma, laptop panel and both monitors to 100%
+#   dock-brightness standalone  start wluma again
+#
+# Each step runs even if an earlier one fails (DDC is often flaky), and the
+# script exits non-zero if any step failed so hyprmoncfgd logs it.
+set -u
+
+status=0
+run() {
+  if ! "$@"; then
+    echo "dock-brightness: failed: $*" >&2
+    status=1
+  fi
+}
+
+ddc_full() {
+  command -v ddcutil >/dev/null 2>&1 || { echo "dock-brightness: ddcutil not installed" >&2; status=1; return; }
+  run ddcutil --mfg "$1" --model "$2" --skip-ddc-checks --sleep-multiplier 2 setvcp 10 100
+}
+
+case "${1:-}" in
+  docked)
+    run systemctl --user stop wluma.service
+    if command -v brightnessctl >/dev/null 2>&1; then
+      run brightnessctl --quiet --class=backlight set 100%
+    else
+      echo "dock-brightness: brightnessctl not installed" >&2; status=1
+    fi
+    ddc_full DEL 'DELL S2725QS'
+    ddc_full AOC Q27G3XMN
+    ;;
+  standalone)
+    run systemctl --user start wluma.service
+    ;;
+  *)
+    echo "usage: dock-brightness docked|standalone" >&2
+    exit 2
+    ;;
+esac
+
+exit "$status"

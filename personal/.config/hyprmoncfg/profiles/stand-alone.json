@@ -58,5 +58,5 @@
       }
     ]
   },
-  "exec": "systemctl --user start wluma.service"
+  "exec": "~/.local/bin/dock-brightness standalone"
 }
