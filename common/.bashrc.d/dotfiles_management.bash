@@ -98,7 +98,7 @@ send_update_notification() {
 
 # Pinned skills.sh CLI. Renovate proposes bumps (renovate.json); set
 # AGENT_SKILLS_CLI_VERSION to try another version on one host.
-_AGENT_SKILLS_CLI_PIN=1.7.4 # renovate: datasource=npm depName=skills
+_AGENT_SKILLS_CLI_PIN=1.7.5 # renovate: datasource=npm depName=skills
 
 _agent_skills_source() {
     printf '%s\n' "${AGENT_SKILLS_SOURCE:-luckycold/agent-skills}"
