@@ -24,6 +24,7 @@ _darcs
 ^/LICENSE.*
 ^/COPYING
 
-# The script itself lives in common/Applications. This path is only a
-# relative symlink, and stowing it would conflict with common.
+# The script itself lives here so the GitHub path stays a regular file.
+# common/Applications/k-notify is a relative symlink to this file, and
+# stowing this path would conflict with that link.
 ^/Applications/k-notify$
