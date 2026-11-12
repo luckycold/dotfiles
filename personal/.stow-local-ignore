@@ -13,6 +13,7 @@ _darcs
 
 \.git
 \.gitignore
+\.gitmodules
 
 .+~          # emacs backup files
 \#.*\#       # emacs autosave files
@@ -22,3 +23,7 @@ _darcs
 ^/README.*
 ^/LICENSE.*
 ^/COPYING
+
+# The script itself lives in common/Applications. This path is only a
+# relative symlink, and stowing it would conflict with common.
+^/Applications/k-notify$
