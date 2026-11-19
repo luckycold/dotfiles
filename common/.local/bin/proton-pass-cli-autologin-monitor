@@ -11,6 +11,8 @@ MAX_NETWORK_WAIT_SECONDS="${MAX_NETWORK_WAIT_SECONDS:-30}"
 NETWORK_CHECK_HOST="${NETWORK_CHECK_HOST:-1.1.1.1}"
 LOGIN_VERIFY_WAIT_SECONDS="${LOGIN_VERIFY_WAIT_SECONDS:-20}"
 LOGIN_RETRY_INTERVAL="${LOGIN_RETRY_INTERVAL:-30}"
+# Hard auth failures (missing/rejected PAT) must not re-notify every 30s.
+AUTH_FAILURE_RETRY_INTERVAL="${AUTH_FAILURE_RETRY_INTERVAL:-3600}"
 HEALTHCHECK_INTERVAL="${HEALTHCHECK_INTERVAL:-300}"
 PROTON_LOGIN="${PROTON_LOGIN:-$HOME/Applications/proton-login}"
 SECRET_UPDATE_HELPER="${SECRET_UPDATE_HELPER:-$HOME/Applications/proton-pass-update-secret}"
@@ -23,6 +25,10 @@ last_check=
 last_tick=
 transient_login_failures=0
 
+auth_notify_pending() {
+  pgrep -u "$(id -u)" -f 'notify-send --urgency=critical --app-name=Proton Pass' >/dev/null 2>&1
+}
+
 notify() {
   local title="$1" msg="$2" urg="${3:-low}"
   echo "$title: $msg"
@@ -32,6 +38,11 @@ notify() {
 notify_secret_action() {
   local secret_type="$1" title="$2" msg="$3" action_label="$4"
   echo "$title: $msg"
+
+  if auth_notify_pending; then
+    echo "Auth notification already pending; not queueing another."
+    return
+  fi
 
   if [ ! -x "$SECRET_UPDATE_HELPER" ] || ! command -v notify-send >/dev/null 2>&1; then
     notify "$title" "$msg" critical
@@ -49,6 +60,11 @@ notify_interactive_auth_action() {
   local title="Proton Pass Login Rejected"
   local msg="PAT login failed. Click to refresh Proton Pass auth in the web UI."
   echo "$title: $msg"
+
+  if auth_notify_pending; then
+    echo "Auth notification already pending; not queueing another."
+    return
+  fi
 
   if ! command -v notify-send >/dev/null 2>&1; then
     notify "$title" "$msg" critical
@@ -68,6 +84,11 @@ notify_interactive_auth_action() {
 notify_web_login_action() {
   local title="$1" msg="$2"
   echo "$title: $msg"
+
+  if auth_notify_pending; then
+    echo "Auth notification already pending; not queueing another."
+    return
+  fi
 
   if [ ! -x "$WEB_LOGIN_HELPER" ] || ! command -v notify-send >/dev/null 2>&1; then
     notify "$title" "$msg" critical
@@ -333,16 +354,18 @@ run_resume_healthcheck() {
   [ "$transient_login_failures" -gt 0 ] && notify_transient=1
   healthcheck "$notify_transient"
   local rc=$?
+  now=$(date +%s)
   if [ "$rc" -eq 0 ]; then
     transient_login_failures=0
     last_check=$now
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
-    last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
+    last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_RETRY_INTERVAL))
   else
     [ "$transient_login_failures" -eq 1 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
     transient_login_failures=$((transient_login_failures + 1))
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   fi
+  last_tick=$now
 }
 
 main() {
@@ -355,18 +378,20 @@ main() {
 
   do_login 0
   local rc=$?
+  now=$(date +%s)
   if [ "$rc" -eq 0 ]; then
     transient_login_failures=0
     last_check=$now
   elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
-    echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
-    last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
+    echo "Authentication failed, retrying in ${AUTH_FAILURE_RETRY_INTERVAL}s..."
+    last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_RETRY_INTERVAL))
   else
     echo "Initial login failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
     transient_login_failures=$((transient_login_failures + 1))
     notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
     last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
   fi
+  last_tick=$now
 
   echo "Starting monitor loop (healthcheck every ${HEALTHCHECK_INTERVAL}s, plus resume events)..."
   last_tick=$now
@@ -424,12 +449,13 @@ main() {
 
       healthcheck "$notify_transient"
       local rc=$?
+      now=$(date +%s)
       if [ "$rc" -eq 0 ]; then
         transient_login_failures=0
         last_check=$now
       elif [ "$rc" -ge 2 ] && [ "$rc" -le 5 ]; then
-        echo "Authentication failed, retrying in ${LOGIN_RETRY_INTERVAL}s..."
-        last_check=$((now - HEALTHCHECK_INTERVAL + LOGIN_RETRY_INTERVAL))
+        echo "Authentication failed, retrying in ${AUTH_FAILURE_RETRY_INTERVAL}s..."
+        last_check=$((now - HEALTHCHECK_INTERVAL + AUTH_FAILURE_RETRY_INTERVAL))
       else
         [ "$transient_login_failures" -eq 1 ] && notify "Proton Pass Warning" "Login failed; retrying in ${LOGIN_RETRY_INTERVAL}s." normal
         transient_login_failures=$((transient_login_failures + 1))
@@ -437,7 +463,7 @@ main() {
       fi
     fi
 
-    last_tick=$now
+    last_tick=$(date +%s)
   done
 }
 
