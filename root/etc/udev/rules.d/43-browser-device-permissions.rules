@@ -2,4 +2,9 @@
 # locally attached USB, HID, and USB serial devices via their browser prompts.
 SUBSYSTEM=="usb", TAG+="uaccess"
 SUBSYSTEM=="hidraw", TAG+="uaccess"
-SUBSYSTEM=="tty", ENV{ID_BUS}=="usb", TAG+="uaccess"
+# Match the kernel name. usb_id imports ID_BUS from 60-serial.rules, which is
+# later than this file, so ENV{ID_BUS}=="usb" never matches and the port stays
+# root:uucp 0660 with no seat ACL. 73-seat-late.rules turns this tag into an
+# ACL for whoever is on the active seat. Covers FTDI, CP210x, CH340 (ttyUSB)
+# and native USB ESP32-S2/S3/C3 boards (ttyACM).
+SUBSYSTEM=="tty", KERNEL=="ttyUSB[0-9]*|ttyACM[0-9]*", TAG+="uaccess"
