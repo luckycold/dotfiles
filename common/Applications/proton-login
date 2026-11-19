@@ -76,6 +76,18 @@ lookup_keyring_secret() {
     local secret_type="$1"
     local i value
 
+    value="$(secret-tool lookup service proton-pass type "$secret_type" 2>/dev/null)"
+    if [ -n "$value" ]; then
+        printf '%s' "$value"
+        return 0
+    fi
+
+    # A later env-file fallback may already have the PAT. Don't block 90s on
+    # every retry when the keyring is unlocked but empty.
+    if [ "$secret_type" = pat ] && [ -r "${PROTON_PASS_ENV_FILE:-$HOME/.config/proton-pass-cli/env}" ]; then
+        return 1
+    fi
+
     for i in $(seq 1 "$KEYRING_WAIT_SECONDS"); do
         value="$(secret-tool lookup service proton-pass type "$secret_type" 2>/dev/null)"
         if [ -n "$value" ]; then
@@ -90,6 +102,27 @@ lookup_keyring_secret() {
         sleep 1
     done
 
+    return 1
+}
+
+# Read a PAT from the file-backed env used on headless hosts. Never print it.
+lookup_env_pat() {
+    local env_file="${PROTON_PASS_ENV_FILE:-$HOME/.config/proton-pass-cli/env}"
+    local value=""
+
+    [ -r "$env_file" ] || return 1
+
+    set -a
+    # shellcheck disable=SC1090
+    . "$env_file"
+    set +a
+
+    value="$(extract_pat "${PROTON_PASS_PAT:-}${PROTON_PASS_PERSONAL_ACCESS_TOKEN:-}")"
+    unset PROTON_PASS_PAT PROTON_PASS_PERSONAL_ACCESS_TOKEN
+    if [ -n "$value" ]; then
+        printf '%s' "$value"
+        return 0
+    fi
     return 1
 }
 
@@ -138,13 +171,20 @@ fi
 
 echo "🔄 Session expired or missing. Logging in..."
 
-# 2. Fetch personal access token from keyring
+# 2. Fetch personal access token from keyring, then the env file fallback.
 PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(extract_pat "$(lookup_keyring_secret pat)")"
+if [ -z "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" ]; then
+    PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(lookup_env_pat)"
+    if [ -n "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" ]; then
+        echo "Using Proton Pass PAT from env file (keyring lookup missed)."
+    fi
+fi
 
 if [ -z "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" ]; then
-    msg="PAT missing in keyring. Run: secret-tool store --label='Proton Pass Personal Access Token' service proton-pass type pat"
+    msg="PAT missing in keyring and env file. Store a host-specific token (not the box Agent Key) with: secret-tool store --label='Proton Pass Personal Access Token' service proton-pass type pat"
     echo "❌ $msg"
-    notify_user "Proton Login Failed" "Personal access token missing in keyring." "critical"
+    # The autologin monitor already emits one actionable notification.
+    # Do not send a second critical toast on every retry.
     exit 5
 fi
 
@@ -157,6 +197,9 @@ printf '%s\n' "$LOGIN_OUTPUT"
 if [ "$LOGIN_STATUS" -ne 0 ] && is_local_db_error "$LOGIN_OUTPUT"; then
     reset_local_session
     PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(extract_pat "$(lookup_keyring_secret pat)")"
+    if [ -z "$PROTON_PASS_PERSONAL_ACCESS_TOKEN" ]; then
+        PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(lookup_env_pat)"
+    fi
     LOGIN_OUTPUT="$(PROTON_PASS_PERSONAL_ACCESS_TOKEN="$PROTON_PASS_PERSONAL_ACCESS_TOKEN" pass-cli login 2>&1)"
     LOGIN_STATUS=$?
     unset PROTON_PASS_PERSONAL_ACCESS_TOKEN

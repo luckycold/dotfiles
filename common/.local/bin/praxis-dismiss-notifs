@@ -1,0 +1,43 @@
+#!/bin/bash
+# Dismiss Omarchy/Hyprland desktop notifications on praxis (and any host
+# running omarchy-shell's notification service).
+#
+# Luke's rule: whenever an agent uses praxis, mind the notification deck.
+# Act on anything still relevant, then clear leftovers. Run this at the end
+# of a praxis session, and after fixing a noisy source.
+#
+# Usage:
+#   praxis-dismiss-notifs             dismiss every on-screen notification
+#   praxis-dismiss-notifs all         same
+#   praxis-dismiss-notifs --count     print the on-screen count only
+#   praxis-dismiss-notifs "text"      dismiss cards whose summary contains text
+
+set -euo pipefail
+
+export OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
+
+if ! command -v omarchy-shell >/dev/null 2>&1; then
+  echo "praxis-dismiss-notifs: omarchy-shell not found on PATH" >&2
+  exit 1
+fi
+
+case "${1:-all}" in
+  --count|-c|count)
+    omarchy-shell notifications count
+    ;;
+  all|--all|-a|"")
+    omarchy-shell notifications dismissAll
+    omarchy-shell notifications count
+    ;;
+  --help|-h)
+    sed -n '2,16p' "$0"
+    ;;
+  *)
+    if command -v omarchy-notification-dismiss >/dev/null 2>&1; then
+      omarchy-notification-dismiss "$1"
+    else
+      omarchy-shell notifications dismiss "$1"
+    fi
+    omarchy-shell notifications count
+    ;;
+esac
