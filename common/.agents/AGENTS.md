@@ -46,13 +46,6 @@ This agreement is stowed from the `common` package under `~/dotfiles` (or `$DOTF
 
 Do not `git reset --hard`, stash unrelated work, or force-push. If a fast-forward fails, report the divergence and continue only with whatever skill copies are already on disk.
 
-
-## Praxis desktop notifications
-
-Whenever you use praxis, mind the Omarchy notification deck: dismiss leftovers, act on anything still relevant for Luke, and fix the source of recurring noisy ones. Do not leave a `--wait` notify-send loop running.
-
-End a praxis session with `praxis-dismiss-notifs` (or `praxis-dismiss-notifs --count` first). The script talks to `omarchy-shell` and sets `OMARCHY_PATH=/usr/share/omarchy` if it is unset.
-
 ## Personal skills
 
 Luke-authored skills are installed in `~/.agents/skills/` from `luckycold/agent-skills` and have `author: Luke` in `SKILL.md`. Load the relevant skill before acting on Luke's infrastructure, authentication, automation, or agent-maintenance work. They supplement project rules; they do not override a repository's explicit constraints. Use `personal-skill-maintenance` when creating, correcting, consolidating, or extending them.

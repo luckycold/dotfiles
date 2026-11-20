@@ -13,7 +13,6 @@ common/.local/bin/*
 !common/.local/bin/mcporter-mcp
 !common/.local/bin/hibernate-inhibitor-notify
 !common/.local/bin/proton-pass-cli-autologin-monitor
-!common/.local/bin/praxis-dismiss-notifs
 !common/.local/bin/switch-to-tv
 common/.local/share/nvim
 common/.local/share
