@@ -5,10 +5,18 @@ hl.env("QS_DISABLE_CRASH_HANDLER", "1")
 -- Extra autostart processes.
 local home = os.getenv("HOME") or ""
 
+-- Launch quietly on workspace 9. Exec rules only touch the windows this launch
+-- opens, so later windows (e.g. Betterbird compose) still open where you are.
+local function launch_on_start_quiet(command)
+  hl.on("hyprland.start", function()
+    hl.exec_cmd(o.launch(command), { workspace = "9 silent", no_initial_focus = true })
+  end)
+end
+
 o.launch_on_start("omarchy-launch-webapp https://teams.cloud.microsoft")
 o.launch_on_start("brave-origin")
-o.launch_on_start(home .. "/AppImages/oneleet.appimage --password-store=gnome-libsecret")
-o.launch_on_start("betterbird")
+launch_on_start_quiet(home .. "/AppImages/oneleet.appimage --password-store=gnome-libsecret")
+launch_on_start_quiet("betterbird")
 o.launch_on_start("beeper")
 o.launch_on_start("t3code")
 
