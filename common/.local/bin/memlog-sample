@@ -1,0 +1,21 @@
+#!/bin/bash
+# One memory-history sample: PSI, free, swap and the top 15 processes by RSS.
+# Run every minute by memlog.timer. Appends to a small rotating log so the
+# history survives a hang or hard reset (read it from the next boot).
+set -u
+dir="${XDG_STATE_HOME:-$HOME/.local/state}/memlog"
+log="$dir/memlog.log"
+max_bytes=$((5 * 1024 * 1024))   # rotate at 5 MiB, keep one old file (10 MiB cap)
+mkdir -p "$dir"
+if [[ -f "$log" ]] && (( $(stat -c %s "$log") >= max_bytes )); then
+  mv -f "$log" "$log.1"
+fi
+{
+  printf '=== %s\n' "$(date -u +%FT%TZ)"
+  for r in memory io cpu; do
+    printf 'psi-%s %s\n' "$r" "$(tr '\n' ' ' </proc/pressure/$r)"
+  done
+  free -m | sed -n '2,3p'
+  ps -eo pid,rss,comm --sort=-rss --no-headers | head -15 |
+    awk '{printf "  %7d %8.1fM %s\n", $1, $2/1024, $3}'
+} >>"$log"

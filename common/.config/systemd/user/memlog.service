@@ -1,0 +1,9 @@
+[Unit]
+Description=Memory history sample (PSI, free, top RSS)
+Documentation=file://%h/.local/bin/memlog-sample
+
+[Service]
+Type=oneshot
+Slice=background.slice
+ExecStart=%h/.local/bin/memlog-sample
+Nice=10
