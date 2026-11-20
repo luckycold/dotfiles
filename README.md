@@ -502,6 +502,39 @@ Important note for `root/` files:
 - the SDDM PAM login file lives under `bootstrap/sddm-gnome-keyring/` so it is installed as a real root-owned file under `/etc/pam.d`
 - SDDM PAM files are copied into `/etc` as real root-owned files because symlinks into `/home` are not reliable for login-time PAM configuration
 
+### Memory pressure and recovery
+
+The `common/` and `root/` settings are shared across Linux hosts, including praxis and philosophia. The system settings take effect when the `root` package is applied or the files are installed as root-owned copies.
+
+- `root/etc/sysctl.d/90-sysrq.conf` enables Magic SysRq, including Alt+SysRq+F/M/T via Proxmox `qm sendkey`.
+- `root/etc/systemd/zram-generator.conf.d/95-zram-size.conf` caps zram at half of RAM or 8 GiB, whichever is smaller. It overrides Omarchy's `90-omarchy.conf` and keeps disk swap as lower-priority overflow.
+- `root/etc/systemd/coredump.conf.d/50-cap.conf` caps individual coredump processing and storage at 2 GiB, with 3 GiB for stored dumps and 10 GiB of free disk space as cleanup targets.
+- `common/.config/systemd/user/app.slice.d/50-memory.conf` throttles user apps at 70% of physical RAM and caps them at 75%. Brave, Electron apps, `t3code.service`, `t3tots-listen*`, and `protonmail-bridge` share that budget and are candidates for `systemd-oomd` eviction. Hyprland runs in `session.slice`.
+- `memlog.timer` runs `memlog.service` every minute in `background.slice`. The sampler records pressure, RAM and swap usage, and the top 15 processes by RSS in `${XDG_STATE_HOME:-$HOME/.local/state}/memlog/memlog.log`. It rotates at 5 MiB and keeps one previous log.
+
+From the repo, run `stow -t ~ common`. If you manage the system files as copies, as on praxis, install or refresh them with:
+
+```bash
+sudo install -Dm 0644 root/etc/sysctl.d/90-sysrq.conf /etc/sysctl.d/90-sysrq.conf
+sudo install -Dm 0644 root/etc/systemd/zram-generator.conf.d/95-zram-size.conf /etc/systemd/zram-generator.conf.d/95-zram-size.conf
+sudo install -Dm 0644 root/etc/systemd/coredump.conf.d/50-cap.conf /etc/systemd/coredump.conf.d/50-cap.conf
+```
+
+Omarchy ships the `systemd-oomd` configuration and leaves the service disabled. Enable it, load the SysRq setting, and start the user timer after installing the files:
+
+```bash
+sudo systemctl enable --now systemd-oomd.socket systemd-oomd.service
+sudo sysctl --system
+systemctl --user daemon-reload
+systemctl --user enable --now memlog.timer
+```
+
+The zram change takes effect on reboot. To resize without rebooting when swap use is low, run:
+
+```bash
+sudo systemctl daemon-reload && sudo swapoff /dev/zram0 && sudo systemctl restart systemd-zram-setup@zram0.service && sudo systemctl start dev-zram0.swap
+```
+
 ## Instructional Video
 This is a useful video if you get lost:
 
